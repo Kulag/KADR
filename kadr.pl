@@ -21,8 +21,12 @@ use Getopt::Long;
 use Digest::MD4;
 use db;
 
+# TODO: convert all this to a single hash
+# TODO: allow loading settings from a config file
 my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
-my($ignore_anti_flood, $clean_scan_dirs, $db_path, $mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count, $encoding, $compression, $db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_db_entries) = (0, 1, "adbren.db", 7200, 1036800, 1036800, 1, 'UTF8', 1, 1, 0, 0, '', 0, 1, 1);
+my($ignore_anti_flood, $clean_scan_dirs, $clean_removed_files, $db_path) = (0, 1, 1, "kadr.db");
+my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count, $encoding) = (7200, 1036800, 1036800, 1, 'UTF8');
+my($compression, $db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_db_entries) = (1, 1, 0, 0, '', 0, 1, 1);
 my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
@@ -43,6 +47,7 @@ GetOptions(
 	"anidb-file-timeout=i" => \$file_timeout,
 	"ignore-anti-flood" => \$ignore_anti_flood, # Allows it to ignore the 1 packet per 30 seconds rule, otherwise this rule is always followed, even when only a small number of commands are used. Intended to speed up short runs.
 	"clean-scan-dirs!" => \$clean_scan_dirs, # Default = true. false disables deletion of empty folders in the scanned directories.
+	"clean-removed-files!" => \$clean_removed_files, # Default is enabled. If enabled, set not found files that are on the database as deleted on anidb if they're still marked as on hdd.
 	"encoding=s" => \$encoding,
 	"compression!" => \$compression,
 	"db-caching!" => \$db_caching, # Loads the entire db into memory. On a full run without any AniDB accesses (everything needed is cached) on about 4000 files, program runtime without is about 30-40 seconds, with is about 1.5-2 seconds.
@@ -81,6 +86,7 @@ my $a = AniDB::UDPClient->new({
 });
 
 my @files;
+my @ed2k_of_processed_files;
 my $dirs_done = 1;
 foreach(@scan_dirs) {
 	next if !-e $_;
@@ -92,8 +98,36 @@ my $fcount = scalar(@files);
 my $file;
 while ($file = shift @files) {
 	next if $kde and $file =~ /\.part$/;
-	process_file($file, $a);
+	if (my $ed2k = process_file($file, $a)) {
+		push(@ed2k_of_processed_files, $ed2k);
+	}
 }
+
+if ($clean_removed_files) {
+	my $sth = $db->{dbh}->prepare_cached("SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (" . join(',',split(//, "?" x scalar(@ed2k_of_processed_files))) . ");");
+	$sth->execute(@ed2k_of_processed_files);
+	my $dead_files = $sth->fetchall_arrayref();
+	$sth->finish();
+	my ($count, $dead_files_len) = (1, scalar(@$dead_files) + 1);
+	while ($file = shift @$dead_files) {
+		printer($$file[2], "Cleaning", 0, $count, $dead_files_len);
+		my $mylistinfo = $a->mylist_file_by_ed2k_size(@$file);
+		if ( defined($mylistinfo) ) {
+			if ($mylistinfo->{state} == 1) {
+				printer($$file[2], "Removed", 1, $count, $dead_files_len);
+				$a->mylistedit({lid => $mylistinfo->{lid}, state => 3});
+			} else {
+				printer($$file[2], "Cleaned", 1, $count, $dead_files_len);
+			}
+			$db->remove("anidb_mylist_file", {lid => $mylistinfo->{lid}});
+		} else {
+			printer($$file[2], "Not Found", 1, $count, $dead_files_len);
+		}
+		$db->remove("known_files", {ed2k => $$file[0]});
+		$count++;
+	}
+}
+
 $a->logout;
 $db->{dbh}->disconnect();
 STDOUT->printflush("\r" . ' ' x $last_msg_len . "\r");
@@ -134,15 +168,27 @@ sub process_file {
 
 	if(!defined $fileinfo) {
 		printer($file, "Ignored", 1);
-		return;
+		return "";
 	}
 
 	# Auto-add to mylist.
 	my $mylistinfo = $a->mylist_file_by_fid($fileinfo->{fid});
 	if(!defined $mylistinfo) {
 		printer($file, "Adding", 0);
-		$a->mylistadd($fileinfo->{fid});
-		printer($file, "Added", 1);
+		if (my $lid = $a->mylistadd($fileinfo->{fid})) {
+			$db->update("anidb_files", {lid => $lid}, {fid => $fileinfo->{fid}});
+			printer($file, "Added", 1);
+		} else {
+			printer($file, "Failed", 1);
+		}
+	} elsif ($mylistinfo->{state} != 1) {
+		printer($file, "Updating", 0);
+		if($a->mylistedit({lid => $fileinfo->{lid}, state => 1})) {
+			$db->update("anidb_mylist_file", {state => 1}, {fid => $mylistinfo->{fid}});
+			printer($file, "Updated", 1);
+		} else {
+			printer($file, "Failed", 1);
+		}
 	}
 	
 	my $mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
@@ -185,6 +231,8 @@ sub process_file {
 			
 		}
 	}
+
+	return $fileinfo->{ed2k};
 }
 
 sub array_contains { defined array_find(@_) }
@@ -521,7 +569,41 @@ sub _insert {
 }
 
 sub mylistadd {
-	(shift->_sendrecv("MYLISTADD", {state => 1, fid => shift}) =~ /^2\d\d$/);
+	my $res = shift->mylist_add_query({state => 1, fid => shift});
+	return $res;
+}
+
+sub mylistedit {
+	my ($self, $params) = @_;
+	$params->{edit} = 1;
+	return $self->mylist_add_query($params);
+}
+
+sub mylist_add_query {
+	my ($self, $params) = @_;
+	my $res;
+
+	if ((!defined $params->{edit}) or $params->{edit} == 0) {
+		# Add
+
+		$res = $self->_sendrecv("MYLISTADD", $params);
+
+		if ($res =~ /^210 MYLIST/) { # OK
+			return (split(/\n/, $res))[1];
+		} elsif ($res !~ /^310/) { # any errors other than 310
+			return 0;
+		}
+		# If 310 ("FILE ALREADY IN MYLIST"), retry with edit=1
+		$params->{edit} = 1;
+	}
+	# Edit
+
+	$res = $self->_sendrecv("MYLISTADD", $params);
+
+	if ($res =~ /^311/) { # OK
+		return (split(/\n/, $res))[1];
+	}
+	return 0; # everything else
 }
 
 sub mylist_file_by_fid {
@@ -533,6 +615,30 @@ sub mylist_file_by_fid {
 	my $fileinfo = $self->file_by_fid($fid);
 	$self->{db}->remove("anidb_mylist_anime", {aid => $fileinfo->{aid}});
 	return $self->_mylist_file_query({fid => $fid});;
+}
+
+sub mylist_file_by_lid {
+	my($self, $lid) = @_;
+
+	my $mylistinfo = $self->{db}->fetch("anidb_mylist_file", ["*"], {lid => $lid}, 1);
+	return $mylistinfo if defined $mylistinfo;
+
+	return $self->_mylist_file_query({lid => $lid});
+}
+
+sub mylist_file_by_ed2k_size {
+	my ($self, $ed2k, $size) = @_;
+
+	my $fileinfo = $self->{db}->fetch("anidb_files", ["*"], {size => $size, ed2k => $ed2k}, 1);
+	if(defined($fileinfo)) {
+		$self->{db}->remove("anidb_mylist_file", {fid => $fileinfo->{fid}});
+
+		if ($fileinfo->{lid} == 0) {
+			return undef;
+		}
+		return $self->mylist_file_by_lid($fileinfo->{lid});
+	}
+	return $self->_mylist_file_query({size => $size, ed2k => $ed2k});
 }
 
 sub _mylist_file_query {
