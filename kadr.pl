@@ -704,12 +704,12 @@ sub _mylist_anime_query {
 sub login {
 	my($self) = @_;
 	if(!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60)) {
-		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => $self->{client}, clientver => $self->{clientver}, nat => 1, enc => $encoding, comp => $compression}, 1);
+		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => $self->{client}, clientver => $self->{clientver}, nat => 1, enc => $encoding, comp => $compression});
 		if(defined $msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
 			$self->{skey} = $1;
 			$self->{myaddr} = $2;
 		} else {
-			print "Login Failed: $msg\n";
+			die "Login Failed: $msg\n";
 		}
 	}
 	return 1;
@@ -722,22 +722,17 @@ sub logout {
 
 # Sends and reads the reply. Tries up to 10 times.
 sub _sendrecv {
-	my($self, $query, $vars, $no_login) = @_;
-	my $stat = 0;
+	my($self, $query, $vars) = @_;
 	my $recvmsg;
-	my $timer = 0;
+	my $attempts = 0;
 	
-	$self->login if !$no_login && (!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60));
+	$self->login if $query ne "AUTH" && (!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60));
 
 	$vars->{'s'} = $self->{skey} if $self->{skey};
 	$vars->{'tag'} = "T" . $self->{queries};
-	$query .= ' ' . join '&', map { "$_=$vars->{$_}" } keys %{$vars} if scalar(keys %{$vars});
-	$query .= "\n";
-	#print "\n$query";
+	$query .= ' ' . join('&', map { "$_=$vars->{$_}" } keys %{$vars}) . "\n";
 
 	while(!$recvmsg) {
-		die "\nTimeout while waiting for reply.\n" if $timer > 10;
-		
 		if($self->{queries} > 5) {
 			while($self->{last_command} + 2 > time) {}
 		}
@@ -746,37 +741,41 @@ sub _sendrecv {
 		}
 		$self->{last_command} = time;
 		$self->{queries} += 1;
-
-		send($self->{handle}, $query, 0, $self->{sockaddr}) or die( "Send: " . $! );
 		
-		# I have no clue what the following 4 lines do, other than that they receive the packet.
+		send($self->{handle}, $query, 0, $self->{sockaddr}) or die( "Send error: " . $! );
+		
 		my $rin = '';
 		my $rout;
 		vec($rin, fileno($self->{handle}), 1) = 1;
-		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv:" . $!) if select($rout = $rin, undef, undef, 10.0);
-		$timer++;
+		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, 30.0);
+		
+		$attempts++;
+		die "\nTimeout while waiting for reply.\n" if $attempts == 4;
         }
 
+	# Check if the data is compressed.
 	if(substr($recvmsg, 0, 2) eq "\x00\x00") {
 		my $data = substr($recvmsg, 2);
 		inflate \$data => \$recvmsg or return undef;
 	}
 
+	# Check that the answer we received matches the query we sent.
 	$recvmsg =~ s/^(T\d+) (.*)/$2/;
 	if($1 ne $vars->{tag}) {
 		die "Tag mismatch";
 	}
 
+	# Check if our session is invalid.
 	if($recvmsg =~ /^501.*|^506.*/) {
-		my $oldskey = $self->{skey};
 		undef $self->{skey};
 		$self->login();
 		return $self->_sendrecv($query, $vars);
 	}
+	
+	# Check for a server error.
 	if($recvmsg =~ /^6\d+.*$/ or $recvmsg =~ /^555/) {
 		die("\nAnidb error:\n$recvmsg");
 	}
 	
-	#print "$recvmsg\n";
 	return $recvmsg;
 }
