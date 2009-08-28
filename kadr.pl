@@ -756,10 +756,6 @@ sub _sendrecv {
 		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv:" . $!) if select($rout = $rin, undef, undef, 10.0);
 		$timer++;
         }
-	
-	if(!defined $recvmsg or $recvmsg eq '') {
-		die("Didn't receive anything!");
-	}
 
 	if(substr($recvmsg, 0, 2) eq "\x00\x00") {
 		my $data = substr($recvmsg, 2);
