@@ -632,11 +632,9 @@ sub mylist_file_by_ed2k_size {
 
 	my $fileinfo = $self->{db}->fetch("anidb_files", ["*"], {size => $size, ed2k => $ed2k}, 1);
 	if(defined($fileinfo)) {
-		$self->{db}->remove("anidb_mylist_file", {fid => $fileinfo->{fid}});
-
-		if ($fileinfo->{lid} == 0) {
-			return undef;
-		}
+		return undef if !$fileinfo->{lid};
+		
+		$self->{db}->remove("anidb_mylist_file", {lid => $fileinfo->{lid}});
 		return $self->mylist_file_by_lid($fileinfo->{lid});
 	}
 	return $self->_mylist_file_query({size => $size, ed2k => $ed2k});
