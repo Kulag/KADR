@@ -663,16 +663,16 @@ sub _mylist_anime_query {
 	return undef if not ($success or $single_episode);
 	$msg =~ s/.*\n//im;
 	my @f = split /\|/, $msg;
-
+	
 	if(scalar @f) {
 		my %mylistanimeinfo;
 		$mylistanimeinfo{aid} = $query->{aid};
 		if($single_episode) {
 			my %mylistinfo;
 			map { $mylistinfo{(MYLIST_FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
-
+			
 			my $fileinfo = $self->file_by_fid($mylistinfo{fid});
-
+			
 			$mylistanimeinfo{anime_title} = $fileinfo->{anime_name_romaji};
 			$mylistanimeinfo{episodes} = '';
 			$mylistanimeinfo{eps_with_state_unknown} = "";
@@ -693,7 +693,7 @@ sub _mylist_anime_query {
 		$self->{db}->set('anidb_mylist_anime', \%mylistanimeinfo, {aid => $mylistanimeinfo{aid}});
 		return \%mylistanimeinfo;
 	}
-	return undef
+	return undef;
 }
 
 sub login {
