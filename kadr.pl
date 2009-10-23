@@ -734,12 +734,14 @@ sub _sendrecv {
 	$query .= ' ' . join('&', map { "$_=$vars->{$_}" } keys %{$vars}) . "\n";
 
 	while(!$recvmsg) {
-		if($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
+		if($self->{queries} > LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
+			if(!$self->{ignore_anti_flood}) {
+				while ($self->{queries} / (time - $self->{starttime}) > 0.033) {}
+			}
+		} elsif($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
 			while($self->{last_command} + 2 > time) {}
 		}
-		if(!$self->{ignore_anti_flood}) {
-			while ($self->{queries} / (time - $self->{starttime}) > 0.033) {}
-		}
+		
 		$self->{last_command} = time;
 		$self->{queries} += 1;
 		
