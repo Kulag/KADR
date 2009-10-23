@@ -165,7 +165,7 @@ sub process_file {
 
 	if(!defined $fileinfo) {
 		printer($file, "Ignored", 1);
-		return "";
+		return $ed2k;
 	}
 
 	# Auto-add to mylist.
