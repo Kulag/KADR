@@ -396,6 +396,10 @@ use warnings;
 use IO::Socket;
 use Scalar::Util qw(reftype);
 
+# Threshhold values are specified in packets.
+use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD = 5;
+use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD = 100;
+
 #acodes:
 use constant GROUP_NAME          => 0x00000001;
 use constant GROUP_NAME_SHORT    => 0x00000002;
@@ -730,7 +734,7 @@ sub _sendrecv {
 	$query .= ' ' . join('&', map { "$_=$vars->{$_}" } keys %{$vars}) . "\n";
 
 	while(!$recvmsg) {
-		if($self->{queries} > 5) {
+		if($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
 			while($self->{last_command} + 2 > time) {}
 		}
 		if(!$self->{ignore_anti_flood}) {
