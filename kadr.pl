@@ -443,15 +443,14 @@ use constant FILETYPE      => 0x02000000;
 use constant LENGTH        => 0x04000000;
 use constant DESCRIPTION   => 0x08000000;
 
-#Status Codes
-use constant STATUS_CRCOK  => 0x01;
-use constant STATUS_CRCERR => 0x02;
-use constant STATUS_ISV2   => 0x04;
-use constant STATUS_ISV3   => 0x08;
-use constant STATUS_ISV4   => 0x10;
-use constant STATUS_ISV5   => 0x20;
-use constant STATUS_UNC    => 0x40;
-use constant STATUS_CEN    => 0x80;
+use constant FILE_STATUS_CRCOK  => 0x01;
+use constant FILE_STATUS_CRCERR => 0x02;
+use constant FILE_STATUS_ISV2   => 0x04;
+use constant FILE_STATUS_ISV3   => 0x08;
+use constant FILE_STATUS_ISV4   => 0x10;
+use constant FILE_STATUS_ISV5   => 0x20;
+use constant FILE_STATUS_UNC    => 0x40;
+use constant FILE_STATUS_CEN    => 0x80;
 
 use constant FILE_ENUM => qw/fid aid eid gid lid status_code size ed2k md5 sha1
   crc32 lang_dub lang_sub quality source audio_codec audio_bitrate video_codec
@@ -534,24 +533,24 @@ sub _file_query {
 		$fileinfo{anime_name_short} =~ s/'/,/g;
 		$fileinfo{anime_synonyms}   =~ s/'/,/g;
 		
-		if($fileinfo{status_code} & STATUS_CEN) {
+		if($fileinfo{status_code} & FILE_STATUS_CEN) {
 			$fileinfo{censored} = "cen";
-		} elsif($fileinfo{status_code} & STATUS_UNC) {
+		} elsif($fileinfo{status_code} & FILE_STATUS_UNC) {
 			$fileinfo{censored} = "unc";
 		}
 		
-		if($fileinfo{status_code} & STATUS_ISV2) {
+		if($fileinfo{status_code} & FILE_STATUS_ISV2) {
 			$fileinfo{version} = "v2";
-		} elsif($fileinfo{status_code} & STATUS_ISV3) {
+		} elsif($fileinfo{status_code} & FILE_STATUS_ISV3) {
 			$fileinfo{version} = "v3";
-		} elsif($fileinfo{status_code} & STATUS_ISV4) {
+		} elsif($fileinfo{status_code} & FILE_STATUS_ISV4) {
 			$fileinfo{version} = "v4";
-		} elsif($fileinfo{status_code} & STATUS_ISV5) {
+		} elsif($fileinfo{status_code} & FILE_STATUS_ISV5) {
 			$fileinfo{version} = "v5";
 		}
 		
-		$fileinfo{crcok} = $fileinfo{status_code} & STATUS_CRCOK;
-		$fileinfo{crcerr} = $fileinfo{status_code} & STATUS_CRCERR;
+		$fileinfo{crcok} = $fileinfo{status_code} & FILE_STATUS_CRCOK;
+		$fileinfo{crcerr} = $fileinfo{status_code} & FILE_STATUS_CRCERR;
 		$fileinfo{anime_name_english} = $fileinfo{anime_name_romaji} if not defined $fileinfo{anime_name_english} or $fileinfo{anime_name_english} eq '';
 		$fileinfo{anime_name_romaji} = $fileinfo{anime_name_english} if not defined $fileinfo{anime_name_romaji} or $fileinfo{anime_name_romaji} eq '';
 		return undef if not defined $fileinfo{anime_name_romaji} and not defined $fileinfo{anime_name_english};
