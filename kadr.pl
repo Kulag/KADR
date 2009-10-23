@@ -556,17 +556,11 @@ sub _file_query {
 		$fileinfo{anime_name_romaji} = $fileinfo{anime_name_english} if not defined $fileinfo{anime_name_romaji} or $fileinfo{anime_name_romaji} eq '';
 		return undef if not defined $fileinfo{anime_name_romaji} and not defined $fileinfo{anime_name_english};
 		
-		$self->_insert('anidb_files', \%fileinfo);
+		$fileinfo{updated} = time;
+		$self->{db}->set('anidb_files', \%fileinfo, {fid => $fileinfo{fid}});
 		return \%fileinfo;
 	}
 	return undef;
-}
-
-sub _insert {
-	my($self, $table, $info) = @_;
-	delete $info->{''};
-	$info->{updated} = time;
-	$self->{db}->insert($table, $info);
 }
 
 sub mylistadd {
@@ -647,7 +641,8 @@ sub _mylist_file_query {
 	if(scalar @f) {
 		my %mylistinfo;
 		map { $mylistinfo{(MYLIST_FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
-		$self->_insert('anidb_mylist_file', \%mylistinfo);
+		$mylistinfo{updated} = time;
+		$self->{db}->set('anidb_mylist_file', \%mylistinfo, {lid => $mylistinfo{lid}});
 		return \%mylistinfo;
 	}
 	undef;
@@ -694,7 +689,8 @@ sub _mylist_anime_query {
 		} else {
 			map { $mylistanimeinfo{(MYLIST_ANIME_ENUM)[$_]} = $f[$_] } 0 .. scalar(MYLIST_ANIME_ENUM) - 1;
 		}
-		$self->_insert('anidb_mylist_anime', \%mylistanimeinfo);
+		$mylistanimeinfo{updated} = time;
+		$self->{db}->set('anidb_mylist_anime', \%mylistanimeinfo, {aid => $mylistanimeinfo{aid}});
 		return \%mylistanimeinfo;
 	}
 	return undef
