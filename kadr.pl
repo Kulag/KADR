@@ -104,12 +104,9 @@ while ($file = shift @files) {
 }
 
 if ($clean_removed_files) {
-	my $sth = $db->{dbh}->prepare_cached("SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (" . join(',',split(//, "?" x scalar(@ed2k_of_processed_files))) . ");");
-	$sth->execute(@ed2k_of_processed_files);
-	my $dead_files = $sth->fetchall_arrayref();
-	$sth->finish();
-	my ($count, $dead_files_len) = (1, scalar(@$dead_files) + 1);
-	while ($file = shift @$dead_files) {
+	my @dead_files = sort { $::a->[2] cmp $::b->[2] } @{$db->{dbh}->selectall_arrayref("SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (" . join(',', map { "'$_'" } @ed2k_of_processed_files) . ");")};
+	my($count, $dead_files_len) = (1, scalar(@dead_files) + 1);
+	while($file = shift @dead_files) {
 		printer($$file[2], "Cleaning", 0, $count, $dead_files_len);
 		my $mylistinfo = $a->mylist_file_by_ed2k_size(@$file);
 		if ( defined($mylistinfo) ) {
