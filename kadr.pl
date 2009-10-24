@@ -505,7 +505,9 @@ sub parse_args {
 sub file_query {
 	my($self, $query) = @_;
 	
-	return $_ if $self->{db}->fetch("adbcache_file", ["*"], $query, 1);
+	if(my $r = $self->{db}->fetch("adbcache_file", ["*"], $query, 1)) {
+		return $r;
+	}
 	
 	$query->{fmask} = FILE_FMASK;
 	$query->{amask} = FILE_AMASK;
