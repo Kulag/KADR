@@ -584,6 +584,8 @@ sub file_query {
 		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
 	} elsif($code == 320) { # No such file.
 		return undef;
+	} else {
+		die "Error: Unexpected return code for file query recieved. Got $code.\n";
 	}
 }
 
