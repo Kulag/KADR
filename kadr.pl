@@ -442,7 +442,8 @@ use constant FILE_FMASK => "7ff8fff8";
 use constant FILE_AMASK => "fefcfcc0";
 
 use constant CODE_220_ENUM => 
-qw/aid eid gid lid other_episodes is_deprecated status
+qw/fid
+   aid eid gid lid other_episodes is_deprecated status
    size ed2k md5 sha1 crc32
    quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
    dub_language sub_language length description air_date
