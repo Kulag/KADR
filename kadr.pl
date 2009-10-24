@@ -438,8 +438,8 @@ use constant FILE_STATUS_ISV5   => 0x20;
 use constant FILE_STATUS_UNC    => 0x40;
 use constant FILE_STATUS_CEN    => 0x80;
 
-use constant FILE_FCODE => "7ff8fff8";
-use constant FILE_ACODE => "fefcfcc0";
+use constant FILE_FMASK => "7ff8fff8";
+use constant FILE_AMASK => "fefcfcc0";
 
 use constant CODE_220_ENUM => 
 qw/aid eid gid lid other_episodes is_deprecated status
@@ -566,8 +566,8 @@ sub file_query {
 	
 	return $_ if $self->{db}->fetch("adbcache_file", ["*"], $query, 1);
 	
-	$query->{fcode} = FILE_FCODE;
-	$query->{acode} = FILE_ACODE;
+	$query->{fmask} = FILE_FMASK;
+	$query->{amask} = FILE_AMASK;
 	
 	my($code, $data) = split("\n", decode($self->{encoding}, $self->_sendrecv("FILE", $query)));
 	
