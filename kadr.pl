@@ -436,6 +436,19 @@ use constant FILE_STATUS_ISV5   => 0x20;
 use constant FILE_STATUS_UNC    => 0x40;
 use constant FILE_STATUS_CEN    => 0x80;
 
+use constant FILE_FCODE => "7ff87ff8";
+use constant FILE_ACODE => "fefcfcc0";
+
+use constant CODE_220_ENUM => 
+qw/aid eid gid lid other_episodes is_deprecated state
+   size ed2k md5 sha1 crc32
+   quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
+   dub_language sub_language length description aired_date
+   anime_total_episodes anime_highest_episode_number anime_year anime_type anime_related_aids anime_related_aid_types anime_categories
+   anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
+   episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
+   group_name group_short_name/;
+
 use constant FILE_ENUM => qw/fid aid eid gid lid status_code size ed2k md5 sha1
   crc32 lang_dub lang_sub quality source audio_codec audio_bitrate video_codec
   video_bitrate resolution filetype length description group group_short
@@ -544,6 +557,62 @@ sub _file_query {
 		return \%fileinfo;
 	}
 	return undef;
+}
+
+sub file_query {
+	my $self = shift;
+	my $query = {};
+	parse_args($query, @_);
+	
+	if($self->{db}->fetch("anidb_files", ["*"], $query, 1)) {
+		return $_;
+	}
+	
+	$query->{fcode} = FILE_FCODE;
+	$query->{acode} = FILE_ACODE;
+	
+	my($code, $data) = split("\n", decode_utf8($self->_sendrecv("FILE", $query)));
+	
+	$code = int((split(" ", $code))[0]);
+	if($code == 220) { # Success
+		my %fileinfo;
+		my @fields = split /\|/, $data;
+		map { $fileinfo{(CODE_220_ENUM)[$_]} = $fields[$_] } 0 .. scalar(CODE_220_ENUM) - 1;
+		
+		if($fileinfo{status_code} & FILE_STATUS_CEN) {
+			$fileinfo{censored} = 1;
+		} elsif($fileinfo{status_code} & FILE_STATUS_UNC) {
+			$fileinfo{censored} = 0;
+		} else {
+			$fileinfo{censored} = undef;
+		}
+		
+		if($fileinfo{status_code} & FILE_STATUS_ISV2) {
+			$fileinfo{version} = 2;
+		} elsif($fileinfo{status_code} & FILE_STATUS_ISV3) {
+			$fileinfo{version} = 3;
+		} elsif($fileinfo{status_code} & FILE_STATUS_ISV4) {
+			$fileinfo{version} = 4;
+		} elsif($fileinfo{status_code} & FILE_STATUS_ISV5) {
+			$fileinfo{version} = 5;
+		}
+		
+		if($fileinfo{status_code} & FILE_STATUS_CRCOK) {
+			$fileinfo{crcok} = 1;
+		} elsif($fileinfo{status_code} & FILE_STATUS_CRCERR) {
+			$fileinfo{crcok} = 0;
+		} else {
+			$fileinfo{crcok} = undef;
+		}
+		
+		$fileinfo{updated} = time;
+		$self->{db}->set('anidb_files', \%fileinfo, {fid => $fileinfo{fid}});
+		return \%fileinfo;
+	} elsif($code == 322) { # Multiple files found.
+		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
+	} elsif($code == 320) { # No such file.
+		return undef;
+	}
 }
 
 sub mylistadd {
