@@ -1,7 +1,56 @@
 CREATE table known_files (`filename` text, `size` int, `ed2k` text primary key, `avdumped` int);
 
-create table anidb_files (`fid` INTEGER primary key, `aid` int, `eid` int, `gid` int, `lid` int, `status_code` int, `size` int, `ed2k` text, `md5` text, `sha1` text, `crc32` text, `lang_dub` text, `lang_sub` text, `quality` text, `source` text, `audio_codec` text, `audio_bitrate` text, `video_codec` text, `video_bitrate` text, `resolution` text, `filetype` text, `length` int, `description` text, `group` text, `group_short` text, `episode` text, `episode_name` text, `episode_name_romaji` text, `episode_name_kanji` text, `episode_total` text, `episode_last` text, `anime_year` int, `anime_type` text, `anime_name_romaji` text, `anime_name_kanji` text, `anime_name_english` text, `anime_name_other` text, `anime_name_short` text, `anime_synonyms` text, `anime_category` text, `updated` int, `crcok` text, `crcerr` text, `version` text, `censored` text);
-
 create table anidb_mylist_file (`lid` int, `fid` integer primary key, `eid` int, `aid` int, `gid` int, `date` int, `state` int, `viewdate` int, `storage` text, `source` text, `other` text, `filestate` text, `updated` int);
 
 create table anidb_mylist_anime (`aid` integer primary key, `anime_title` text, `episodes` int, `eps_with_state_unknown` text, `eps_with_state_on_hdd` text, `eps_with_state_on_cd` text, `eps_with_state_deleted` text, `watched_eps` text, `updated` int);
+
+create table adbcache_file (
+			    `fid` INTEGER primary key,
+			    `aid` int,
+			    `eid` int,
+			    `gid` int,
+			    `lid` int,
+			    `other_episodes` text,
+			    `is_deprecated` int,
+			    `status` int,
+			    `size` int,
+			    `ed2k` text, 
+			    `md5` text,
+			    `sha1` text,
+			    `crc32` text,
+			    `quality` text,
+			    `source` text,
+			    `audio_codec` text,
+			    `audio_bitrate` int,
+			    `video_codec` text,
+			    `video_bitrate` int,
+			    `video_resolution` text,
+			    `file_type` text,
+			    `dub_language` text,
+			    `sub_language` text,
+			    `length` int,
+			    `description` text,
+			    `air_date` int,
+			    `anime_total_episodes` int,
+			    `anime_highest_episode_number` int,
+			    `anime_year` int,
+			    `anime_type` int,
+			    `anime_related_aids` text,
+			    `anime_related_aid_types` text,
+			    `anime_categories` text,
+			    `anime_romaji_name` text,
+			    `anime_kanji_name` text,
+			    `anime_english_name` text,
+			    `anime_other_name` text,
+			    `anime_short_names` text,
+			    `anime_synonyms` text,
+			    `episode_number` text,
+			    `episode_english_name` text,
+			    `episode_romaji_name` text,
+			    `episode_kanji_name` text,
+			    `episode_rating` text,
+			    `episode_vote_count` text,
+			    `group_name` text,
+			    `group_short_name` text,
+			    `updated` int
+);
