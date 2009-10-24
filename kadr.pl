@@ -438,7 +438,7 @@ use constant FILE_STATUS_ISV5   => 0x20;
 use constant FILE_STATUS_UNC    => 0x40;
 use constant FILE_STATUS_CEN    => 0x80;
 
-use constant FILE_FCODE => "7ff87ff8";
+use constant FILE_FCODE => "7ff8fff8";
 use constant FILE_ACODE => "fefcfcc0";
 
 use constant CODE_220_ENUM => 
