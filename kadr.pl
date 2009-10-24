@@ -161,7 +161,7 @@ sub process_file {
 	printer($file, "Processing", 0);
 
 	my $ed2k = ed2k_hash($file);
-	my $fileinfo = $a->file_by_ed2k_size($ed2k, -s $file);
+	my $fileinfo = $a->file_query({ed2k => $ed2k, size => -s $file});
 
 	if(!defined $fileinfo) {
 		printer($file, "Ignored", 1);
@@ -198,16 +198,17 @@ sub process_file {
 		$file_output_dir = $unwatched_output_dir unless array_contains($dir, @unwatched_dirs);
 	}
 
-	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $watched_output_dir and $fileinfo->{episode} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $unwatched_output_dir and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
-		my $anime_dir = $fileinfo->{anime_name_romaji};
+	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $watched_output_dir and $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $unwatched_output_dir and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
+		my $anime_dir = $fileinfo->{anime_romaji_name};
 		$anime_dir =~ s/\//∕/g;
 		$file_output_dir .= "/$anime_dir";
 		mkdir($file_output_dir) if !-e $file_output_dir;
 	}
-
-	my $newname = $fileinfo->{anime_name_romaji} . ($fileinfo->{episode_name} =~ /^(Complete Movie|ova|special|tv special)$/i ? '' : " - " . $fileinfo->{episode} . ((defined $fileinfo->{version}) ? $fileinfo->{version} : "") . " - " . $fileinfo->{episode_name}) . ((not $fileinfo->{group_short} eq "raw") ? " [" . $fileinfo->{group_short} . "]" : "") . "." . $fileinfo->{filetype};
 	
-	$newname = $fileinfo->{anime_name_romaji} . " - " . $fileinfo->{episode} . " - Episode " . $fileinfo->{episode} . ((not $fileinfo->{group_short} eq "raw") ? " [" . $fileinfo->{group_short} . "]" : "") . "." . $fileinfo->{filetype} if length($newname) > 250;
+	my $file_version = $a->file_version($fileinfo);
+	my $newname = $fileinfo->{anime_romaji_name} . ($fileinfo->{episode_english_name} =~ /^(Complete Movie|ova|special|tv special)$/i ? '' : " - " . $fileinfo->{episode_number} . ($file_version > 1 ? "v$file_version" : "") . " - " . $fileinfo->{episode_name}) . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
+	
+	$newname = $fileinfo->{anime_romaji_name} . " - " . $fileinfo->{episode_number} . " - Episode " . $fileinfo->{episode_number} . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type} if length($newname) > 250;
 	
 	$newname =~ s/\//∕/g; # unix doesn't like / in filenames
 	$newname =~ s/[\\\\:\*"><\|\?]/_/g if $windows;
@@ -662,7 +663,7 @@ sub mylist_file_by_lid {
 sub mylist_file_by_ed2k_size {
 	my ($self, $ed2k, $size) = @_;
 
-	my $fileinfo = $self->{db}->fetch("anidb_files", ["*"], {size => $size, ed2k => $ed2k}, 1);
+	my $fileinfo = $self->{db}->fetch("adbcache_file", ["*"], {size => $size, ed2k => $ed2k}, 1);
 	if(defined($fileinfo)) {
 		return undef if !$fileinfo->{lid};
 		
