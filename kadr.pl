@@ -563,7 +563,7 @@ sub _file_query {
 sub file_query {
 	my($self, $query) = @_;
 	
-	return $_ if $self->{db}->fetch("anidb_files", ["*"], $query, 1);
+	return $_ if $self->{db}->fetch("adbcache_file", ["*"], $query, 1);
 	
 	$query->{fcode} = FILE_FCODE;
 	$query->{acode} = FILE_ACODE;
