@@ -592,7 +592,7 @@ sub mylist_file_by_fid {
 	my $mylistinfo = $self->{db}->fetch("anidb_mylist_file", ["*"], {fid => $fid}, 1);
 	return $mylistinfo if defined $mylistinfo;
 	# Due to the current design, if me need to get this record from AniDB, it's a new file, so we should update the mylist_anime record at the same time. Deleting the old record will atuomatically force it to fetch if from the server again.
-	my $fileinfo = $self->file_by_fid($fid);
+	my $fileinfo = $self->file_query({fid => $fid});
 	$self->{db}->remove("anidb_mylist_anime", {aid => $fileinfo->{aid}});
 	return $self->_mylist_file_query({fid => $fid});;
 }
@@ -656,7 +656,7 @@ sub _mylist_anime_query {
 			my %mylistinfo;
 			map { $mylistinfo{(MYLIST_FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
 			
-			my $fileinfo = $self->file_by_fid($mylistinfo{fid});
+			my $fileinfo = $self->file_query({fid => $mylistinfo{fid}});
 			
 			$mylistanimeinfo{anime_title} = $fileinfo->{anime_name_romaji};
 			$mylistanimeinfo{episodes} = '';
