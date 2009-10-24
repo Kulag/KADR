@@ -386,49 +386,6 @@ use Encode;
 use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 5;
 use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 100;
 
-#acodes:
-use constant GROUP_NAME          => 0x00000001;
-use constant GROUP_NAME_SHORT    => 0x00000002;
-use constant EPISODE_NUMBER      => 0x00000100;
-use constant EPISODE_NAME        => 0x00000200;
-use constant EPISODE_NAME_ROMAJI => 0x00000400;
-use constant EPISODE_NAME_KANJI  => 0x00000800;
-use constant EPISODE_TOTAL       => 0x00010000;
-use constant EPISODE_LAST        => 0x00020000;
-use constant ANIME_YEAR          => 0x00040000;
-use constant ANIME_TYPE          => 0x00080000;
-use constant ANIME_NAME_ROMAJI   => 0x00100000;
-use constant ANIME_NAME_KANJI    => 0x00200000;
-use constant ANIME_NAME_ENGLISH  => 0x00400000;
-use constant ANIME_NAME_OTHER    => 0x00800000;
-use constant ANIME_NAME_SHORT    => 0x01000000;
-use constant ANIME_SYNONYMS      => 0x02000000;
-use constant ANIME_CATEGORY      => 0x04000000;
-
-#fcodes:
-use constant AID           => 0x00000002;
-use constant EID           => 0x00000004;
-use constant GID           => 0x00000008;
-use constant LID           => 0x00000010;
-use constant STATUS        => 0x00000100;
-use constant SIZE          => 0x00000200;
-use constant ED2K          => 0x00000400;
-use constant MD5           => 0x00000800;
-use constant SHA1          => 0x00001000;
-use constant CRC32         => 0x00002000;
-use constant LANG_DUB      => 0x00010000;
-use constant LANG_SUB      => 0x00020000;
-use constant QUALITY       => 0x00040000;
-use constant SOURCE        => 0x00080000;
-use constant CODEC_AUDIO   => 0x00100000;
-use constant BITRATE_AUDIO => 0x00200000;
-use constant CODEC_VIDEO   => 0x00400000;
-use constant BITRATE_VIDEO => 0x00800000;
-use constant RESOLUTION    => 0x01000000;
-use constant FILETYPE      => 0x02000000;
-use constant LENGTH        => 0x04000000;
-use constant DESCRIPTION   => 0x08000000;
-
 use constant FILE_STATUS_CRCOK  => 0x01;
 use constant FILE_STATUS_CRCERR => 0x02;
 use constant FILE_STATUS_ISV2   => 0x04;
@@ -451,26 +408,6 @@ qw/fid
    anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
    episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
    group_name group_short_name/;
-
-use constant FILE_ENUM => qw/fid aid eid gid lid status_code size ed2k md5 sha1
-  crc32 lang_dub lang_sub quality source audio_codec audio_bitrate video_codec
-  video_bitrate resolution filetype length description group group_short
-  episode episode_name episode_name_romaji episode_name_kanji episode_total
-  episode_last anime_year anime_type anime_name_romaji anime_name_kanji
-  anime_name_english anime_name_other anime_name_short anime_synonyms
-  anime_category/;
-
-use constant FILE_CODE =>
-		AID | EID | GID | LID | STATUS | SIZE | ED2K | MD5 | SHA1 | CRC32 |
-		LANG_DUB | LANG_SUB | QUALITY | SOURCE | CODEC_AUDIO | BITRATE_AUDIO |
-		CODEC_VIDEO | BITRATE_VIDEO | RESOLUTION | FILETYPE | LENGTH |
-		DESCRIPTION;
-use constant ANIME_CODE =>
-		GROUP_NAME | GROUP_NAME_SHORT | EPISODE_NUMBER | EPISODE_NAME |
-		EPISODE_NAME_ROMAJI | EPISODE_NAME_KANJI | EPISODE_TOTAL | EPISODE_LAST |
-		ANIME_YEAR | ANIME_TYPE | ANIME_NAME_ROMAJI | ANIME_NAME_KANJI |
-		ANIME_NAME_ENGLISH | ANIME_NAME_OTHER | ANIME_NAME_SHORT |
-		ANIME_SYNONYMS | ANIME_CATEGORY;
 
 use constant MYLIST_FILE_ENUM => qw/lid fid eid aid gid date state viewdate storage source other filestate/;
 
