@@ -397,8 +397,8 @@ use IO::Socket;
 use Scalar::Util qw(reftype);
 
 # Threshhold values are specified in packets.
-use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD = 5;
-use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD = 100;
+use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 5;
+use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 100;
 
 #acodes:
 use constant GROUP_NAME          => 0x00000001;
