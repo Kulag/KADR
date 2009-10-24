@@ -440,7 +440,7 @@ use constant FILE_FCODE => "7ff87ff8";
 use constant FILE_ACODE => "fefcfcc0";
 
 use constant CODE_220_ENUM => 
-qw/aid eid gid lid other_episodes is_deprecated state
+qw/aid eid gid lid other_episodes is_deprecated status
    size ed2k md5 sha1 crc32
    quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
    dub_language sub_language length description aired_date
