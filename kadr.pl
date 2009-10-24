@@ -502,66 +502,6 @@ sub parse_args {
 	map { $mod->{$_} = shift @args if scalar @args } @names;
 }
 
-sub file_by_ed2k_size {
-	my ($self, $ed2k, $size) = @_;
-	
-	my $fileinfo = $self->{db}->fetch("anidb_files", ["*"], {ed2k => $ed2k}, 1);
-	return $fileinfo if defined $fileinfo;
-	return $self->_file_query({size => $size, ed2k => $ed2k});
-}
-
-sub file_by_fid {
-	my($self, $fid) = @_;
-
-	my $fileinfo = $self->{db}->fetch("anidb_files", ["*"], {fid => $fid}, 1);
-	return $fileinfo if defined $fileinfo;
-	return $self->_file_query({fid => $fid});
-}
-
-sub _file_query {
-	my($self, $query) = @_;
-	$query->{acode} = ANIME_CODE;# + 134217728 + 268435456 + 536870912;
-	$query->{fcode} = FILE_CODE;
-	
-	my $msg = $self->_sendrecv("FILE", $query);
-	$msg =~ s/.*\n//im;
-	my @f = split /\|/, $msg;
-
-	if(scalar @f > 0) {
-		my %fileinfo;
-		map { $fileinfo{(FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
-		$fileinfo{anime_name_short} =~ s/'/,/g;
-		$fileinfo{anime_synonyms}   =~ s/'/,/g;
-		
-		if($fileinfo{status_code} & FILE_STATUS_CEN) {
-			$fileinfo{censored} = "cen";
-		} elsif($fileinfo{status_code} & FILE_STATUS_UNC) {
-			$fileinfo{censored} = "unc";
-		}
-		
-		if($fileinfo{status_code} & FILE_STATUS_ISV2) {
-			$fileinfo{version} = "v2";
-		} elsif($fileinfo{status_code} & FILE_STATUS_ISV3) {
-			$fileinfo{version} = "v3";
-		} elsif($fileinfo{status_code} & FILE_STATUS_ISV4) {
-			$fileinfo{version} = "v4";
-		} elsif($fileinfo{status_code} & FILE_STATUS_ISV5) {
-			$fileinfo{version} = "v5";
-		}
-		
-		$fileinfo{crcok} = $fileinfo{status_code} & FILE_STATUS_CRCOK;
-		$fileinfo{crcerr} = $fileinfo{status_code} & FILE_STATUS_CRCERR;
-		$fileinfo{anime_name_english} = $fileinfo{anime_name_romaji} if not defined $fileinfo{anime_name_english} or $fileinfo{anime_name_english} eq '';
-		$fileinfo{anime_name_romaji} = $fileinfo{anime_name_english} if not defined $fileinfo{anime_name_romaji} or $fileinfo{anime_name_romaji} eq '';
-		return undef if not defined $fileinfo{anime_name_romaji} and not defined $fileinfo{anime_name_english};
-		
-		$fileinfo{updated} = time;
-		$self->{db}->set('anidb_files', \%fileinfo, {fid => $fileinfo{fid}});
-		return \%fileinfo;
-	}
-	return undef;
-}
-
 sub file_query {
 	my($self, $query) = @_;
 	
