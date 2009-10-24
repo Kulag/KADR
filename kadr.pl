@@ -587,15 +587,15 @@ sub file_query {
 }
 
 sub file_version {
-	my($file) = @_;
+	my($self, $file) = @_;
 	
-	if($fileinfo{status} & FILE_STATUS_ISV2) {
+	if($file->{status} & FILE_STATUS_ISV2) {
 		return 2;
-	} elsif($fileinfo{status} & FILE_STATUS_ISV3) {
+	} elsif($file->{status} & FILE_STATUS_ISV3) {
 		return 3;
-	} elsif($fileinfo{status} & FILE_STATUS_ISV4) {
+	} elsif($file->{status} & FILE_STATUS_ISV4) {
 		return 4;
-	} elsif($fileinfo{status} & FILE_STATUS_ISV5) {
+	} elsif($file->{status} & FILE_STATUS_ISV5) {
 		return 5;
 	} else {
 		return 1;
