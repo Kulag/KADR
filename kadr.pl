@@ -575,32 +575,6 @@ sub file_query {
 		my @fields = split /\|/, $data;
 		map { $fileinfo{(CODE_220_ENUM)[$_]} = $fields[$_] } 0 .. scalar(CODE_220_ENUM) - 1;
 		
-		if($fileinfo{status_code} & FILE_STATUS_CEN) {
-			$fileinfo{censored} = 1;
-		} elsif($fileinfo{status_code} & FILE_STATUS_UNC) {
-			$fileinfo{censored} = 0;
-		} else {
-			$fileinfo{censored} = undef;
-		}
-		
-		if($fileinfo{status_code} & FILE_STATUS_ISV2) {
-			$fileinfo{version} = 2;
-		} elsif($fileinfo{status_code} & FILE_STATUS_ISV3) {
-			$fileinfo{version} = 3;
-		} elsif($fileinfo{status_code} & FILE_STATUS_ISV4) {
-			$fileinfo{version} = 4;
-		} elsif($fileinfo{status_code} & FILE_STATUS_ISV5) {
-			$fileinfo{version} = 5;
-		}
-		
-		if($fileinfo{status_code} & FILE_STATUS_CRCOK) {
-			$fileinfo{crcok} = 1;
-		} elsif($fileinfo{status_code} & FILE_STATUS_CRCERR) {
-			$fileinfo{crcok} = 0;
-		} else {
-			$fileinfo{crcok} = undef;
-		}
-		
 		$fileinfo{updated} = time;
 		$self->{db}->set('adbcache_file', \%fileinfo, {fid => $fileinfo{fid}});
 		return \%fileinfo;
@@ -608,6 +582,22 @@ sub file_query {
 		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
 	} elsif($code == 320) { # No such file.
 		return undef;
+	}
+}
+
+sub file_version {
+	my($file) = @_;
+	
+	if($fileinfo{status} & FILE_STATUS_ISV2) {
+		return 2;
+	} elsif($fileinfo{status} & FILE_STATUS_ISV3) {
+		return 3;
+	} elsif($fileinfo{status} & FILE_STATUS_ISV4) {
+		return 4;
+	} elsif($fileinfo{status} & FILE_STATUS_ISV5) {
+		return 5;
+	} else {
+		return 1;
 	}
 }
 
