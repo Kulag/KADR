@@ -380,6 +380,7 @@ use strict;
 use warnings;
 use IO::Socket;
 use Scalar::Util qw(reftype);
+use Encode;
 
 # Threshhold values are specified in packets.
 use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 5;
@@ -568,7 +569,7 @@ sub file_query {
 	$query->{fcode} = FILE_FCODE;
 	$query->{acode} = FILE_ACODE;
 	
-	my($code, $data) = split("\n", decode_utf8($self->_sendrecv("FILE", $query)));
+	my($code, $data) = split("\n", decode($self->{encoding}, $self->_sendrecv("FILE", $query)));
 	
 	$code = int((split(" ", $code))[0]);
 	if($code == 220) { # Success
