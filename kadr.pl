@@ -443,7 +443,7 @@ use constant CODE_220_ENUM =>
 qw/aid eid gid lid other_episodes is_deprecated status
    size ed2k md5 sha1 crc32
    quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
-   dub_language sub_language length description aired_date
+   dub_language sub_language length description air_date
    anime_total_episodes anime_highest_episode_number anime_year anime_type anime_related_aids anime_related_aid_types anime_categories
    anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
    episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
