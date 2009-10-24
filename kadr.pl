@@ -71,7 +71,7 @@ if($purge_old_db_entries) {
 	}
 }
 
-$db->cache([{table => "known_files", indices => ["filename", "size"]}, {table => "anidb_files", indices => ["ed2k"]}, {table => "anidb_mylist_file", indices => ["fid"]}, {table => "anidb_mylist_anime", indices => ["aid"]}]) if $db_caching;
+$db->cache([{table => "known_files", indices => ["filename", "size"]}, {table => "adbcache_file", indices => ["ed2k"]}, {table => "anidb_mylist_file", indices => ["fid"]}, {table => "anidb_mylist_anime", indices => ["aid"]}]) if $db_caching;
 
 my $a = AniDB::UDPClient->new({
 	username  => $username,
@@ -173,7 +173,7 @@ sub process_file {
 	if(!defined $mylistinfo) {
 		printer($file, "Adding", 0);
 		if (my $lid = $a->mylistadd($fileinfo->{fid})) {
-			$db->update("anidb_files", {lid => $lid}, {fid => $fileinfo->{fid}});
+			$db->update("adbcache_files", {lid => $lid}, {fid => $fileinfo->{fid}});
 			printer($file, "Added", 1);
 		} else {
 			printer($file, "Failed", 1);
