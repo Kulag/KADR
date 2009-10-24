@@ -374,22 +374,6 @@ sub range {
 	map { "$tag$_" } $start .. $end;
 }
 
-sub binary_search {
-	my($haystack, $needle) = @_;
-	my($start, $end) = (0, scalar(@$haystack) - 1);
-	while($start <= $end) {
-		my $mid = int(($start + $end) / 2);
-		if($$haystack[$mid] gt $needle) {
-			$end = $mid - 1;
-		} elsif($$haystack[$mid] lt $needle) {
-			$start = $mid + 1;
-		} else {
-			return $mid;
-		}	
-	}
-	return -1;
-}
-
 package AniDB::UDPClient;
 use strict;
 use warnings;
