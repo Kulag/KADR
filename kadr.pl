@@ -602,7 +602,7 @@ sub file_query {
 		}
 		
 		$fileinfo{updated} = time;
-		$self->{db}->set('anidb_files', \%fileinfo, {fid => $fileinfo{fid}});
+		$self->{db}->set('adbcache_file', \%fileinfo, {fid => $fileinfo{fid}});
 		return \%fileinfo;
 	} elsif($code == 322) { # Multiple files found.
 		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
