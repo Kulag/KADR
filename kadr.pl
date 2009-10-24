@@ -62,7 +62,7 @@ GetOptions(
 my $db = db->new("dbi:SQLite:$db_path");
 
 if($purge_old_db_entries) {
-	$db->{dbh}->do("DELETE FROM anidb_files WHERE updated < " . (time - $file_timeout));
+	$db->{dbh}->do("DELETE FROM adbcache_file WHERE updated < " . (time - $file_timeout));
 	if($reset_mylist_anime) {
 		$db->delete("anidb_mylist_anime", {});
 	} else {
