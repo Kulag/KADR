@@ -192,7 +192,7 @@ sub process_file {
 	my $dir = array_find(substr($file, 0, rindex($file, '/')), @scan_dirs);
 	my $file_output_dir = $dir;
 	
-	if(in_list($fileinfo->{episode}, $mylistanimeinfo->{watched_eps})) {
+	if(in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps})) {
 		$file_output_dir = $watched_output_dir unless array_contains($dir, @watched_dirs);
 	} else {
 		$file_output_dir = $unwatched_output_dir unless array_contains($dir, @unwatched_dirs);
@@ -206,7 +206,7 @@ sub process_file {
 	}
 	
 	my $file_version = $a->file_version($fileinfo);
-	my $newname = $fileinfo->{anime_romaji_name} . ($fileinfo->{episode_english_name} =~ /^(Complete Movie|ova|special|tv special)$/i ? '' : " - " . $fileinfo->{episode_number} . ($file_version > 1 ? "v$file_version" : "") . " - " . $fileinfo->{episode_name}) . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
+	my $newname = $fileinfo->{anime_romaji_name} . ($fileinfo->{episode_english_name} =~ /^(Complete Movie|ova|special|tv special)$/i ? '' : " - " . $fileinfo->{episode_number} . ($file_version > 1 ? "v$file_version" : "") . " - " . $fileinfo->{episode_english_name}) . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
 	
 	$newname = $fileinfo->{anime_romaji_name} . " - " . $fileinfo->{episode_number} . " - Episode " . $fileinfo->{episode_number} . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type} if length($newname) > 250;
 	
