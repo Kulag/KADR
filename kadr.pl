@@ -595,16 +595,16 @@ sub _mylist_anime_query {
 			
 			my $fileinfo = $self->file_query({fid => $mylistinfo{fid}});
 			
-			$mylistanimeinfo{anime_title} = $fileinfo->{anime_name_romaji};
+			$mylistanimeinfo{anime_title} = $fileinfo->{anime_romaji_name};
 			$mylistanimeinfo{episodes} = '';
 			$mylistanimeinfo{eps_with_state_unknown} = "";
 			
-			if($fileinfo->{episode} =~ /^(\w*?)[0]*(\d+)$/) {
+			if($fileinfo->{episode_number} =~ /^(\w*?)[0]*(\d+)$/) {
 				$mylistanimeinfo{eps_with_state_on_hdd} = "$1$2";
 				$mylistanimeinfo{watched_eps} = ($mylistinfo{viewdate} > 0 ? "$1$2" : "");
 			} else {
-				$mylistanimeinfo{eps_with_state_on_hdd} = $fileinfo->{episode};
-				$mylistanimeinfo{watched_eps} = ($mylistinfo{viewdate} > 0 ? $fileinfo->{episode} : "");
+				$mylistanimeinfo{eps_with_state_on_hdd} = $fileinfo->{episode_number};
+				$mylistanimeinfo{watched_eps} = ($mylistinfo{viewdate} > 0 ? $fileinfo->{episode_number} : "");
 			}
 			$mylistanimeinfo{eps_with_state_on_cd} = "";
 			$mylistanimeinfo{eps_with_state_deleted} = "";
