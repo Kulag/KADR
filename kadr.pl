@@ -173,7 +173,7 @@ sub process_file {
 	if(!defined $mylistinfo) {
 		printer($file, "Adding", 0);
 		if (my $lid = $a->mylistadd($fileinfo->{fid})) {
-			$db->update("adbcache_files", {lid => $lid}, {fid => $fileinfo->{fid}});
+			$db->update("adbcache_file", {lid => $lid}, {fid => $fileinfo->{fid}});
 			printer($file, "Added", 1);
 		} else {
 			printer($file, "Failed", 1);
