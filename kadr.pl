@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 # Copyright (c) 2008, clip9 <clip9str@gmail.com>
 
 # Permission to use, copy, modify, and/or distribute this software for any
