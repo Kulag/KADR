@@ -74,8 +74,6 @@ $db->cache([{table => "known_files", indices => ["filename", "size"]}, {table =>
 my $a = AniDB::UDPClient->new({
 	username  => $username,
 	password  => $password,
-	client    => "adbren",
-	clientver => "5",
 	db => $db,
 	port => 3700,
 	ignore_anti_flood => $ignore_anti_flood,
@@ -379,6 +377,9 @@ use IO::Uncompress::Inflate qw(inflate $InflateError);
 use Scalar::Util qw(reftype);
 use Encode;
 
+use constant CLIENT_NAME => "kadr";
+use constant CLIENT_VER => 1;
+
 # Threshhold values are specified in packets.
 use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 5;
 use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 100;
@@ -416,8 +417,6 @@ sub new {
 
 	defined $self->{username}  or die "Username not defined!\n";
 	defined $self->{password}  or die "Password not defined!\n";
-	defined $self->{client}    or die "Client not defined!\n";
-	defined $self->{clientver} or die "Clientver not defined!\n";
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
@@ -615,7 +614,7 @@ sub _mylist_anime_query {
 sub login {
 	my($self) = @_;
 	if(!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60)) {
-		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => $self->{client}, clientver => $self->{clientver}, nat => 1, enc => "UTF8", comp => 1});
+		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => "UTF8", comp => 1});
 		if(defined $msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
 			$self->{skey} = $1;
 			$self->{myaddr} = $2;
