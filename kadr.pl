@@ -26,7 +26,7 @@ use db;
 my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
 my($ignore_anti_flood, $clean_scan_dirs, $clean_removed_files, $db_path) = (0, 1, 1, "kadr.db");
 my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count) = (7200, 1036800, 1036800, 1);
-my($compression, $db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_db_entries) = (1, 1, 0, 0, '', 0, 1, 1);
+my($db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_db_entries) = (1, 0, 0, '', 0, 1, 1);
 my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
@@ -48,7 +48,6 @@ GetOptions(
 	"ignore-anti-flood" => \$ignore_anti_flood, # Allows it to ignore the 1 packet per 30 seconds rule, otherwise this rule is always followed, even when only a small number of commands are used. Intended to speed up short runs.
 	"clean-scan-dirs!" => \$clean_scan_dirs, # Default = true. false disables deletion of empty folders in the scanned directories.
 	"clean-removed-files!" => \$clean_removed_files, # Default is enabled. If enabled, set not found files that are on the database as deleted on anidb if they're still marked as on hdd.
-	"compression!" => \$compression,
 	"db-caching!" => \$db_caching, # Loads the entire db into memory. On a full run without any AniDB accesses (everything needed is cached) on about 4000 files, program runtime without is about 30-40 seconds, with is about 1.5-2 seconds.
 	"windows!" => \$windows,
 	"kde!" => \$kde, # Ignores .part files.
@@ -80,7 +79,6 @@ my $a = AniDB::UDPClient->new({
 	db => $db,
 	port => 3700,
 	ignore_anti_flood => $ignore_anti_flood,
-	compression => $compression,
 });
 
 my @files;
@@ -377,6 +375,7 @@ package AniDB::UDPClient;
 use strict;
 use warnings;
 use IO::Socket;
+use IO::Uncompress::Inflate qw(inflate $InflateError);
 use Scalar::Util qw(reftype);
 use Encode;
 
@@ -425,9 +424,6 @@ sub new {
 	$self->{handle}   = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
 	$self->{ipaddr}   = gethostbyname("api.anidb.info") or die("Gethostbyname('api.anidb.info'):" . $!);
 	$self->{sockaddr} = sockaddr_in(9000, $self->{ipaddr}) or die($!);
-	if($self->{compression}) {
-		use IO::Uncompress::Inflate qw(inflate $InflateError);
-	}
 	return $self;
 }
 
@@ -619,7 +615,7 @@ sub _mylist_anime_query {
 sub login {
 	my($self) = @_;
 	if(!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60)) {
-		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => $self->{client}, clientver => $self->{clientver}, nat => 1, enc => "UTF8", comp => $compression});
+		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => $self->{client}, clientver => $self->{clientver}, nat => 1, enc => "UTF8", comp => 1});
 		if(defined $msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
 			$self->{skey} = $1;
 			$self->{myaddr} = $2;
