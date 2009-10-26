@@ -24,7 +24,7 @@ use db;
 # TODO: convert all this to a single hash
 # TODO: allow loading settings from a config file
 my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
-my($ignore_anti_flood, $clean_scan_dirs, $clean_removed_files, $db_path) = (0, 1, 1, "kadr.db");
+my($clean_scan_dirs, $clean_removed_files, $db_path) = (1, 1, "kadr.db");
 my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count) = (7200, 1036800, 1036800, 1);
 my($db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_db_entries) = (1, 0, 0, '', 0, 1, 1);
 my $max_status_len = 1;
@@ -45,7 +45,6 @@ GetOptions(
 	"anidb-mylist-timeout=i" => \$mylist_timeout,
 	"anidb-mylist-watched-timeout=i" => \$mylist_watched_timeout,
 	"anidb-file-timeout=i" => \$file_timeout,
-	"ignore-anti-flood" => \$ignore_anti_flood, # Allows it to ignore the 1 packet per 30 seconds rule, otherwise this rule is always followed, even when only a small number of commands are used. Intended to speed up short runs.
 	"clean-scan-dirs!" => \$clean_scan_dirs, # Default = true. false disables deletion of empty folders in the scanned directories.
 	"clean-removed-files!" => \$clean_removed_files, # Default is enabled. If enabled, set not found files that are on the database as deleted on anidb if they're still marked as on hdd.
 	"db-caching!" => \$db_caching, # Loads the entire db into memory. On a full run without any AniDB accesses (everything needed is cached) on about 4000 files, program runtime without is about 30-40 seconds, with is about 1.5-2 seconds.
@@ -76,7 +75,6 @@ my $a = AniDB::UDPClient->new({
 	password  => $password,
 	db => $db,
 	port => 3700,
-	ignore_anti_flood => $ignore_anti_flood,
 });
 
 my @files;
@@ -644,9 +642,7 @@ sub _sendrecv {
 
 	while(!$recvmsg) {
 		if($self->{queries} > LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
-			if(!$self->{ignore_anti_flood}) {
-				while ($self->{queries} / (time - $self->{starttime}) > 0.033) {}
-			}
+			while ($self->{queries} / (time - $self->{starttime}) > 0.033) {}
 		} elsif($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
 			while($self->{last_command} + 2 > time) {}
 		}
