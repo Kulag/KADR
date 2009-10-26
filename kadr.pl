@@ -21,8 +21,6 @@ use Getopt::Long;
 use Digest::MD4;
 use db;
 
-# TODO: convert all this to a single hash
-# TODO: allow loading settings from a config file
 my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
 my($clean_scan_dirs, $clean_removed_files, $db_path) = (1, 1, "kadr.db");
 my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count) = (7200, 1036800, 1036800, 1);
