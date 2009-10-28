@@ -671,6 +671,11 @@ sub _sendrecv {
 	
 	$recvmsg = decode_utf8($recvmsg);
 	
+	if($recvmsg =~ /^555/) {
+		print "\nBanned, exiting.";
+		exit(1);
+	}
+	
 	# Check that the answer we received matches the query we sent.
 	$recvmsg =~ s/^(T\d+) (.*)/$2/;
 	if($1 ne $vars->{tag}) {
