@@ -138,7 +138,7 @@ sub recurse {
 	for my $path (@paths) {
 		opendir IMD, $path;
 		for(readdir IMD) {
-			if(!($_ eq '.' or $_ eq '..')) {
+			if(!($_ eq '.' or $_ eq '..' or ($windows and $_ eq 'System Volume Information'))) {
 				$_ = "$path/$_";
 				if(-d $_) {
 					push @paths, $_;
