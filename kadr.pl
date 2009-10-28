@@ -640,6 +640,7 @@ sub _sendrecv {
 	$vars->{'s'} = $self->{skey} if $self->{skey};
 	$vars->{'tag'} = "T" . $self->{queries};
 	$query .= ' ' . join('&', map { "$_=$vars->{$_}" } keys %{$vars}) . "\n";
+	$query = encode_utf8($query);
 
 	while(!$recvmsg) {
 		if($self->{queries} > LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
