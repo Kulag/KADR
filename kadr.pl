@@ -22,6 +22,7 @@ use File::Copy;
 use File::Find;
 use Getopt::Long;
 use Digest::MD4;
+use lib ".";
 use db;
 use Encode;
 
