@@ -427,7 +427,8 @@ sub new {
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
 	$self->{handle}   = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
-	$self->{sockaddr} = sockaddr_in(9000, gethostbyname("api.anidb.info") or die("Gethostbyname('api.anidb.info'):" . $!)) or die($!);
+	my $host = gethostbyname("api.anidb.info") or die($!);
+	$self->{sockaddr} = sockaddr_in(9000, $host) or die($!);
 	return $self;
 }
 
