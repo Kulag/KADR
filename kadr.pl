@@ -16,12 +16,18 @@
 # KADR was forked from ADBREN v4 Copyright (c) 2008, clip9 <clip9str@gmail.com>
 
 use strict;
+use utf8;
 use warnings;
 use File::Copy;
 use File::Find;
 use Getopt::Long;
 use Digest::MD4;
 use db;
+use Encode;
+
+$SIG{INT} = "cleanup";
+binmode STDIN, ':encoding(UTF-8)';
+binmode STDOUT, ':encoding(UTF-8)';
 
 my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
 my($clean_scan_dirs, $clean_removed_files, $db_path) = (1, 1, "kadr.db");
@@ -31,7 +37,6 @@ my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
 my $in_list_cache = bless {};
-
 
 GetOptions(
 	"username=s" => \$username,
@@ -133,12 +138,12 @@ sub recurse {
 	for my $path (@paths) {
 		opendir IMD, $path;
 		for(readdir IMD) {
-			if(!($_ eq '.' or $_ eq '..' or ($windows and $_ eq 'System Volume Information'))) {
+			if(!($_ eq '.' or $_ eq '..')) {
 				$_ = "$path/$_";
 				if(-d $_) {
 					push @paths, $_;
 				} else {
-					push @files, $_;
+					push @files, decode_utf8($_);
 				}
 			}
 		}
@@ -159,7 +164,7 @@ sub process_file {
 		printer($file, "Ignored", 1);
 		return $ed2k;
 	}
-
+	
 	# Auto-add to mylist.
 	my $mylistinfo = $a->mylist_file_by_fid($fileinfo->{fid});
 	if(!defined $mylistinfo) {
@@ -202,9 +207,8 @@ sub process_file {
 	
 	$newname = $fileinfo->{anime_romaji_name} . " - " . $fileinfo->{episode_number} . " - Episode " . $fileinfo->{episode_number} . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type} if length($newname) > 250;
 	
-	$newname =~ s/\//∕/g; # unix doesn't like / in filenames
-	$newname =~ s/[\\\\:\*"><\|\?]/_/g if $windows;
-
+	$newname =~ s/\//∕/g;
+	
 	unless($file eq "$file_output_dir/$newname") {
 		if(-e "$file_output_dir/$newname") {
 			print "\nRename from:   $file\nFailed to: $file_output_dir/$newname\n";
@@ -221,7 +225,7 @@ sub process_file {
 			
 		}
 	}
-
+	
 	return $fileinfo->{ed2k};
 }
 
@@ -249,7 +253,7 @@ sub ed2k_hash {
 	my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
 	my $size = -s $file;
 	my($ed2k, $avdumped);
-	my $r = $db->fetch("known_files", ["ed2k", "avdumped"], {filename => $file_sn, size => $size}, 1, "array");
+	my $r = $db->fetch("known_files", ["ed2k", "avdumped"], {filename => $file_sn, size => $size}, 1);
 	if(defined $r) {
 		($ed2k, $avdumped) = ($r->{ed2k}, $r->{avdumped});
 		avdump($file, $ed2k, $size) if $avdump and !$avdumped;
@@ -367,12 +371,17 @@ sub range {
 	map { "$tag$_" } $start .. $end;
 }
 
+sub cleanup {
+	$a->logout() if defined $a;
+	print "\nExiting.\n";
+	exit(1);
+}
+
 package AniDB::UDPClient;
 use strict;
 use warnings;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
-use Scalar::Util qw(reftype);
 use Encode;
 
 use constant CLIENT_NAME => "kadr";
@@ -411,23 +420,14 @@ use constant MYLIST_ANIME_ENUM => qw/anime_title episodes eps_with_state_unknown
 
 sub new {
 	my $self = bless {}, shift;
-	parse_args($self, @_);
-
-	defined $self->{username}  or die "Username not defined!\n";
-	defined $self->{password}  or die "Password not defined!\n";
+	$self->{$_} = $_[0]->{$_} for keys %{$_[0]};
+	
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
 	$self->{handle}   = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
-	$self->{ipaddr}   = gethostbyname("api.anidb.info") or die("Gethostbyname('api.anidb.info'):" . $!);
-	$self->{sockaddr} = sockaddr_in(9000, $self->{ipaddr}) or die($!);
+	$self->{sockaddr} = sockaddr_in(9000, gethostbyname("api.anidb.info") or die("Gethostbyname('api.anidb.info'):" . $!)) or die($!);
 	return $self;
-}
-
-sub parse_args {
-	my($mod, @args, @names) = @_;
-	map { $mod->{$_} = $args[0]->{$_} } keys %{$args[0]} and shift @args if reftype($args[0]) eq 'HASH';
-	map { $mod->{$_} = shift @args if scalar @args } @names;
 }
 
 sub file_query {
@@ -440,7 +440,7 @@ sub file_query {
 	$query->{fmask} = FILE_FMASK;
 	$query->{amask} = FILE_AMASK;
 	
-	my($code, $data) = split("\n", decode_utf8($self->_sendrecv("FILE", $query)));
+	my($code, $data) = split("\n", $self->_sendrecv("FILE", $query));
 	
 	$code = int((split(" ", $code))[0]);
 	if($code == 220) { # Success
@@ -666,7 +666,9 @@ sub _sendrecv {
 		my $data = substr($recvmsg, 2);
 		inflate \$data => \$recvmsg or return undef;
 	}
-
+	
+	$recvmsg = decode_utf8($recvmsg);
+	
 	# Check that the answer we received matches the query we sent.
 	$recvmsg =~ s/^(T\d+) (.*)/$2/;
 	if($1 ne $vars->{tag}) {

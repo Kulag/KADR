@@ -16,6 +16,7 @@ package db;
 use strict;
 use warnings;
 use DBI;
+use Encode;
 
 sub new {
 	my $self = bless {}, shift;
@@ -38,13 +39,19 @@ sub fetch {
 		for my $index (keys %{$whereinfo}) {
 			$ptr = $ptr->{$whereinfo->{$index}};
 		}
-		return $ptr if defined $ptr;
+		if(defined $ptr) {
+			$ptr->{$_} = decode_utf8($ptr->{$_}) for keys %$ptr;
+			return $ptr
+		}
 	}
 	
 	my $sth = $self->{dbh}->prepare_cached("SELECT " . join(",", @$what) . " FROM `$table`" . $self->_whereinfo($whereinfo) . ($limit ? "LIMIT $limit" : "")) or die $DBI::errstr;
 	$sth->execute(map { "$whereinfo->{$_}" } keys(%{$whereinfo}));
 	my $r = int($limit) == 1 ? $sth->fetchrow_hashref() : $sth->fetchall_hashref();
 	$sth->finish();
+	if(defined $r) {
+		$r->{$_} = decode_utf8($r->{$_}) for keys %$r;
+	}
 	$r;
 }
 
@@ -60,15 +67,15 @@ sub exists {
 sub insert {
 	my($self, $table, $info) = @_;
 	my $sth = $self->{dbh}->prepare_cached("INSERT INTO $table (" . join(",", map { "`$_`" } keys(%{$info})) . ") VALUES(" . join(",", map {"?"} keys(%{$info})) . ")");
-	$sth->execute(map { "$info->{$_}" } keys(%{$info}));
+	$sth->execute(map { encode_utf8("$info->{$_}") } keys(%{$info}));
 	$sth->finish();
 }
 
 sub update {
 	my($self, $table, $info, $whereinfo) = @_;
 	my $sth = $self->{dbh}->prepare_cached("UPDATE $table SET `" . join("`=?,`", keys(%{$info})) . "`=?" . $self->_whereinfo($whereinfo));
-	my @a = map { "$info->{$_}" } keys(%{$info});
-	my @b = map { "$whereinfo->{$_}" } keys(%{$whereinfo});
+	my @a = map { encode_utf8("$info->{$_}") } keys(%{$info});
+	my @b = map { encode_utf8("$whereinfo->{$_}") } keys(%{$whereinfo});
 	$sth->execute(@a, @b);
 	$sth->finish();
 }
@@ -90,7 +97,7 @@ sub remove {
 	}
 	
 	my $sth = $self->{dbh}->prepare_cached("DELETE FROM $table" . $self->_whereinfo($whereinfo));
-	$sth->execute(map { "$whereinfo->{$_}" } keys(%{$whereinfo}));
+	$sth->execute(map { encode_utf8("$whereinfo->{$_}") } keys(%{$whereinfo}));
 	$sth->finish();
 }
 
