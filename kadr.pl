@@ -36,7 +36,7 @@ my($db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_
 my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
-my $in_list_cache = bless {};
+my $in_list_cache = {};
 
 GetOptions(
 	"username=s" => \$username,
