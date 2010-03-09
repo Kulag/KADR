@@ -237,7 +237,7 @@ sub array_find {
 	foreach my $straw (@haystack) {
 		return $straw if index($key, $straw) > -1;
 	}
-	return undef;
+	return;
 }
 
 sub avdump {
@@ -456,7 +456,7 @@ sub file_query {
 	} elsif($code == 322) { # Multiple files found.
 		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
 	} elsif($code == 320) { # No such file.
-		return undef;
+		return;
 	} else {
 		die "Error: Unexpected return code for file query recieved. Got $code.\n";
 	}
@@ -541,7 +541,7 @@ sub mylist_file_by_ed2k_size {
 
 	my $fileinfo = $self->{db}->fetch("adbcache_file", ["*"], {size => $size, ed2k => $ed2k}, 1);
 	if(defined($fileinfo)) {
-		return undef if !$fileinfo->{lid};
+		return if !$fileinfo->{lid};
 		
 		$self->{db}->remove("anidb_mylist_file", {lid => $fileinfo->{lid}});
 		return $self->mylist_file_by_lid($fileinfo->{lid});
@@ -575,7 +575,7 @@ sub _mylist_anime_query {
 	my $msg = $self->_sendrecv("MYLIST", $query);
 	my $single_episode = ($msg =~ /^221/);
 	my $success = ($msg =~ /^312/);
-	return undef if not ($success or $single_episode);
+	return if not ($success or $single_episode);
 	$msg =~ s/.*\n//im;
 	my @f = split /\|/, $msg;
 	
@@ -608,7 +608,7 @@ sub _mylist_anime_query {
 		$self->{db}->set('anidb_mylist_anime', \%mylistanimeinfo, {aid => $mylistanimeinfo{aid}});
 		return \%mylistanimeinfo;
 	}
-	return undef;
+	return;
 }
 
 sub login {
@@ -667,7 +667,7 @@ sub _sendrecv {
 	# Check if the data is compressed.
 	if(substr($recvmsg, 0, 2) eq "\x00\x00") {
 		my $data = substr($recvmsg, 2);
-		inflate \$data => \$recvmsg or return undef;
+		inflate \$data => \$recvmsg or return;
 	}
 	
 	$recvmsg = decode_utf8($recvmsg);
