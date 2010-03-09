@@ -243,7 +243,7 @@ sub array_find {
 sub avdump {
 	my($file, $ed2k, $size) = @_;
 	printer($file, "Avdumping", 0);
-	(my $esc_file = $file) =~ s/(["'`])/\\$1/s; # I never quite figured out how to get it to avdump files with quotation marks in the names.
+	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
 	system "$avdump -as -tout:20:6555 \"$esc_file\" > /dev/null";
 	$db->update("known_files", {avdumped => 1}, {ed2k => $ed2k, size => $size});
 	printer($file, "Avdumped", 1);
