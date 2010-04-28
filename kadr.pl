@@ -381,6 +381,7 @@ sub cleanup {
 package AniDB::UDPClient;
 use strict;
 use warnings;
+use Time::HiRes;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
 use Encode;
@@ -645,12 +646,17 @@ sub _sendrecv {
 
 	while(!$recvmsg) {
 		if($self->{queries} > LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
-			while ($self->{queries} / (time - $self->{starttime}) > 0.033) {}
-		} elsif($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
-			while($self->{last_command} + 2 > time) {}
+			if(($self->{queries} - LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) / (Time::HiRes::time - $self->{starttime}) > 0.033) {
+				Time::HiRes::sleep((30 * ($self->{queries} - LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) + $self->{starttime}) - Time::HiRes::time);
+			}
+		}
+		if($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
+			if($self->{last_command} + 2 > Time::HiRes::time) {
+				Time::HiRes::sleep($self->{last_command} + 2 - Time::HiRes::time);
+			}
 		}
 		
-		$self->{last_command} = time;
+		$self->{last_command} = Time::HiRes::time;
 		$self->{queries} += 1;
 		
 		send($self->{handle}, $query, 0, $self->{sockaddr}) or die( "Send error: " . $! );
