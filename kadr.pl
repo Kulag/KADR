@@ -691,6 +691,11 @@ sub _sendrecv {
 		return $self->_sendrecv($query, $vars);
 	}
 	
+	# Check for a server error.
+	if($recvmsg =~ /^6\d+.*$/ or $recvmsg =~ /^555/) {
+		die("\nAnidb error:\n$recvmsg");
+	}
+	
 	# Check that the answer we received matches the query we sent.
 	$recvmsg =~ s/^(T\d+) (.*)/$2/;
 	if(not defined($1) or $1 ne $vars->{tag}) {
@@ -702,11 +707,6 @@ sub _sendrecv {
 		undef $self->{skey};
 		$self->login();
 		return $self->_sendrecv($query, $vars);
-	}
-	
-	# Check for a server error.
-	if($recvmsg =~ /^6\d+.*$/ or $recvmsg =~ /^555/) {
-		die("\nAnidb error:\n$recvmsg");
 	}
 	
 	return $recvmsg;
