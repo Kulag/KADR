@@ -33,7 +33,8 @@ binmode STDOUT, ':encoding(UTF-8)';
 my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
 my($clean_scan_dirs, $clean_removed_files, $db_path) = (1, 1, "kadr.db");
 my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count) = (7200, 1036800, 1036800, 1);
-my($db_caching, $windows, $kde, $avdump, $reset_mylist_anime, $move, $purge_old_db_entries) = (1, 0, 0, '', 0, 1, 1);
+my($db_caching, $windows, $kde, $avdump, $anidb_busy_sleep_time) = (1, 0, 0, '', 10*60);
+my($reset_mylist_anime, $move, $purge_old_db_entries) = (0, 1, 1);
 my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
@@ -57,6 +58,7 @@ GetOptions(
 	"windows!" => \$windows,
 	"kde!" => \$kde, # Ignores .part files.
 	"avdump=s" => \$avdump,
+	'anidb-busy-sleep-time=i' => \$anidb_busy_sleep_time, # How long (in seconds) to sleep if AniDB informs us it's too busy to talk to us.
 	"reset-mylist-anime!" => \$reset_mylist_anime, # Debug option. Default = false. true wipes all mylist_anime records from the cache, useful for when something breaks, and adbren-mod starts caching lots of invalid information.
 	"move!" => \$move, # Debug option. Default = true. false does everything short of moving/renaming the files.
 	"purge-old-db-entries!" => \$purge_old_db_entries, # Debug option. Default = true. false disables deletion of old cached records.
@@ -681,6 +683,12 @@ sub _sendrecv {
 	if($recvmsg =~ /^555/) {
 		print "\nBanned, exiting.";
 		exit(1);
+	}
+	
+	if($recvmsg =~ /^602/) {
+		print "\nAniDB is too busy, will retry in $anidb_busy_sleep_time seconds.";
+		Time::HiRes::sleep($anidb_busy_sleep_time);
+		return $self->_sendrecv($query, $vars);
 	}
 	
 	# Check that the answer we received matches the query we sent.
