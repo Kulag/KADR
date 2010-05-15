@@ -646,8 +646,8 @@ sub _sendrecv {
 
 	while(!$recvmsg) {
 		if($self->{queries} > LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
-			if(($self->{queries} - LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) / (Time::HiRes::time - $self->{starttime}) > 0.033) {
-				Time::HiRes::sleep((30 * ($self->{queries} - LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) + $self->{starttime}) - Time::HiRes::time);
+			while((my $waittime = (30 * ($self->{queries} - LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) + $self->{starttime}) - Time::HiRes::time) > 0) {
+				Time::HiRes::sleep($waittime);
 			}
 		}
 		if($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
