@@ -76,7 +76,14 @@ if($purge_old_db_entries) {
 	}
 }
 
-$db->cache([{table => "known_files", indices => ["filename", "size"]}, {table => "adbcache_file", indices => ["ed2k", 'size']}, {table => "anidb_mylist_file", indices => ["fid"]}, {table => "anidb_mylist_anime", indices => ["aid"]}]) if $db_caching;
+if($db_caching) {
+	$db->cache([
+		{table => 'known_files', indices => ['filename', 'size']},
+		{table => 'adbcache_file', indices => ['ed2k', 'size']},
+		{table => 'anidb_mylist_file', indices => ['fid']},
+		{table => 'anidb_mylist_anime', indices => ['aid']},
+	]);
+}
 
 my $a = AniDB::UDPClient->new({
 	username  => $username,
