@@ -15,9 +15,8 @@
 #
 # KADR was forked from ADBREN v4 Copyright (c) 2008, clip9 <clip9str@gmail.com>
 
-use strict;
-use utf8;
-use warnings;
+use v5.10;
+use common::sense;
 use File::Copy;
 use File::Find;
 use Getopt::Long;
@@ -198,9 +197,9 @@ sub process_file {
 	my $file_output_dir = $dir;
 	
 	if(in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps})) {
-		$file_output_dir = $watched_output_dir unless array_contains($dir, @watched_dirs);
+		$file_output_dir = $watched_output_dir unless $dir ~~ @watched_dirs;
 	} else {
-		$file_output_dir = $unwatched_output_dir unless array_contains($dir, @unwatched_dirs);
+		$file_output_dir = $unwatched_output_dir unless $dir ~~ @unwatched_dirs;
 	}
 
 	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $watched_output_dir and $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $unwatched_output_dir and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
@@ -236,8 +235,6 @@ sub process_file {
 	
 	return $fileinfo->{ed2k};
 }
-
-sub array_contains { defined array_find(@_) }
 
 sub array_find {
 	my($key, @haystack) = @_;
