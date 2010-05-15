@@ -423,14 +423,13 @@ use constant MYLIST_FILE_ENUM => qw/lid fid eid aid gid date state viewdate stor
 use constant MYLIST_ANIME_ENUM => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
 
 sub new {
-	my $self = bless {}, shift;
-	$self->{$_} = $_[0]->{$_} for keys %{$_[0]};
-	
+	my($package, $opts) = @_;
+	my $self = bless $opts, $package;
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
-	$self->{handle}   = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
-	my $host = gethostbyname("api.anidb.info") or die($!);
+	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
+	my $host = gethostbyname('api.anidb.info') or die($!);
 	$self->{sockaddr} = sockaddr_in(9000, $host) or die($!);
 	return $self;
 }
