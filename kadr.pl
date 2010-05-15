@@ -295,15 +295,11 @@ sub calc_ed2k_hash {
 		$ctx->add($buffer);
 		$b++;
 		$donelen += $length;
-		if($b % 100) {
-			my $progress = ($donelen / $size) * 100;
-			printer($file, "Hashing " . substr($progress, 0, index($progress, '.') + 2) . "%", 0);
-		}
-
 		if($b == 95) {
 			$ctx2->add($ctx->digest);
 			$b = 0;
 			$block++;
+			printer($file, sprintf('Hashing %.01f%%', ($donelen / $size) * 100), 0);
 		}
 	}
 	close($handle);
