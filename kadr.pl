@@ -255,23 +255,25 @@ sub ed2k_hash {
 	my($file) = @_;
 	my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
 	my $size = -s $file;
-	my($ed2k, $avdumped);
-	my $r = $db->fetch("known_files", ["ed2k", "avdumped"], {filename => $file_sn, size => $size}, 1);
-	if(defined $r) {
-		($ed2k, $avdumped) = ($r->{ed2k}, $r->{avdumped});
-		avdump($file, $ed2k, $size) if $avdump and !$avdumped;
-		return $ed2k;
+
+	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file_sn, size => $size}, 1)) {
+		avdump($file, $r->{ed2k}, $size) if $avdump and !$r->{avdumped};
+		return $r->{ed2k};
 	}
-	
-	$ed2k = calc_ed2k_hash($file);
-	$db->insert("known_files", {filename => $file_sn, size => $size, ed2k => $ed2k});
-	avdump($file, $ed2k, $size) if $avdump;
+
+	my $ed2k = calc_ed2k_hash($file, $size);
+	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
+		$db->update('known_files', {filename => $file_sn}, {ed2k => $ed2k, size => $size});
+	}
+	else {
+		$db->insert('known_files', {filename => $file_sn, size => $size, ed2k => $ed2k});
+		avdump($file, $ed2k, $size) if $avdump;
+	}
 	return $ed2k;
 }
 
 sub calc_ed2k_hash {
-	my($file) = @_;
-	my $ed2k;
+	my($file, $size) = @_;
 	my $ctx    = Digest::MD4->new;
 	my $ctx2   = Digest::MD4->new;
 	my $buffer;
@@ -282,14 +284,12 @@ sub calc_ed2k_hash {
 	my $b      = 0;
 	my $length = 0;
 	my $donelen= 0;
-	my $size = -s $file;
 	while($length = read $handle, $buffer, 102400) {
 		while($length < 102400) {
-			my $missing = 102400 - $length;
+			last if $donelen + $length == $size;
 			my $missing_buffer;
-			my $missing_read = read $handle, $missing_buffer, $missing;
+			my $missing_read = read $handle, $missing_buffer, 102400 - $length;
 			$length += $missing_read;
-			last if !$missing_read;
 			$buffer .= $missing_buffer;
 		}
 		$ctx->add($buffer);
