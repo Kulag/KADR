@@ -28,37 +28,67 @@ sub cache {
 	my($self, $to_cache) = @_;
 	$self->{cache} = bless {};
 	for(@{$to_cache}) {
-		$self->{cache}->{join '-', ($_->{table}, @{$_->{indices}})} = $self->{dbh}->selectall_hashref("SELECT * FROM " . $_->{table}, $_->{indices});
+		my $ckey = join '-', ($_->{table}, @{$_->{indices}});
+		$self->{cache}->{$ckey} = $self->{dbh}->selectall_hashref('SELECT * FROM ' . $_->{table}, $_->{indices});
+		if(defined $self->{cache}->{$ckey}) {
+			_cache_mark_utf8($self->{cache}->{$ckey}, scalar(@{$_->{indices}}));
+		}
 	}
+	return;
+}
+
+sub _cache_mark_utf8 {
+	my($cache, $index_depth) = @_;
+	if($index_depth == 0) {
+		for(keys %$cache) {
+			Encode::_utf8_on($cache->{$_});
+		}
+	}
+	elsif($index_depth > 0) {
+		my $new_depth = $index_depth - 1;
+		for(keys %$cache) {
+			_cache_mark_utf8($cache->{$_}, $new_depth);
+		}
+	}
+	else {
+		die 'bad index depth in cache';
+	}
+	return;
 }
 
 sub fetch {
 	my($self, $table, $what, $whereinfo, $limit) = @_;
-	if(defined $self->{cache}->{join('-', ($table, keys %{$whereinfo}))}) {
-		my $ptr = $self->{cache}->{join('-', ($table, keys %{$whereinfo}))};
-		for my $index (keys %{$whereinfo}) {
-			$ptr = $ptr->{$whereinfo->{$index}};
+	my $ckey = join('-', ($table, keys %{$whereinfo}));
+	if(defined $self->{cache}->{$ckey}) {
+		my $ptr = $self->{cache}->{$ckey};
+		for(values %{$whereinfo}) {
+			$ptr = $ptr->{$_};
 		}
-		if(defined $ptr) {
-			$ptr->{$_} = decode_utf8($ptr->{$_}) for keys %$ptr;
-			return $ptr
-		}
+		return $ptr if defined $ptr;
 	}
 	
 	my $sth = $self->{dbh}->prepare_cached("SELECT " . join(",", @$what) . " FROM `$table`" . $self->_whereinfo($whereinfo) . ($limit ? "LIMIT $limit" : "")) or die $DBI::errstr;
-	$sth->execute(map { "$whereinfo->{$_}" } keys(%{$whereinfo}));
+	my @vals = values(%{$whereinfo});
+	for(@vals) {
+		utf8::upgrade($_)
+	}
+	$sth->execute(@vals);
 	my $r = int($limit) == 1 ? $sth->fetchrow_hashref() : $sth->fetchall_hashref();
 	$sth->finish();
 	if(defined $r) {
-		$r->{$_} = decode_utf8($r->{$_}) for keys %$r;
+		Encode::_utf8_on($r->{$_}) for keys %$r;
 	}
-	$r;
+	return $r;
 }
 
 sub exists {
 	my($self, $table, $whereinfo) = @_;
 	my $sth = $self->{dbh}->prepare_cached("SELECT count(*) FROM $table" . $self->_whereinfo($whereinfo)) or die $DBI::errstr;
-	$sth->execute(map { "$whereinfo->{$_}" } keys(%{$whereinfo}));
+	my @vals = values(%{$whereinfo});
+	for(@vals) {
+		utf8::upgrade($_)
+	}
+	$sth->execute(@vals);
 	my($count) = $sth->fetchrow_array();
 	$sth->finish();
 	return $count;
@@ -67,16 +97,22 @@ sub exists {
 sub insert {
 	my($self, $table, $info) = @_;
 	my $sth = $self->{dbh}->prepare_cached("INSERT INTO $table (" . join(",", map { "`$_`" } keys(%{$info})) . ") VALUES(" . join(",", map {"?"} keys(%{$info})) . ")");
-	$sth->execute(map { encode_utf8("$info->{$_}") } keys(%{$info}));
+	my @vals = values(%{$info});
+	for(@vals) {
+		utf8::upgrade($_)
+	}
+	$sth->execute(@vals);
 	$sth->finish();
 }
 
 sub update {
 	my($self, $table, $info, $whereinfo) = @_;
 	my $sth = $self->{dbh}->prepare_cached("UPDATE $table SET `" . join("`=?,`", keys(%{$info})) . "`=?" . $self->_whereinfo($whereinfo));
-	my @a = map { encode_utf8("$info->{$_}") } keys(%{$info});
-	my @b = map { encode_utf8("$whereinfo->{$_}") } keys(%{$whereinfo});
-	$sth->execute(@a, @b);
+	my @vals = (values(%$info), values(%$whereinfo));
+	for(@vals) {
+		utf8::upgrade($_)
+	}
+	$sth->execute(@vals);
 	$sth->finish();
 }
 
@@ -97,7 +133,11 @@ sub remove {
 	}
 	
 	my $sth = $self->{dbh}->prepare_cached("DELETE FROM $table" . $self->_whereinfo($whereinfo));
-	$sth->execute(map { encode_utf8("$whereinfo->{$_}") } keys(%{$whereinfo}));
+	my @vals = values(%{$whereinfo});
+	for(@vals) {
+		utf8::upgrade($_)
+	}
+	$sth->execute(@vals);
 	$sth->finish();
 }
 
