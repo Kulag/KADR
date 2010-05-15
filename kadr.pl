@@ -132,9 +132,7 @@ if ($clean_removed_files) {
 	}
 }
 
-$a->logout;
-$db->{dbh}->disconnect();
-STDOUT->printflush("\r" . ' ' x $last_msg_len . "\r");
+cleanup();
 
 if($clean_scan_dirs) {
 	for(@scan_dirs) {
@@ -379,8 +377,9 @@ sub range {
 
 sub cleanup {
 	$a->logout() if defined $a;
-	print "\nExiting.\n";
-	exit(1);
+	$db->{dbh}->disconnect();
+	STDOUT->printflush("\r" . ' ' x $last_msg_len . "\rExiting.\n");
+	exit;
 }
 
 package AniDB::UDPClient;
