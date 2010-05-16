@@ -17,13 +17,12 @@
 
 use v5.10;
 use common::sense;
+use DBI::SpeedySimple;
+use Digest::MD4;
+use Encode;
 use File::Copy;
 use File::Find;
 use Getopt::Long;
-use Digest::MD4;
-use lib ".";
-use db;
-use Encode;
 
 $SIG{INT} = "cleanup";
 binmode STDIN, ':encoding(UTF-8)';
@@ -63,7 +62,7 @@ GetOptions(
 	"purge-old-db-entries!" => \$purge_old_db_entries, # Debug option. Default = true. false disables deletion of old cached records.
 );
 
-my $db = db->new("dbi:SQLite:$db_path");
+my $db = DBI::SpeedySimple->new("dbi:SQLite:$db_path");
 
 if($purge_old_db_entries) {
 	$db->{dbh}->do("DELETE FROM adbcache_file WHERE updated < " . (time - $file_timeout));
