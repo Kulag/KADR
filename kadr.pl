@@ -18,11 +18,12 @@
 use v5.10;
 use common::sense;
 use DBI::SpeedySimple;
-use Digest::MD4;
+use Digest::ED2K;
 use Encode;
 use File::Copy;
 use File::Find;
 use Getopt::Long;
+use PortIO;
 
 $SIG{INT} = "cleanup";
 binmode STDIN, ':encoding(UTF-8)';
@@ -32,7 +33,7 @@ my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_ou
 my($clean_scan_dirs, $clean_removed_files, $db_path) = (1, 1, "kadr.db");
 my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count) = (7200, 1036800, 1036800, 1);
 my($db_caching, $windows, $kde, $avdump, $anidb_busy_sleep_time) = (1, 0, 0, '', 10*60);
-my($reset_mylist_anime, $move, $purge_old_db_entries) = (0, 1, 1);
+my($reset_mylist_anime, $move, $purge_old_db_entries, $show_hashing_progress) = (0, 1, 1, 1);
 my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
@@ -57,6 +58,7 @@ GetOptions(
 	"kde!" => \$kde, # Ignores .part files.
 	"avdump=s" => \$avdump,
 	'anidb-busy-sleep-time=i' => \$anidb_busy_sleep_time, # How long (in seconds) to sleep if AniDB informs us it's too busy to talk to us.
+	'show-hashing-progress!' => \$show_hashing_progress, # Only disable if you think that printing the hashing progess is taking up a significant amount of CPU time when hashing a file.
 	"reset-mylist-anime!" => \$reset_mylist_anime, # Debug option. Default = false. true wipes all mylist_anime records from the cache, useful for when something breaks, and adbren-mod starts caching lots of invalid information.
 	"move!" => \$move, # Debug option. Default = true. false does everything short of moving/renaming the files.
 	"purge-old-db-entries!" => \$purge_old_db_entries, # Debug option. Default = true. false disables deletion of old cached records.
@@ -262,7 +264,25 @@ sub ed2k_hash {
 		return $r->{ed2k};
 	}
 
-	my $ed2k = calc_ed2k_hash($file, $size);
+	my $ctx = Digest::ED2K->new;
+	my $fh = file_open('<:mmap:raw', $file);
+	if($show_hashing_progress) {
+		my $buffer;
+		my $bytes_done;
+		while(my $bytes_read = read $fh, $buffer, Digest::ED2K::CHUNK_SIZE) {
+			$ctx->add($buffer);
+			$bytes_done += $bytes_read;
+			printer($file, sprintf('Hashing %.01f%%', ($bytes_done / $size) * 100), 0);
+		}
+	}
+	else {
+		printer($file, 'Hashing', 0);
+		$ctx->addfile($fh);
+	}
+	close $fh;
+	my $ed2k = $ctx->hexdigest;
+	printer($file, 'Hashed', 1);
+
 	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
 		$db->update('known_files', {filename => $file_sn}, {ed2k => $ed2k, size => $size});
 	}
@@ -271,44 +291,6 @@ sub ed2k_hash {
 		avdump($file, $ed2k, $size) if $avdump;
 	}
 	return $ed2k;
-}
-
-sub calc_ed2k_hash {
-	my($file, $size) = @_;
-	my $ctx    = Digest::MD4->new;
-	my $ctx2   = Digest::MD4->new;
-	my $buffer;
-	open my $handle, "<", $file or die $!;
-	binmode $handle;
-
-	my $block  = 0;
-	my $b      = 0;
-	my $length = 0;
-	my $donelen= 0;
-	while($length = read $handle, $buffer, 102400) {
-		while($length < 102400) {
-			last if $donelen + $length == $size;
-			my $missing_buffer;
-			my $missing_read = read $handle, $missing_buffer, 102400 - $length;
-			$length += $missing_read;
-			$buffer .= $missing_buffer;
-		}
-		$ctx->add($buffer);
-		$b++;
-		$donelen += $length;
-		if($b == 95) {
-			$ctx2->add($ctx->digest);
-			$b = 0;
-			$block++;
-			printer($file, sprintf('Hashing %.01f%%', ($donelen / $size) * 100), 0);
-		}
-	}
-	close($handle);
-	printer($file, "Hashed", 1);
-	return $ctx->hexdigest if $block == 0;
-	return $ctx2->hexdigest if $b == 0;
-	$ctx2->add($ctx->digest);
-	return $ctx2->hexdigest;
 }
 
 sub printer {
