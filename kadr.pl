@@ -219,7 +219,8 @@ sub process_file {
 	
 	unless($file eq "$file_output_dir/$newname") {
 		if(-e "$file_output_dir/$newname") {
-			print "\nRename from:   $file\nFailed to: $file_output_dir/$newname\n";
+			print "\n";
+			printer("$file_output_dir/$newname", 'Rename target already exists', 1);
 		} else {
 			printer($file, "File", 1);
 			if($move) {
