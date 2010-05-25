@@ -720,5 +720,6 @@ sub _sendrecv {
 }
 
 sub DESTROY {
+	my $self = shift;
 	$self->logout;
 }
