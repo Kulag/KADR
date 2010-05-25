@@ -17,66 +17,79 @@
 
 use v5.10;
 use common::sense;
+use Config::YAML;
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
 use File::Copy;
+use File::HomeDir;
 use File::Find;
 use Getopt::Long;
 use PortIO;
+use Readonly;
 
 $SIG{INT} = "cleanup";
 binmode STDIN, ':encoding(UTF-8)';
 binmode STDOUT, ':encoding(UTF-8)';
 
-my($username, $password, @scan_dirs, @watched_dirs, @unwatched_dirs, $watched_output_dir, $unwatched_output_dir);
-my($clean_scan_dirs, $clean_removed_files, $db_path) = (1, 1, "kadr.db");
-my($mylist_timeout, $mylist_watched_timeout, $file_timeout, $thread_count) = (7200, 1036800, 1036800, 1);
-my($db_caching, $windows, $kde, $avdump, $anidb_busy_sleep_time) = (1, 0, 0, '', 10*60);
-my($reset_mylist_anime, $move, $purge_old_db_entries, $show_hashing_progress) = (0, 1, 1, 1);
+# Some debug options
+Readonly my $appdir => $ENV{KADR_DIR} // File::HomeDir->my_home . '/.kadr';
+Readonly my $dont_move => 0; # Does everything short of moving/renaming the files when true.
+Readonly my $dont_expire_cache => 0; # Leaves expired cache entries untouched.
+
+if(!is_file("$appdir/config")) {
+	if(!is_dir($appdir)) {
+		mkpath($appdir);
+	}
+	close(file_open('>', "$appdir/config"));
+}
+my $conf = Config::YAML->new(
+	config => "$appdir/config",
+	output => "$appdir/config",
+	anidb => {
+		cache_timeout => {
+			mylist_unwatched => 7200,
+			mylist_watched => 1036800,
+			file => 1036800,
+		},
+		password => undef,
+		time_to_sleep_when_busy => 10*60, # How long (in seconds) to sleep if AniDB informs us it's too busy to talk to us.
+		update_records_for_deleted_files => 1,
+		username => undef,
+	},
+	avdump => undef, # Commandline to run avdump.
+	dirs => {
+		delete_empty_dirs_in_scanned => 1,
+		to_put_unwatched_eps => undef,
+		to_put_watched_eps => undef,
+		to_scan => [],
+		valid_for_unwatched_eps => [],
+		valid_for_watched_eps => [],
+	},
+	load_local_cache_into_memory => 1,
+	show_hashing_progress => 1, # Only disable if you think that printing the hashing progess is taking up a significant amount of CPU time when hashing a file.
+	use_windows_compatible_filenames => 0, # Off by default since not having to do this produces nicer filenames.
+);
+$conf->read("$appdir/config");
+
+# Some variables for the printer
 my $max_status_len = 1;
 my $last_msg_len = 1;
 my $last_msg_type = 0;
+
+# A cache to speed up in_list calls.
 my $in_list_cache = {};
 
-GetOptions(
-	"username=s" => \$username,
-	"password=s" => \$password,
-	"scan-dirs=s{,}" => \@scan_dirs,
-	"db:s" => \$db_path,
-	"watched-dirs=s{,}" => \@watched_dirs,
-	"unwatched-dirs=s{,}" => \@unwatched_dirs,
-	"watched-output-dir=s" => \$watched_output_dir,
-	"unwatched-output-dir=s" => \$unwatched_output_dir,
-	"anidb-mylist-timeout=i" => \$mylist_timeout,
-	"anidb-mylist-watched-timeout=i" => \$mylist_watched_timeout,
-	"anidb-file-timeout=i" => \$file_timeout,
-	"clean-scan-dirs!" => \$clean_scan_dirs, # Default = true. false disables deletion of empty folders in the scanned directories.
-	"clean-removed-files!" => \$clean_removed_files, # Default is enabled. If enabled, set not found files that are on the database as deleted on anidb if they're still marked as on hdd.
-	"db-caching!" => \$db_caching, # Loads the entire db into memory. On a full run without any AniDB accesses (everything needed is cached) on about 4000 files, program runtime without is about 30-40 seconds, with is about 1.5-2 seconds.
-	"windows!" => \$windows,
-	"kde!" => \$kde, # Ignores .part files.
-	"avdump=s" => \$avdump,
-	'anidb-busy-sleep-time=i' => \$anidb_busy_sleep_time, # How long (in seconds) to sleep if AniDB informs us it's too busy to talk to us.
-	'show-hashing-progress!' => \$show_hashing_progress, # Only disable if you think that printing the hashing progess is taking up a significant amount of CPU time when hashing a file.
-	"reset-mylist-anime!" => \$reset_mylist_anime, # Debug option. Default = false. true wipes all mylist_anime records from the cache, useful for when something breaks, and adbren-mod starts caching lots of invalid information.
-	"move!" => \$move, # Debug option. Default = true. false does everything short of moving/renaming the files.
-	"purge-old-db-entries!" => \$purge_old_db_entries, # Debug option. Default = true. false disables deletion of old cached records.
-);
+my $db = DBI::SpeedySimple->new("dbi:SQLite:$appdir/db");
 
-my $db = DBI::SpeedySimple->new("dbi:SQLite:$db_path");
-
-if($purge_old_db_entries) {
-	$db->{dbh}->do("DELETE FROM adbcache_file WHERE updated < " . (time - $file_timeout));
-	if($reset_mylist_anime) {
-		$db->delete("anidb_mylist_anime", {});
-	} else {
-		$db->{dbh}->do("DELETE FROM anidb_mylist_anime WHERE updated < " . (time - $mylist_watched_timeout) . " AND watched_eps = eps_with_state_on_hdd");
-		$db->{dbh}->do("DELETE FROM anidb_mylist_anime WHERE updated < " . (time - $mylist_timeout) . " AND watched_eps != eps_with_state_on_hdd");
-	}
+unless($dont_expire_cache) {
+	my $timeout = $conf->{anidb}->{cache_timeout};
+	$db->{dbh}->do("DELETE FROM adbcache_file WHERE updated < " . (time - $timeout->{file}));
+	$db->{dbh}->do("DELETE FROM anidb_mylist_anime WHERE updated < " . (time - $timeout->{mylist_unwatched}) . " AND watched_eps = eps_with_state_on_hdd");
+	$db->{dbh}->do("DELETE FROM anidb_mylist_anime WHERE updated < " . (time - $timeout->{mylist_watched}) . " AND watched_eps != eps_with_state_on_hdd");
 }
 
-if($db_caching) {
+if($conf->{load_local_cache_into_memory}) {
 	$db->cache([
 		{table => 'known_files', indices => ['filename', 'size']},
 		{table => 'adbcache_file', indices => ['ed2k', 'size']},
@@ -86,8 +99,8 @@ if($db_caching) {
 }
 
 my $a = AniDB::UDPClient->new({
-	username  => $username,
-	password  => $password,
+	username => $conf->{anidb}->{username},
+	password => $conf->{anidb}->{password},
 	db => $db,
 	port => 3700,
 });
@@ -95,22 +108,22 @@ my $a = AniDB::UDPClient->new({
 my @files;
 my @ed2k_of_processed_files;
 my $dirs_done = 1;
-foreach(@scan_dirs) {
+foreach(@{$conf->{dirs}->{to_scan}}) {
 	next if !-e $_;
-	printer($_, "Scanning", 0, $dirs_done++, scalar(@scan_dirs));
+	printer($_, "Scanning", 0, $dirs_done++, scalar(@{$conf->{dirs}->{to_scan}}));
 	@files = (@files, sort(recurse($_)));
 }
 
 my $fcount = scalar(@files);
 my $file;
 while ($file = shift @files) {
-	next if $kde and $file =~ /\.part$/;
+	next if $file =~ /\.part$/;
 	if (my $ed2k = process_file($file, $a)) {
 		push(@ed2k_of_processed_files, $ed2k);
 	}
 }
 
-if ($clean_removed_files) {
+if($conf->{anidb}->{update_records_for_deleted_files}) {
 	my @dead_files = sort { $::a->[2] cmp $::b->[2] } @{$db->{dbh}->selectall_arrayref("SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (" . join(',', map { "'$_'" } @ed2k_of_processed_files) . ");")};
 	my($count, $dead_files_len) = (1, scalar(@dead_files) + 1);
 	while($file = shift @dead_files) {
@@ -134,8 +147,8 @@ if ($clean_removed_files) {
 
 cleanup();
 
-if($clean_scan_dirs) {
-	for(@scan_dirs) {
+if($conf->{dirs}->{delete_empty_dirs_in_scanned}) {
+	for(@{$conf->{dirs}->{to_scan}}) {
 		finddepth({wanted => sub{rmdir}, follow => 1}, $_) if -e;
 	}
 }
@@ -146,7 +159,7 @@ sub recurse {
 	for my $path (@paths) {
 		opendir IMD, $path;
 		for(readdir IMD) {
-			if(!($_ eq '.' or $_ eq '..' or ($windows and $_ eq 'System Volume Information'))) {
+			if(!($_ eq '.' or $_ eq '..')) {
 				$_ = "$path/$_";
 				if(-d $_) {
 					push @paths, $_;
@@ -194,16 +207,21 @@ sub process_file {
 	}
 	
 	my $mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
-	my $dir = array_find(substr($file, 0, rindex($file, '/')), @scan_dirs);
+	my $dir = array_find(substr($file, 0, rindex($file, '/')), @{$conf->{dirs}->{to_scan}});
 	my $file_output_dir = $dir;
 	
 	if(in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps})) {
-		$file_output_dir = $watched_output_dir unless $dir ~~ @watched_dirs;
-	} else {
-		$file_output_dir = $unwatched_output_dir unless $dir ~~ @unwatched_dirs;
+		if(!($dir ~~ @{$conf->{dirs}->{valid_for_watched_eps}})) {
+			$file_output_dir = $conf->{dirs}->{to_put_watched_eps};
+		}
+	}
+	else {
+		if(!($dir ~~ @{$conf->{dirs}->{valid_for_unwatched_eps}})) {
+			$file_output_dir = $conf->{dirs}->{to_put_unwatched_eps};
+		}
 	}
 
-	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $watched_output_dir and $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $unwatched_output_dir and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
+	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $conf->{dirs}->{to_put_watched_eps} and $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $conf->{dirs}->{to_put_unwatched_eps} and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
 		my $anime_dir = $fileinfo->{anime_romaji_name};
 		$anime_dir =~ s/\//∕/g;
 		$file_output_dir .= "/$anime_dir";
@@ -223,7 +241,7 @@ sub process_file {
 			printer("$file_output_dir/$newname", 'Rename target already exists', 1);
 		} else {
 			printer($file, "File", 1);
-			if($move) {
+			if(!$dont_move) {
 				printer("$file_output_dir/$newname", "Moving to", 0);
 				$db->update("known_files", {filename => $newname}, {ed2k => $ed2k, size => -s $file});
 				move($file, "$file_output_dir/$newname");
@@ -250,7 +268,7 @@ sub avdump {
 	my($file, $ed2k, $size) = @_;
 	printer($file, "Avdumping", 0);
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
-	system "$avdump -as -tout:20:6555 \"$esc_file\" > /dev/null";
+	system "$conf->{avdump} -as -tout:20:6555 \"$esc_file\" > /dev/null";
 	$db->update("known_files", {avdumped => 1}, {ed2k => $ed2k, size => $size});
 	printer($file, "Avdumped", 1);
 }
@@ -261,13 +279,13 @@ sub ed2k_hash {
 	my $size = -s $file;
 
 	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file_sn, size => $size}, 1)) {
-		avdump($file, $r->{ed2k}, $size) if $avdump and !$r->{avdumped};
+		avdump($file, $r->{ed2k}, $size) if $conf->{avdump} and !$r->{avdumped};
 		return $r->{ed2k};
 	}
 
 	my $ctx = Digest::ED2K->new;
 	my $fh = file_open('<:mmap:raw', $file);
-	if($show_hashing_progress) {
+	if($conf->{show_hashing_progress}) {
 		my $buffer;
 		my $bytes_done;
 		while(my $bytes_read = read $fh, $buffer, Digest::ED2K::CHUNK_SIZE) {
@@ -289,7 +307,7 @@ sub ed2k_hash {
 	}
 	else {
 		$db->insert('known_files', {filename => $file_sn, size => $size, ed2k => $ed2k});
-		avdump($file, $ed2k, $size) if $avdump;
+		avdump($file, $ed2k, $size) if $conf->{avdump};
 	}
 	return $ed2k;
 }
@@ -355,9 +373,13 @@ sub range {
 }
 
 sub cleanup {
-	$a->logout() if defined $a;
+	STDOUT->printflush("\r" . ' ' x $last_msg_len . "\r");
+	if(defined $a) {
+		say 'Logging out.';
+		$a->logout();
+	}
 	$db->{dbh}->disconnect();
-	STDOUT->printflush("\r" . ' ' x $last_msg_len . "\rExiting.\n");
+	$conf->write;
 	exit;
 }
 
@@ -406,6 +428,8 @@ use constant MYLIST_ANIME_ENUM => qw/anime_title episodes eps_with_state_unknown
 sub new {
 	my($package, $opts) = @_;
 	my $self = bless $opts, $package;
+	$self->{username} or die 'AniDB error: Need a username';
+	$self->{password} or die 'AniDB error: Need a password';
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
@@ -610,7 +634,10 @@ sub login {
 
 sub logout {
 	my($self) = @_;
-	$self->_sendrecv("LOGOUT") if $self->{skey};
+	if($self->{skey} && (time - $self->{last_command}) > (35 * 60)) {
+		$self->_sendrecv("LOGOUT");
+	}
+	delete $self->{skey};
 }
 
 # Sends and reads the reply. Tries up to 10 times.
@@ -666,8 +693,8 @@ sub _sendrecv {
 	}
 	
 	if($recvmsg =~ /^602/) {
-		print "\nAniDB is too busy, will retry in $anidb_busy_sleep_time seconds.";
-		Time::HiRes::sleep($anidb_busy_sleep_time);
+		print "\nAniDB is too busy, will retry in $conf->{anidb}->{time_to_sleep_when_busy} seconds.";
+		Time::HiRes::sleep($conf->{anidb}->{time_to_sleep_when_busy});
 		return $self->_sendrecv($query, $vars);
 	}
 	
@@ -690,4 +717,8 @@ sub _sendrecv {
 	}
 	
 	return $recvmsg;
+}
+
+sub DESTROY {
+	$self->logout;
 }
