@@ -448,8 +448,10 @@ sub file_query {
 	
 	$query->{fmask} = FILE_FMASK;
 	$query->{amask} = FILE_AMASK;
-	
-	my($code, $data) = split("\n", $self->_sendrecv("FILE", $query));
+
+	my $recvmsg = $self->_sendrecv("FILE", $query);
+	return unless defined $recvmsg;
+	my($code, $data) = split("\n", $recvmsg);
 	
 	$code = int((split(" ", $code))[0]);
 	if($code == 220) { # Success
@@ -682,7 +684,10 @@ sub _sendrecv {
 	# Check if the data is compressed.
 	if(substr($recvmsg, 0, 2) eq "\x00\x00") {
 		my $data = substr($recvmsg, 2);
-		inflate \$data => \$recvmsg or return;
+		if(!inflate(\$data, \$recvmsg)) {
+			warn "\nError inflating packet: $InflateError";
+			return;
+		}
 	}
 	
 	$recvmsg = decode_utf8($recvmsg);
