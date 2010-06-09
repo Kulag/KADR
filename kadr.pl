@@ -147,12 +147,6 @@ if($conf->{anidb}->{update_records_for_deleted_files}) {
 
 cleanup();
 
-if($conf->{dirs}->{delete_empty_dirs_in_scanned}) {
-	for(@{$conf->{dirs}->{to_scan}}) {
-		finddepth({wanted => sub{rmdir}, follow => 1}, $_) if -e;
-	}
-}
-
 sub recurse {
 	my(@paths) = @_;
 	my @files;
@@ -377,6 +371,13 @@ sub cleanup {
 	if(defined $a) {
 		say 'Logging out.';
 		$a->logout();
+	}
+	if($conf->{dirs}->{delete_empty_dirs_in_scanned}) {
+		print "Deleting empty folders in those scanned... ";
+		for(@{$conf->{dirs}->{to_scan}}) {
+			finddepth({wanted => sub{rmdir}, follow => 1}, $_) if -e;
+		}
+		say "done.";
 	}
 	$db->{dbh}->disconnect();
 	$conf->write;
