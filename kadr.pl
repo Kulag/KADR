@@ -26,6 +26,7 @@ use File::HomeDir;
 use File::Find;
 use Getopt::Long;
 use PortIO;
+use Term::StatusLine::XofX;
 use Readonly;
 
 $SIG{INT} = "cleanup";
@@ -105,15 +106,8 @@ my $a = AniDB::UDPClient->new({
 	port => 3700,
 });
 
-my @files;
+my @files = sort(find_files(@{$conf->{dirs}->{to_scan}}));
 my @ed2k_of_processed_files;
-my $dirs_done = 1;
-foreach(@{$conf->{dirs}->{to_scan}}) {
-	next if !-e $_;
-	printer($_, "Scanning", 0, $dirs_done++, scalar(@{$conf->{dirs}->{to_scan}}));
-	@files = (@files, sort(recurse($_)));
-}
-
 my $fcount = scalar(@files);
 my $file;
 while ($file = shift @files) {
@@ -147,23 +141,41 @@ if($conf->{anidb}->{update_records_for_deleted_files}) {
 
 cleanup();
 
-sub recurse {
+sub find_files {
 	my(@paths) = @_;
-	my @files;
-	for my $path (@paths) {
-		opendir IMD, $path;
-		for(readdir IMD) {
+	my(@dirs, @files);
+	for(@paths) {
+		if(!is_dir($_)) {
+			if(is_file($_)) {
+				push @files, $_;
+			}
+			else {
+				say "Warning: Not a directory: $_";
+			}
+		}
+		else {
+			push @dirs, $_;
+		}
+	}
+	my $sl = Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
+	my $scanned = 0;
+	for my $dir (@dirs) {
+		$sl->update(++$scanned, $dir);
+		opendir(my $dh, $dir);
+		for(readdir($dh)) {
 			if(!($_ eq '.' or $_ eq '..')) {
-				$_ = "$path/$_";
-				if(-d $_) {
-					push @paths, $_;
-				} else {
+				$_ = "$dir/$_";
+				if(is_dir($_)) {
+					push @dirs, $_;
+				}
+				else {
 					push @files, decode_utf8($_);
 				}
 			}
 		}
-		close IMD;
+		close($dh);
 	}
+	$sl->finalize;
 	return @files;
 }
 
