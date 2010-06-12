@@ -26,9 +26,11 @@ use File::HomeDir;
 use File::Find;
 use Getopt::Long;
 use PortIO;
+use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
 use Readonly;
 
+$|++;
 $SIG{INT} = "cleanup";
 binmode STDIN, ':encoding(UTF-8)';
 binmode STDOUT, ':encoding(UTF-8)';
@@ -118,24 +120,28 @@ while ($file = shift @files) {
 }
 
 if($conf->{anidb}->{update_records_for_deleted_files}) {
-	my @dead_files = sort { $::a->[2] cmp $::b->[2] } @{$db->{dbh}->selectall_arrayref("SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (" . join(',', map { "'$_'" } @ed2k_of_processed_files) . ");")};
-	my($count, $dead_files_len) = (1, scalar(@dead_files) + 1);
-	while($file = shift @dead_files) {
-		printer($$file[2], "Cleaning", 0, $count, $dead_files_len);
+	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
+	my $sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
+	my $done;
+	for my $file (@missing_files) {
+		$sl->update(++$done, $$file[2]);
+		my $file_status = Term::StatusLine::Freeform->new(parent => $sl, value => 'Checking AniDB record');
 		my $mylistinfo = $a->mylist_file_by_ed2k_size(@$file);
-		if ( defined($mylistinfo) ) {
-			if ($mylistinfo->{state} == 1) {
-				printer($$file[2], "Removed", 1, $count, $dead_files_len);
+		if(defined($mylistinfo)) {
+			if($mylistinfo->{state} == 1) {
+				$file_status->update('Setting AniDB status to "deleted".');
 				$a->mylistedit({lid => $mylistinfo->{lid}, state => 3});
-			} else {
-				printer($$file[2], "Cleaned", 1, $count, $dead_files_len);
+				$file_status->update('Set AniDB status to "deleted".');
 			}
-			$db->remove("anidb_mylist_file", {lid => $mylistinfo->{lid}});
-		} else {
-			printer($$file[2], "Not Found", 1, $count, $dead_files_len);
+			else {
+				$file_status->update('AniDB Mylist status already set.');
+			}
+			$db->remove('anidb_mylist_file', {lid => $mylistinfo->{lid}});
 		}
-		$db->remove("known_files", {ed2k => $$file[0]});
-		$count++;
+		else {
+			$file_status->update('No AniDB Mylist record found.');
+		}
+		$db->remove('known_files', {ed2k => $$file[0]});
 	}
 }
 
