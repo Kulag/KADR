@@ -121,9 +121,8 @@ while(my $file = shift @files) {
 if($conf->{anidb}->{update_records_for_deleted_files}) {
 	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
 	my $sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
-	my $done;
 	for my $file (@missing_files) {
-		$sl->update(++$done, $$file[2]);
+		$sl->update('++', $$file[2]);
 		my $file_status = Term::StatusLine::Freeform->new(parent => $sl, value => 'Checking AniDB record');
 		my $mylistinfo = $a->mylist_file_by_ed2k_size(@$file);
 		if(defined($mylistinfo)) {
@@ -169,9 +168,8 @@ sub find_files {
 		}
 	}
 	my $sl = Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
-	my $scanned = 0;
 	for my $dir (@dirs) {
-		$sl->update(++$scanned, $dir);
+		$sl->update('++', $dir);
 		opendir(my $dh, $dir);
 		for(readdir($dh)) {
 			if(!($_ eq '.' or $_ eq '..')) {
