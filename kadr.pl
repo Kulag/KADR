@@ -75,11 +75,6 @@ my $conf = Config::YAML->new(
 );
 $conf->read("$appdir/config");
 
-# Some variables for the printer
-my $max_status_len = 1;
-my $last_msg_len = 1;
-my $last_msg_type = 0;
-
 # A cache to speed up in_list calls.
 my $in_list_cache = {};
 
@@ -110,17 +105,19 @@ my $a = AniDB::UDPClient->new({
 
 my @files = sort(find_files(@{$conf->{dirs}->{to_scan}}));
 my @ed2k_of_processed_files;
-my $fcount = scalar(@files);
-while(my $file = shift @files) {
-	next if !valid_file($file);
-	if(my $ed2k = process_file($file)) {
+my $sl = Term::StatusLine::XofX->new(total_item_count => scalar(@files));
+for(@files) {
+	$sl->update('++', $_);
+	next if !valid_file($_);
+	if(my $ed2k = process_file($_)) {
 		push @ed2k_of_processed_files, $ed2k;
 	}
 }
+$sl->finalize;
 
 if($conf->{anidb}->{update_records_for_deleted_files}) {
 	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
-	my $sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
+	$sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
 	for my $file (@missing_files) {
 		$sl->update('++', $$file[2]);
 		my $file_status = Term::StatusLine::Freeform->new(parent => $sl, value => 'Checking AniDB record');
@@ -141,6 +138,7 @@ if($conf->{anidb}->{update_records_for_deleted_files}) {
 		}
 		$db->remove('known_files', {ed2k => $$file[0]});
 	}
+	$sl->finalize;
 }
 
 cleanup();
@@ -190,36 +188,38 @@ sub find_files {
 
 sub process_file {
 	my $file = shift;
-	printer($file, "Processing", 0);
-
 	my $ed2k = ed2k_hash($file);
 	my $fileinfo = $a->file_query({ed2k => $ed2k, size => -s $file});
+	my $proc_sl = Term::StatusLine::Freeform->new(parent => $sl);
 
 	if(!defined $fileinfo) {
-		printer($file, "Ignored", 1);
+		$proc_sl->finalize_and_log('Ignored');
 		return $ed2k;
 	}
-	
+
 	# Auto-add to mylist.
 	my $mylistinfo = $a->mylist_file_by_fid($fileinfo->{fid});
 	if(!defined $mylistinfo) {
-		printer($file, "Adding", 0);
-		if (my $lid = $a->mylistadd($fileinfo->{fid})) {
-			$db->update("adbcache_file", {lid => $lid}, {fid => $fileinfo->{fid}});
-			printer($file, "Added", 1);
-		} else {
-			printer($file, "Failed", 1);
+		$proc_sl->update('Adding to AniDB Mylist');
+		if(my $lid = $a->mylistadd($fileinfo->{fid})) {
+			$db->update('adbcache_file', {lid => $lid}, {fid => $fileinfo->{fid}});
+			$proc_sl->finalize_and_log('Added to AniDB Mylist');
 		}
-	} elsif ($mylistinfo->{state} != 1) {
-		printer($file, "Updating", 0);
-		if($a->mylistedit({lid => $fileinfo->{lid}, state => 1})) {
-			$db->update("anidb_mylist_file", {state => 1}, {fid => $mylistinfo->{fid}});
-			printer($file, "Updated", 1);
-		} else {
-			printer($file, "Failed", 1);
+		else {
+			$proc_sl->finalize_and_log('Error adding to AniDB Mylist');
 		}
 	}
-	
+	elsif($mylistinfo->{state} != 1) { # State 1 == on disk.
+		$proc_sl->update('Setting AniDB Mylist state to "On HDD"');
+		if($a->mylistedit({lid => $fileinfo->{lid}, state => 1})) {
+			$db->update('anidb_mylist_file', {state => 1}, {fid => $mylistinfo->{fid}});
+			$proc_sl->finalize_and_log('Set AniDB Mylist state to "On HDD"');
+		}
+		else {
+			$proc_sl->finalize_and_log('Error setting AniDB Mylist state to "On HDD"');
+		}
+	}
+
 	my $mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
 	my $dir = array_find(substr($file, 0, rindex($file, '/')), @{$conf->{dirs}->{to_scan}});
 	my $file_output_dir = $dir;
@@ -241,32 +241,37 @@ sub process_file {
 		$file_output_dir .= "/$anime_dir";
 		mkdir($file_output_dir) if !-e $file_output_dir;
 	}
-	
+
 	my $file_version = $a->file_version($fileinfo);
 	my $newname = $fileinfo->{anime_romaji_name} . ($fileinfo->{episode_english_name} =~ /^(Complete Movie|ova|special|tv special)$/i ? '' : " - " . $fileinfo->{episode_number} . ($file_version > 1 ? "v$file_version" : "") . " - " . $fileinfo->{episode_english_name}) . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
-	
-	$newname = $fileinfo->{anime_romaji_name} . " - " . $fileinfo->{episode_number} . " - Episode " . $fileinfo->{episode_number} . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type} if length($newname) > 250;
-	
+	if(length($newname) > 250) {
+		$newname = $fileinfo->{anime_romaji_name} . " - " . $fileinfo->{episode_number} . " - Episode " . $fileinfo->{episode_number} . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
+	}
 	$newname =~ s/\//∕/g;
-	
+
 	unless($file eq "$file_output_dir/$newname") {
 		if(-e "$file_output_dir/$newname") {
-			print "\n";
-			printer("$file_output_dir/$newname", 'Rename target already exists', 1);
-		} else {
-			printer($file, "File", 1);
-			if(!$dont_move) {
-				printer("$file_output_dir/$newname", "Moving to", 0);
-				$db->update("known_files", {filename => $newname}, {ed2k => $ed2k, size => -s $file});
-				move($file, "$file_output_dir/$newname");
-				printer("$file_output_dir/$newname", "Moved to", 1);
-			} else {
-				printer("$file_output_dir/$newname", "Would have moved to", 1);
+			$proc_sl->finalize_and_log("Tried to rename to existing file: $file_output_dir/$newname");
+		}
+		else {
+			if($dont_move) {
+				$proc_sl->finalize_and_log("Would have moved to $file_output_dir/$newname");
 			}
-			
+			else {
+				$proc_sl->update("Moving to $file_output_dir/$newname");
+				$db->update('known_files', {filename => $newname}, {ed2k => $ed2k, size => -s $file});
+				if(move($file, "$file_output_dir/$newname")) {
+					$proc_sl->finalize_and_log("Moved to $file_output_dir/$newname");
+				}
+				else {
+					$proc_sl->finalize_and_log("Error moving to $file_output_dir/$newname");
+					exit 2;
+				}
+			}
 		}
 	}
-	
+
+	$proc_sl->finalize;
 	return $fileinfo->{ed2k};
 }
 
@@ -279,12 +284,40 @@ sub array_find {
 }
 
 sub avdump {
-	my($file, $ed2k, $size) = @_;
-	printer($file, "Avdumping", 0);
+	my($file, $size, $ed2k) = @_;
+	my $avsl = Term::StatusLine::XofX->new(parent => $sl, label => 'AvHashing', format => 'percent', total_item_count => 100);
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
-	system "$conf->{avdump} -as -tout:20:6555 \"$esc_file\" > /dev/null";
-	$db->update("known_files", {avdumped => 1}, {ed2k => $ed2k, size => $size});
-	printer($file, "Avdumped", 1);
+	open my $av, '-|', "$conf->{avdump} -vas -tout:20:6555 \"$esc_file\" 2>&1";
+	my $off = 0;
+	my $aved2k;
+	while(sysread($av, my $line, 8, $off)) {
+		my @parts = split(/\r?\n/, $line);
+		if(scalar(@parts) > 1) {
+			$line = pop @parts;
+			foreach (@parts) {
+				if (/H (\d+).(\d{2})/) {
+					$avsl->update(($1 >= 100 ? 0 : $2) + $2 / 100);
+				}
+				elsif (/P (\d+).(\d{2})/) {
+					if($avsl->label eq 'AvHashing') {
+						$avsl->label('AvParsing');
+					}
+					$avsl->update($1 + $2 / 100);
+				}
+				elsif (/ed2k: ([0-9a-f]{32})/) {
+					$aved2k = $1;
+				}
+			}
+		}
+		$off = length($line);
+	}
+	$avsl->finalize_and_log('Avdumped');
+	if($ed2k) {
+		 $db->update('known_files', {avdumped => 1}, {ed2k => $ed2k, size => $size});
+	}
+	else {
+		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file, size => $size}, {filename => $file, size => $size});
+	}
 }
 
 sub ed2k_hash {
@@ -293,47 +326,33 @@ sub ed2k_hash {
 	my $size = -s $file;
 
 	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file_sn, size => $size}, 1)) {
-		avdump($file, $r->{ed2k}, $size) if $conf->{avdump} and !$r->{avdumped};
+		avdump($file, $size, $r->{ed2k}) if $conf->{avdump} and !$r->{avdumped};
 		return $r->{ed2k};
+	}
+
+	if($conf->{avdump}) {
+		return avdump($file, $size);
 	}
 
 	my $ctx = Digest::ED2K->new;
 	my $fh = file_open('<:mmap:raw', $file);
+	my $ed2k_sl;
 	if($conf->{show_hashing_progress}) {
-		my $buffer;
-		my $bytes_done;
-		while(my $bytes_read = read $fh, $buffer, Digest::ED2K::CHUNK_SIZE) {
+		$ed2k_sl = Term::StatusLine::XofX->new(parent => $sl, label => 'Hashing', total_item_count => $size);
+		while(my $bytes_read = read $fh, my $buffer, Digest::ED2K::CHUNK_SIZE) {
 			$ctx->add($buffer);
-			$bytes_done += $bytes_read;
-			printer($file, sprintf('Hashing %.01f%%', ($bytes_done / $size) * 100), 0);
+			$ed2k_sl->update("+=$bytes_read");
 		}
 	}
 	else {
-		printer($file, 'Hashing', 0);
+		$ed2k_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Hashing');
 		$ctx->addfile($fh);
 	}
 	close $fh;
 	my $ed2k = $ctx->hexdigest;
-	printer($file, 'Hashed', 1);
-
-	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
-		$db->update('known_files', {filename => $file_sn}, {ed2k => $ed2k, size => $size});
-	}
-	else {
-		$db->insert('known_files', {filename => $file_sn, size => $size, ed2k => $ed2k});
-		avdump($file, $ed2k, $size) if $conf->{avdump};
-	}
+	$db->set('known_files', {avdumped => 1, ed2k => $ed2k, filename => $file, size => $size}, {filename => $file, size => $size});
+	$ed2k_sl->finalize_and_log('Hashed');
 	return $ed2k;
-}
-
-sub printer {
-	my($file, $status, $type, $progress, $total) = @_;
-	my $status_len = length($status);
-	$max_status_len = $status_len if $status_len > $max_status_len;
-	my $msg = "[" . (defined $progress ? $progress : ($fcount - scalar(@files))) . "/" . (defined $total ? $total : $fcount) . "][$status]" . (" " x ($max_status_len - $status_len + 1)) . $file;
-	STDOUT->printflush(($last_msg_type ? "\n" : ("\r" . (length($msg) < $last_msg_len ? (' ' x $last_msg_len) . "\r" : ''))) . $msg);
-	$last_msg_len = length($msg);
-	$last_msg_type = $type;
 }
 
 # Determines if the specified number is in a AniDB style list of episode numbers.
@@ -387,9 +406,7 @@ sub range {
 }
 
 sub cleanup {
-	STDOUT->printflush("\r" . ' ' x $last_msg_len . "\r");
 	if(defined $a) {
-		say 'Logging out.';
 		$a->logout();
 	}
 	if($conf->{dirs}->{delete_empty_dirs_in_scanned}) {
@@ -462,17 +479,20 @@ sub new {
 
 sub file_query {
 	my($self, $query) = @_;
-	
+
 	if(my $r = $self->{db}->fetch("adbcache_file", ["*"], $query, 1)) {
 		return $r;
 	}
-	
+
+	my $file_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Updating file information');
+
 	$query->{fmask} = FILE_FMASK;
 	$query->{amask} = FILE_AMASK;
 
 	my $recvmsg = $self->_sendrecv("FILE", $query);
 	return unless defined $recvmsg;
 	my($code, $data) = split("\n", $recvmsg);
+	$file_sl->finalize;
 	
 	$code = int((split(" ", $code))[0]);
 	if($code == 220) { # Success
@@ -581,7 +601,9 @@ sub mylist_file_by_ed2k_size {
 
 sub _mylist_file_query {
 	my($self, $query) = @_;
+	my $mylist_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Updating mylist information');
 	(my $msg = $self->_sendrecv("MYLIST", $query)) =~ s/.*\n//im;
+	$mylist_sl->finalize;
 	my @f = split /\|/, $msg;
 	if(scalar @f) {
 		my %mylistinfo;
@@ -602,7 +624,9 @@ sub mylist_anime_by_aid {
 
 sub _mylist_anime_query {
 	my($self, $query) = @_;
+	my $mylist_anime_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Updating mylist anime information');
 	my $msg = $self->_sendrecv("MYLIST", $query);
+	$mylist_anime_sl->finalize;
 	my $single_episode = ($msg =~ /^221/);
 	my $success = ($msg =~ /^312/);
 	return if not ($success or $single_episode);
@@ -644,6 +668,7 @@ sub _mylist_anime_query {
 sub login {
 	my($self) = @_;
 	if(!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60)) {
+		my $login_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Logging in to AniDB');
 		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => "UTF8", comp => 1});
 		if(defined $msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
 			$self->{skey} = $1;
@@ -651,6 +676,7 @@ sub login {
 		} else {
 			die "Login Failed: $msg\n";
 		}
+		$login_sl->finalize;
 	}
 	return 1;
 }
@@ -658,7 +684,9 @@ sub login {
 sub logout {
 	my($self) = @_;
 	if($self->{skey} && (time - $self->{last_command}) > (35 * 60)) {
+		my $logout_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Logging out of AniDB');
 		$self->_sendrecv("LOGOUT");
+		$logout_sl->finalize;
 	}
 	delete $self->{skey};
 }
