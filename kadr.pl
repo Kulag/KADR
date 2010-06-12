@@ -111,11 +111,10 @@ my $a = AniDB::UDPClient->new({
 my @files = sort(find_files(@{$conf->{dirs}->{to_scan}}));
 my @ed2k_of_processed_files;
 my $fcount = scalar(@files);
-my $file;
-while ($file = shift @files) {
-	next if $file =~ /\.part$/;
-	if (my $ed2k = process_file($file, $a)) {
-		push(@ed2k_of_processed_files, $ed2k);
+while(my $file = shift @files) {
+	next if !valid_file($file);
+	if(my $ed2k = process_file($file)) {
+		push @ed2k_of_processed_files, $ed2k;
 	}
 }
 
@@ -146,6 +145,12 @@ if($conf->{anidb}->{update_records_for_deleted_files}) {
 }
 
 cleanup();
+
+sub valid_file {
+	return if /\.part$/;
+	return if !is_file($_);
+	return 1;
+}
 
 sub find_files {
 	my(@paths) = @_;
@@ -186,8 +191,7 @@ sub find_files {
 }
 
 sub process_file {
-	my($file, $a) = @_;
-	return if(not -e $file);
+	my $file = shift;
 	printer($file, "Processing", 0);
 
 	my $ed2k = ed2k_hash($file);
