@@ -62,6 +62,7 @@ my $conf = Config::YAML->new(
 		username => undef,
 	},
 	avdump => undef, # Commandline to run avdump.
+	avdump_timeout => 30, # How many seconds to wait for avdump to contact AniDB before retrying.
 	dirs => {
 		delete_empty_dirs_in_scanned => 1,
 		to_put_unwatched_eps => undef,
@@ -291,7 +292,7 @@ sub avdump {
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
 	my $exp = Expect->new("$conf->{avdump} -vas -tout:20:6555 \"$esc_file\" 2>&1");
 	$exp->log_stdout(0);
-	$exp->expect(30,
+	$exp->expect($conf->{avdump_timeout},
 		[qr/H\s+(\d+).(\d{2})/, sub {
 			my @m = @{shift->matchlist};
 			$avsl->update(int(int($m[0]) + int($m[1]) / 100));
