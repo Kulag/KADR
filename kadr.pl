@@ -21,6 +21,7 @@ use Config::YAML;
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
+use Expect;
 use File::Copy;
 use File::HomeDir;
 use File::Find;
@@ -285,31 +286,38 @@ sub array_find {
 
 sub avdump {
 	my($file, $size, $ed2k) = @_;
+	my($aved2k, $timedout);
 	my $avsl = Term::StatusLine::XofX->new(parent => $sl, label => 'AvHashing', format => 'percent', total_item_count => 100);
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
-	open my $av, '-|', "$conf->{avdump} -vas -tout:20:6555 \"$esc_file\" 2>&1";
-	my $off = 0;
-	my $aved2k;
-	while(sysread($av, my $line, 8, $off)) {
-		my @parts = split(/\r?\n/, $line);
-		if(scalar(@parts) > 1) {
-			$line = pop @parts;
-			foreach (@parts) {
-				if (/H (\d+).(\d{2})/) {
-					$avsl->update(($1 >= 100 ? 0 : $2) + $2 / 100);
-				}
-				elsif (/P (\d+).(\d{2})/) {
-					if($avsl->label eq 'AvHashing') {
-						$avsl->label('AvParsing');
-					}
-					$avsl->update($1 + $2 / 100);
-				}
-				elsif (/ed2k: ([0-9a-f]{32})/) {
-					$aved2k = $1;
-				}
+	my $exp = Expect->new("$conf->{avdump} -vas -tout:20:6555 \"$esc_file\" 2>&1");
+	$exp->log_stdout(0);
+	$exp->expect(30,
+		[qr/H\s+(\d+).(\d{2})/, sub {
+			my @m = @{shift->matchlist};
+			$avsl->update(int(int($m[0]) + int($m[1]) / 100));
+			exp_continue;
+		}],
+		[qr/P\s+(\d+).(\d{2})/, sub {
+			my @m = @{shift->matchlist};
+			if($avsl->label eq 'AvHashing') {
+				$avsl->label('AvParsing');
 			}
-		}
-		$off = length($line);
+			$avsl->update(int(int($m[0]) + int($m[1]) / 100));
+			exp_continue;
+		}],
+		[qr/ed2k: ([0-9a-f]{32})/, sub {
+			my @m = @{shift->matchlist};
+			$aved2k = $m[0];
+			exp_continue;
+		}],
+		timeout => sub { $timedout = 1; }
+	);
+	if($timedout) {
+		return avdump($file, $size, $ed2k);
+	}
+	if(!$aved2k) {
+		$avsl->log('Error avdumping.');
+		exit 2;
 	}
 	$avsl->finalize_and_log('Avdumped');
 	if($ed2k) {
