@@ -317,6 +317,7 @@ sub avdump {
 	}
 	else {
 		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file, size => $size}, {filename => $file, size => $size});
+		return $aved2k;
 	}
 }
 
