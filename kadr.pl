@@ -314,6 +314,7 @@ sub avdump {
 		timeout => sub { $timedout = 1; }
 	);
 	if($timedout) {
+		$avsl->finalize;
 		return avdump($file, $size, $ed2k);
 	}
 	if(!$aved2k) {
