@@ -204,6 +204,7 @@ sub process_file {
 	if(!defined $mylistinfo) {
 		$proc_sl->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylistadd($fileinfo->{fid})) {
+			$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}}); # Force an update of this record, it's out of date.
 			$db->update('adbcache_file', {lid => $lid}, {fid => $fileinfo->{fid}});
 			$proc_sl->finalize_and_log('Added to AniDB Mylist');
 		}
@@ -579,12 +580,8 @@ sub mylist_add_query {
 
 sub mylist_file_by_fid {
 	my($self, $fid) = @_;
-
 	my $mylistinfo = $self->{db}->fetch("anidb_mylist_file", ["*"], {fid => $fid}, 1);
 	return $mylistinfo if defined $mylistinfo;
-	# Due to the current design, if me need to get this record from AniDB, it's a new file, so we should update the mylist_anime record at the same time. Deleting the old record will atuomatically force it to fetch if from the server again.
-	my $fileinfo = $self->file_query({fid => $fid});
-	$self->{db}->remove("anidb_mylist_anime", {aid => $fileinfo->{aid}});
 	return $self->_mylist_file_query({fid => $fid});;
 }
 
@@ -593,7 +590,6 @@ sub mylist_file_by_lid {
 
 	my $mylistinfo = $self->{db}->fetch("anidb_mylist_file", ["*"], {lid => $lid}, 1);
 	return $mylistinfo if defined $mylistinfo;
-
 	return $self->_mylist_file_query({lid => $lid});
 }
 
