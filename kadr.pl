@@ -333,7 +333,7 @@ sub avdump {
 	}
 	else {
 		my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
-		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file, size => $size}, {filename => $file_sn, size => $size});
+		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file_sn, size => $size}, {filename => $file_sn, size => $size});
 		return $aved2k;
 	}
 }
