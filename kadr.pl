@@ -30,13 +30,11 @@ use File::HomeDir;
 use File::Find;
 use Getopt::Long;
 use PortIO;
-use lib 'Term-StatusLine/lib';
-use Term::StatusLine::Freeform;
-use Term::StatusLine::XofX;
-use lib 'Parse-TitleSyntax/lib';
 use Parse::TitleSyntax;
 use Parse::TitleSyntax::Functions::Regexp;
 use Readonly;
+use Term::StatusLine::Freeform;
+use Term::StatusLine::XofX;
 
 $|++;
 $SIG{INT} = "cleanup";
