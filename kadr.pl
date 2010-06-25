@@ -76,7 +76,7 @@ my $conf = Config::YAML->new(
 		valid_for_watched_eps => [],
 	},
 	file_naming_scheme => <<'EOF',
-%anime_romaji_name%/%anime_romaji_name%
+$if(%only_episode_in_folder%,,%anime_romaji_name%/)%anime_romaji_name%
 $if($rematch(%episode_english_name%,'^(Complete Movie|ova|special|tv special)$'),,
  - %episode_number%$ifgreater(%file_version%,1,v%file_version%,) - %episode_english_name%)
 $if($not($strcmp(%group_short_name%,raw)), '['%group_short_name%']').%file_type%
@@ -276,8 +276,22 @@ sub process_file {
 		$fileinfo->{$_} =~ s/\//∕/g;
 		$fileinfo->{$_} =~ s/\`/'/g;
 	}
-	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $conf->{dirs}->{to_put_watched_eps} and $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $conf->{dirs}->{to_put_unwatched_eps} and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
-		$fileinfo->{some_kulag_check} = "";
+
+	# Check if this is the only episode going into the folder.
+	if(
+		defined $mylistanimeinfo
+		# This is the only episode from this anime on HDD.
+		&& $mylistanimeinfo->{eps_with_state_on_hdd} =~ /^[a-z]*\d+$/i
+		# And this is it.
+		&& $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
+		&& (
+			# This episode is the only watched episode from this anime.
+			($file_output_dir eq $conf->{dirs}->{to_put_watched_eps} && $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps})
+			# Or this episode is the only unwatched episode from this anime.
+			|| ($file_output_dir eq $conf->{dirs}->{to_put_unwatched_eps} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
+		)
+	) {
+		$fileinfo->{only_episode_in_folder} = 1;
 	}
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
