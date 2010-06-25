@@ -295,8 +295,9 @@ sub process_file {
 			}
 			else {
 				$proc_sl->update("Moving to $file_output_dir/$newname");
-				$db->update('known_files', {filename => $newname}, {ed2k => $ed2k, size => -s $file});
+				my $size = -s $file;
 				if(move($file, "$file_output_dir/$newname")) {
+					$db->update('known_files', {filename => $newname}, {ed2k => $ed2k, size => $size});
 					$proc_sl->finalize_and_log("Moved to $file_output_dir/$newname");
 				}
 				else {
