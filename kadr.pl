@@ -272,7 +272,7 @@ sub process_file {
 		}
 	}
 
-	foreach (keys %$fileinfo) {
+	for(keys %$fileinfo) {
 		$fileinfo->{$_} =~ s/\//∕/g;
 		$fileinfo->{$_} =~ s/\`/'/g;
 	}
