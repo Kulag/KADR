@@ -1,3 +1,6 @@
 [submodule "Term-StatusLine"]
 	path = Term-StatusLine
 	url = git://github.com/Kulag/Term-StatusLine.git
+[submodule "Parse-TitleSyntax"]
+	path = Parse-TitleSyntax
+	url = git://github.com/Kovensky/Parse-TitleSyntax.git

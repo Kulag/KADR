@@ -24,6 +24,8 @@ use Digest::ED2K;
 use Encode;
 use Expect;
 use File::Copy;
+use File::Basename;
+use File::Path;
 use File::HomeDir;
 use File::Find;
 use Getopt::Long;
@@ -31,6 +33,9 @@ use PortIO;
 use lib 'Term-StatusLine/lib';
 use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
+use lib 'Parse-TitleSyntax/lib';
+use Parse::TitleSyntax;
+use Parse::TitleSyntax::Functions::Regexp;
 use Readonly;
 
 $|++;
@@ -73,12 +78,21 @@ my $conf = Config::YAML->new(
 		valid_for_unwatched_eps => [],
 		valid_for_watched_eps => [],
 	},
+	file_naming_scheme => <<'EOF',
+%anime_romaji_name%/%anime_romaji_name%
+$if($rematch(%episode_english_name%,'^(Complete Movie|ova|special|tv special)$'),,
+ - %episode_number%$ifgreater(%file_version%,1,v%file_version%,) - %episode_english_name%)
+$if($not($strcmp(%group_short_name%,raw)), '['%group_short_name%']').%file_type%
+EOF
 	load_local_cache_into_memory => 1,
 	show_hashing_progress => 1, # Only disable if you think that printing the hashing progess is taking up a significant amount of CPU time when hashing a file.
 	use_windows_compatible_filenames => 0, # Off by default since not having to do this produces nicer filenames.
 );
 $conf->read("$appdir/config");
 $conf->write;
+
+my $parsets = Parse::TitleSyntax->new($conf->{file_naming_scheme});
+$parsets->AddFunctions(Parse::TitleSyntax::Functions::Regexp->new($parsets));
 
 # A cache to speed up in_list calls.
 my $in_list_cache = {};
@@ -261,22 +275,21 @@ sub process_file {
 		}
 	}
 
+	foreach (keys %$fileinfo) {
+		$fileinfo->{$_} =~ s/\//∕/g;
+		$fileinfo->{$_} =~ s/\`/'/g;
+	}
 	if(defined $mylistanimeinfo and $mylistanimeinfo->{eps_with_state_on_hdd} !~ /^[a-z]*\d+$/i and !($fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}) and not ($file_output_dir eq $conf->{dirs}->{to_put_watched_eps} and $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}) and not ($file_output_dir eq $conf->{dirs}->{to_put_unwatched_eps} and count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)) {
-		my $anime_dir = $fileinfo->{anime_romaji_name};
-		$anime_dir =~ s/\//∕/g;
-		$file_output_dir .= "/$anime_dir";
-		mkdir($file_output_dir) if !-e $file_output_dir;
+		$fileinfo->{some_kulag_check} = "";
 	}
+	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $file_version = $a->file_version($fileinfo);
-	my $newname = $fileinfo->{anime_romaji_name} . ($fileinfo->{episode_english_name} =~ /^(Complete Movie|ova|special|tv special)$/i ? '' : " - " . $fileinfo->{episode_number} . ($file_version > 1 ? "v$file_version" : "") . " - " . $fileinfo->{episode_english_name}) . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
-	if(length($newname) > 250) {
-		$newname = $fileinfo->{anime_romaji_name} . " - " . $fileinfo->{episode_number} . " - Episode " . $fileinfo->{episode_number} . ((not $fileinfo->{group_short_name} eq "raw") ? " [" . $fileinfo->{group_short_name} . "]" : "") . "." . $fileinfo->{file_type};
-	}
-	$newname =~ s/\//∕/g;
+	my ($newname, $file_output_dir) = fileparse("$file_output_dir/" . $parsets->Run($fileinfo));
+	$file_output_dir =~ s!/$!!;
+	mkpath($file_output_dir) if ! file_exists($file_output_dir);
 
 	unless($file eq "$file_output_dir/$newname") {
-		if(-e "$file_output_dir/$newname") {
+		if(file_exists("$file_output_dir/$newname")) {
 			$proc_sl->finalize_and_log("Tried to rename to existing file: $file_output_dir/$newname");
 		}
 		else {
