@@ -18,6 +18,7 @@
 use v5.10;
 use common::sense;
 use Config::YAML;
+use Data::Types qw(:int);
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
@@ -377,7 +378,7 @@ sub ed2k_hash {
 # Example: in_List(2, "1-3") == true
 sub in_list {
 	my($needle, $haystack) = @_;
-	#print "\nneedle: $needle\t haystack: $haystack\n";
+	cache_list($haystack);
 	if($needle =~ /^(\w+)-(\w+)$/) {
 		return in_list($1, $haystack);
 		# This is commented out to work around a bug in the AniDB UDP API.
@@ -387,11 +388,7 @@ sub in_list {
 		#}
 		#return 1;
 	}
-	
-	$needle =~ s/^(\w*?)[0]*(\d+)$/$1$2/;
-	#print "ineedle: $needle\t haystack: $haystack\n";
-	cache_list($haystack);
-	return(defined $in_list_cache->{$haystack}->{$needle} ? 1 : 0);
+	return defined $in_list_cache->{$haystack}->{(is_int($needle) ? int($needle) : $needle)};
 }
 
 sub count_list {
@@ -409,7 +406,7 @@ sub cache_list {
 					$in_list_cache->{$list}->{$a} = 1;
 				}
 			} else {
-				$in_list_cache->{$list}->{$_} = 1;
+				$in_list_cache->{$list}->{(is_int($_) ? int($_) : $_)} = 1;
 			}
 		}
 	}
