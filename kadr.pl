@@ -331,7 +331,8 @@ sub avdump {
 		 $db->update('known_files', {avdumped => 1}, {ed2k => $ed2k, size => $size});
 	}
 	else {
-		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file, size => $size}, {filename => $file, size => $size});
+		my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
+		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file, size => $size}, {filename => $file_sn, size => $size});
 		return $aved2k;
 	}
 }
