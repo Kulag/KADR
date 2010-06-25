@@ -25,7 +25,6 @@ use Encode;
 use Expect;
 use File::Copy;
 use File::Basename;
-use File::Path;
 use File::HomeDir;
 use File::Find;
 use Getopt::Long;
