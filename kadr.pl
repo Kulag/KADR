@@ -77,7 +77,7 @@ my $conf = Config::YAML->new(
 	},
 	file_naming_scheme => <<'EOF',
 $if(%only_episode_in_folder%,,%anime_romaji_name%/)%anime_romaji_name%
-$if($rematch(%episode_english_name%,'^(Complete Movie|ova|special|tv special)$'),,
+$if($rematch(%episode_english_name%,'^(Complete Movie|OVA|Special|TV Special)$'),,
  - %episode_number%$ifgreater(%file_version%,1,v%file_version%,) - %episode_english_name%)
 $if($not($strcmp(%group_short_name%,raw)), '['%group_short_name%']').%file_type%
 EOF
