@@ -1,0 +1,3 @@
+[submodule "Term-StatusLine"]
+	path = Term-StatusLine
+	url = git://github.com/Kulag/Term-StatusLine.git
