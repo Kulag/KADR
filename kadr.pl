@@ -77,6 +77,7 @@ my $conf = Config::YAML->new(
 	use_windows_compatible_filenames => 0, # Off by default since not having to do this produces nicer filenames.
 );
 $conf->read("$appdir/config");
+$conf->write;
 
 # A cache to speed up in_list calls.
 my $in_list_cache = {};
@@ -447,7 +448,6 @@ sub cleanup {
 		say "done.";
 	}
 	$db->{dbh}->disconnect();
-	$conf->write;
 	exit;
 }
 
