@@ -282,9 +282,9 @@ sub process_file {
 	}
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my ($newname, $file_output_dir) = fileparse("$file_output_dir/" . $parsets->Run($fileinfo));
+	my($newname, $file_output_dir) = fileparse("$file_output_dir/" . $parsets->Run($fileinfo));
 	$file_output_dir =~ s!/$!!;
-	mkpath($file_output_dir) if ! file_exists($file_output_dir);
+	mkpath($file_output_dir) if !is_dir($file_output_dir);
 
 	unless($file eq "$file_output_dir/$newname") {
 		if(file_exists("$file_output_dir/$newname")) {
