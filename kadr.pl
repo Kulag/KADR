@@ -227,6 +227,7 @@ sub process_file {
 	if(!in_list($fileinfo->{episode_number}, $mylistanimeinfo->{eps_with_state_on_hdd})) {
 		# Our mylistanime record is old. Can happen if the file was not added by kadr.
 		$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}});
+		$mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
 	}
 
 	my $dir = array_find(substr($file, 0, rindex($file, '/')), @{$conf->{dirs}->{to_scan}});
