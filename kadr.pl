@@ -411,7 +411,12 @@ sub ed2k_hash {
 	}
 	close $fh;
 	my $ed2k = $ctx->hexdigest;
-	$db->set('known_files', {avdumped => 1, ed2k => $ed2k, filename => $file, size => $size}, {filename => $file, size => $size});
+	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
+		$db->update('known_files', {filename => $file_sn}, {ed2k => $ed2k, size => $size});
+	}
+	else {
+		$db->insert('known_files', {ed2k => $ed2k, filename => $file_sn, size => $size});
+	}
 	$ed2k_sl->finalize_and_log('Hashed');
 	return $ed2k;
 }
