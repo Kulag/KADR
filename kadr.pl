@@ -426,6 +426,9 @@ sub ed2k_hash {
 sub in_list {
 	my($needle, $haystack) = @_;
 	cache_list($haystack);
+	if($needle =~ /^(.+),(.+)$/) {
+		return in_list($1, $haystack);
+	}
 	if($needle =~ /^(\w+)-(\w+)$/) {
 		return in_list($1, $haystack);
 		# This is commented out to work around a bug in the AniDB UDP API.
