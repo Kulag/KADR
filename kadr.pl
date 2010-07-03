@@ -113,9 +113,9 @@ $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS adbcache_file (`fid` INTEGER PRIMARY
 
 unless($dont_expire_cache) {
 	my $timeout = $conf->{anidb}->{cache_timeout};
-	$db->{dbh}->do("DELETE FROM adbcache_file WHERE updated < " . (time - $timeout->{file}));
-	$db->{dbh}->do("DELETE FROM anidb_mylist_anime WHERE updated < " . (time - $timeout->{mylist_unwatched}) . " AND watched_eps = eps_with_state_on_hdd");
-	$db->{dbh}->do("DELETE FROM anidb_mylist_anime WHERE updated < " . (time - $timeout->{mylist_watched}) . " AND watched_eps != eps_with_state_on_hdd");
+	$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $timeout->{file}));
+	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $timeout->{mylist_unwatched}) . ' AND watched_eps != eps_with_state_on_hdd');
+	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $timeout->{mylist_watched}) . ' AND watched_eps = eps_with_state_on_hdd');
 }
 
 if($conf->{load_local_cache_into_memory}) {
