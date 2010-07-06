@@ -276,6 +276,8 @@ sub process_file {
 		$fileinfo->{$_} =~ s/\//∕/g;
 		$fileinfo->{$_} =~ s/\`/'/g;
 	}
+	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
+	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
 	# Check if this is the only episode going into the folder.
 	if(
