@@ -297,7 +297,8 @@ sub process_file {
 	}
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my($newname, $file_output_dir) = fileparse("$file_output_dir/" . $parsets->Run($fileinfo));
+	my $newname;
+	($newname, $file_output_dir) = fileparse("$file_output_dir/" . $parsets->Run($fileinfo));
 	$file_output_dir =~ s!/$!!;
 	mkpath($file_output_dir) if !is_dir($file_output_dir);
 
