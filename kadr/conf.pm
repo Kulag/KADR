@@ -19,7 +19,7 @@ has 'delete_empty_dirs_in_scanned' => (is => 'rw', isa => 'Str', required => 1, 
 has 'dont_move' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "Doesn't move or rename files. Useful for testing new file_naming_scheme settings.");
 has 'dont_expire_cache' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "DEBUG OPTION. Doesn't delete old cached information.");
 has [qw(dir_to_put_unwatched_eps dir_to_put_watched_eps)] => (is => 'rw', isa => 'ExistingDir', required => 1);
-has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_unwatched_eps)] => (is => 'rw', isa => 'ArrayRef[ExistingDir]', required => 1);
+has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_watched_eps)] => (is => 'rw', isa => 'ArrayRef[ExistingDir]', required => 1);
 has 'file_naming_scheme' => (is => 'rw', isa => 'Str', required => 1, default => <<'EOF');
 $if(%only_episode_in_folder%,,%anime_romaji_name%/)%anime_romaji_name%
 $if($rematch(%episode_english_name%,'^(Complete Movie|OVA|Special|TV Special)$'),,
