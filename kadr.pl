@@ -93,7 +93,7 @@ for(@files) {
 }
 $sl->finalize;
 
-if($conf->update_records_for_deleted_files) {
+if($conf->update_anidb_records_for_deleted_files) {
 	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
 	$sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
 	for my $file (@missing_files) {
