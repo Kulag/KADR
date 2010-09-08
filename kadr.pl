@@ -24,12 +24,13 @@ use Encode;
 use Expect;
 use File::Copy;
 use File::Basename;
-use File::HomeDir;
 use File::Find;
-use kadr::conf;
 use PortIO;
 use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
+
+use lib dirname(__FILE__);
+use kadr::conf;
 
 $|++;
 $SIG{INT} = "cleanup";

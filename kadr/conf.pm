@@ -1,4 +1,5 @@
 package kadr::conf;
+use File::HomeDir;
 use Moose;
 use Moose::Util::TypeConstraints;
 use Parse::TitleSyntax;
