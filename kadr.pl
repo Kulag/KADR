@@ -222,6 +222,9 @@ sub process_file {
 	for(keys %$fileinfo) {
 		$fileinfo->{$_} =~ s/\//∕/g;
 		$fileinfo->{$_} =~ s/\`/'/g;
+		if($conf->windows_compatible_filenames) {
+			$fileinfo->{$_} =~ tr!\?"\\<>\|:\*!？”￥＜＞｜：＊!;
+		}
 	}
 	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
