@@ -28,8 +28,6 @@ use File::HomeDir;
 use File::Find;
 use kadr::conf;
 use PortIO;
-use Parse::TitleSyntax;
-use Parse::TitleSyntax::Functions::Regexp;
 use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
 
@@ -39,9 +37,6 @@ binmode STDIN, ':encoding(UTF-8)';
 binmode STDOUT, ':encoding(UTF-8)';
 
 my $conf = kadr::conf->new_with_options;
-
-my $parsets = Parse::TitleSyntax->new($conf->file_naming_scheme);
-$parsets->AddFunctions(Parse::TitleSyntax::Functions::Regexp->new($parsets));
 
 # A cache to speed up in_list calls.
 my $in_list_cache = {};
@@ -250,7 +245,7 @@ sub process_file {
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
 	my $newname;
-	($newname, $file_output_dir) = fileparse("$file_output_dir/" . $parsets->Run($fileinfo));
+	($newname, $file_output_dir) = fileparse("$file_output_dir/" . $conf->file_naming_scheme->Run($fileinfo));
 	$file_output_dir =~ s!/$!!;
 	mkpath($file_output_dir) if !is_dir($file_output_dir);
 

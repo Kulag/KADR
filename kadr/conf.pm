@@ -1,11 +1,20 @@
 package kadr::conf;
 use Moose;
 use Moose::Util::TypeConstraints;
+use Parse::TitleSyntax;
+use Parse::TitleSyntax::Functions::Regexp;
 use Readonly;
 with qw(MooseX::Getopt MooseX::SimpleConfig);
 
 Readonly my $appdir => File::HomeDir->my_home . '/.kadr';
 subtype 'ExistingDir' => as 'Str' => where { -d $_ };
+
+subtype 'FileNamingSchemeParser' => as 'Object' => where { $_->isa('Parse::TitleSyntax'); };
+coerce 'FileNamingSchemeParser' => from 'Str' => via {
+	my $parsets = Parse::TitleSyntax->new($_);
+	$parsets->AddFunctions(Parse::TitleSyntax::Functions::Regexp->new($parsets));
+	return $parsets;
+};
 
 has '+configfile' => (default => "$appdir/config.yml", documentation => 'Default: ~/.kadr/config.yml');
 
@@ -20,7 +29,7 @@ has 'dont_move' => (is => 'rw', isa => 'Bool', required => 1, default => 0, docu
 has 'dont_expire_cache' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "DEBUG OPTION. Doesn't delete old cached information.");
 has [qw(dir_to_put_unwatched_eps dir_to_put_watched_eps)] => (is => 'rw', isa => 'ExistingDir', required => 1);
 has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_watched_eps)] => (is => 'rw', isa => 'ArrayRef[ExistingDir]', required => 1);
-has 'file_naming_scheme' => (is => 'rw', isa => 'Str', required => 1, default => <<'EOF');
+has 'file_naming_scheme' => (is => 'rw', isa => 'FileNamingSchemeParser', required => 1, coerce => 1, default => <<'EOF');
 $if(%only_episode_in_folder%,,%anime_romaji_name%/)%anime_romaji_name%
 $if($rematch(%episode_english_name%,'^(Complete Movie|OVA|Special|TV Special)$'),,
  - %episode_number%$ifgreater(%file_version%,1,v%file_version%,) - %episode_english_name%)
