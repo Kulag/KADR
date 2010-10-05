@@ -78,7 +78,6 @@ my $a = AniDB::UDPClient->new({
 	username => $conf->anidb_username,
 	password => $conf->anidb_password,
 	db => $db,
-	port => 3700,
 	time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
 });
 
@@ -482,17 +481,26 @@ use constant MYLIST_FILE_ENUM => qw/lid fid eid aid gid date state viewdate stor
 use constant MYLIST_ANIME_ENUM => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
 
 sub new {
-	my($package, $opts) = @_;
-	my $self = bless $opts, $package;
-	$self->{username} or die 'AniDB error: Need a username';
-	$self->{password} or die 'AniDB error: Need a password';
+	my($class, $opts) = @_;
+	my $self = bless {}, $class;
+	$self->{username} = $opts->{username} or die 'AniDB error: Need a username';
+	$self->{password} = $opts->{password} or die 'AniDB error: Need a password';
+	$self->{db} = $opts->{db} or die 'AniDB error: Need a working database';
+	$self->{time_to_sleep_when_busy} = $opts->{time_to_sleep_when_busy};
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
-	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
+	$self->setup_iohandle($opts->{port} || 9000);
 	my $host = gethostbyname('api.anidb.info') or die($!);
 	$self->{sockaddr} = sockaddr_in(9000, $host) or die($!);
-	return $self;
+	$self;
+}
+
+sub setup_iohandle {
+	my($self, $port) = @_;
+	$self->{port} = $port;
+	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
+	$self;
 }
 
 sub file_query {
@@ -691,7 +699,7 @@ sub login {
 		}
 		$login_sl->finalize;
 	}
-	return 1;
+	$self;
 }
 
 sub logout {
@@ -702,6 +710,7 @@ sub logout {
 		$logout_sl->finalize;
 	}
 	delete $self->{skey};
+	$self;
 }
 
 # Sends and reads the reply. Tries up to 10 times.
@@ -773,7 +782,8 @@ sub _sendrecv {
 	# Check that the answer we received matches the query we sent.
 	$recvmsg =~ s/^(T\d+) (.*)/$2/;
 	if(not defined($1) or $1 ne $vars->{tag}) {
-		die("\nTag mismatch");
+		warn "\nPort changing\n";
+		$self->logout->setup_iohandle($self->{port} + 1)->_sendrecv($query, $vars);
 	}
 	
 	# Check if our session is invalid.
@@ -787,6 +797,5 @@ sub _sendrecv {
 }
 
 sub DESTROY {
-	my $self = shift;
-	$self->logout;
+	shift->logout;
 }
