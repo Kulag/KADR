@@ -17,7 +17,6 @@
 
 use v5.10;
 use common::sense;
-use Data::Types qw(:int);
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
@@ -385,7 +384,7 @@ sub ed2k_hash {
 }
 
 # Determines if the specified number is in a AniDB style list of episode numbers.
-# Example: in_List(2, "1-3") == true
+# Example: in_list(2, "1-3") == true
 sub in_list {
 	my($needle, $haystack) = @_;
 	cache_list($haystack);
@@ -401,7 +400,7 @@ sub in_list {
 		#}
 		#return 1;
 	}
-	return defined $in_list_cache->{$haystack}->{(is_int($needle) ? int($needle) : $needle)};
+	return defined $in_list_cache->{$haystack}->{(int($needle) || $needle)};
 }
 
 sub count_list {
@@ -419,7 +418,7 @@ sub cache_list {
 					$in_list_cache->{$list}->{$a} = 1;
 				}
 			} else {
-				$in_list_cache->{$list}->{(is_int($_) ? int($_) : $_)} = 1;
+				$in_list_cache->{$list}->{(int($_) || $_)} = 1;
 			}
 		}
 	}
