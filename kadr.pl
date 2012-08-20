@@ -89,13 +89,11 @@ $files = $conf->collator->($files);
 say 'done.';
 
 my @ed2k_of_processed_files;
-my $sl = Term::StatusLine::XofX->new(total_item_count => scalar(@files));
-for(@files) {
-	$sl->update('++', $_);
-	next if !valid_file($_);
-	if(my $ed2k = process_file($_)) {
-		push @ed2k_of_processed_files, $ed2k;
-	}
+my $sl = Term::StatusLine::XofX->new(total_item_count => scalar @$files);
+for my $file (@$files) {
+	$sl->incr->update_label($file);
+	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file);
+	process_file($file, $ed2k);
 }
 $sl->finalize;
 
@@ -180,15 +178,13 @@ sub find_files {
 }
 
 sub process_file {
-	my $file = shift;
-	my $ed2k = ed2k_hash($file);
-	my $fileinfo = $a->file_query({ed2k => $ed2k, size => -s $file});
+	my ($file, $ed2k) = @_;
+	my $file_size = -s $file;
+	my $fileinfo = $a->file_query({ed2k => $ed2k, size => $file_size});
 	my $proc_sl = Term::StatusLine::Freeform->new(parent => $sl);
 
-	if(!defined $fileinfo) {
-		$proc_sl->finalize_and_log('Ignored');
-		return $ed2k;
-	}
+	# File not in AniDB.
+	return $proc_sl->finalize_and_log('Ignored') unless $fileinfo;
 
 	# Auto-add to mylist.
 	my $mylistinfo = $a->mylist_file_by_fid($fileinfo->{fid});
@@ -290,8 +286,6 @@ sub process_file {
 		}
 	}
 
-	$proc_sl->finalize;
-	return $fileinfo->{ed2k};
 }
 
 sub array_find {
