@@ -17,6 +17,8 @@
 
 use v5.10;
 use common::sense;
+use open qw(:std :utf8);
+use utf8;
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
@@ -24,7 +26,8 @@ use Expect;
 use File::Copy;
 use File::Basename;
 use File::Find;
-use PortIO;
+use List::AllUtils qw(first none reduce);
+use Path::Class;
 use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
 use Time::HiRes;
@@ -33,6 +36,8 @@ use lib dirname(__FILE__);
 use kadr::conf;
 
 sub TERM_SPEED() { $ENV{KADR_TERM_SPEED} // 0.05 }
+
+sub shortest(@) { reduce { length($a) < length($b) ? $a : $b } @_ }
 
 $|++;
 $SIG{INT} = "cleanup";
@@ -94,7 +99,7 @@ say 'done.';
 my @ed2k_of_processed_files;
 my $sl = Term::StatusLine::XofX->new(total_item_count => scalar @$files);
 for my $file (@$files) {
-	$sl->incr->update_label($file);
+	$sl->incr->update_label(shortest $file->relative, $file);
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file);
 	process_file($file, $ed2k);
 }
@@ -138,44 +143,29 @@ cleanup();
 
 sub valid_file {
 	return if /\.part$/;
-	return if !is_file($_);
-	return 1;
+	return unless -f $_;
+	1;
 }
 
 sub find_files {
-	my(@paths) = @_;
-	my(@dirs, @files);
-	for(@paths) {
-		if(!is_dir($_)) {
-			if(is_file($_)) {
-				push @files, $_;
-			}
-			else {
-				say "Warning: Not a directory: $_";
-			}
-		}
-		else {
-			push @dirs, $_;
-		}
-	}
+	my @dirs = map { shortest $_, $_->relative } @_;
+	my @files;
+
 	my $sl = Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
 	for my $dir (@dirs) {
-		$sl->update('++', $dir);
-		opendir(my $dh, $dir);
-		for(readdir($dh)) {
-			if(!($_ eq '.' or $_ eq '..')) {
-				$_ = "$dir/$_";
-				if(is_dir($_)) {
-					push @dirs, $_;
-				}
-				else {
-					push @files, decode_utf8($_);
-				}
+		$sl->incr;
+		$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
+
+		for ($dir->children) {
+			if ($_->is_dir) { push @dirs, $_ }
+			else {
+				$_ = file(decode_utf8 $_);
+				push @files, $_ if valid_file
 			}
 		}
-		close($dh);
 	}
-	$sl->finalize;
+
+	$sl->log(sprintf 'Found %d files in %d directories.', scalar @files, scalar @dirs);
 
 	\@files;
 }
@@ -220,16 +210,18 @@ sub process_file {
 		$mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
 	}
 
-	my $dir = array_find(substr($file, 0, rindex($file, '/')), @{$conf->dirs_to_scan});
-	my $file_output_dir = $dir;
-	if(in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps})) {
-		if(!($dir ~~ @{$conf->valid_dirs_for_watched_eps})) {
-			$file_output_dir = $conf->dir_to_put_watched_eps;
+	$fileinfo->{episode_watched} = in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps});
+
+	# Watched / Unwatched directories.
+	my $dir = first { $_->subsumes($file) } @{$conf->dirs_to_scan};
+	if ($fileinfo->{episode_watched}) {
+		if (none { $_->subsumes($dir) } @{$conf->valid_dirs_for_watched_eps}) {
+			$dir = $conf->dir_to_put_watched_eps;
 		}
 	}
 	else {
-		if(!($dir ~~ @{$conf->valid_dirs_for_unwatched_eps})) {
-			$file_output_dir = $conf->dir_to_put_unwatched_eps;
+		if (none { $_->subsumes($dir) } @{$conf->valid_dirs_for_unwatched_eps}) {
+			$dir = $conf->dir_to_put_unwatched_eps;
 		}
 	}
 
@@ -261,42 +253,34 @@ sub process_file {
 	}
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname;
-	($newname, $file_output_dir) = fileparse("$file_output_dir/" . $conf->file_naming_scheme->Run($fileinfo));
-	$file_output_dir =~ s!/$!!;
-	mkpath($file_output_dir) if !is_dir($file_output_dir);
-
-	unless($file eq "$file_output_dir/$newname") {
-		if(file_exists("$file_output_dir/$newname")) {
-			$proc_sl->finalize_and_log("Tried to rename to existing file: $file_output_dir/$newname");
-		}
-		else {
-			if($conf->dont_move) {
-				$proc_sl->finalize_and_log("Would have moved to $file_output_dir/$newname");
-			}
-			else {
-				$proc_sl->update("Moving to $file_output_dir/$newname");
-				my $size = -s $file;
-				if(move($file, "$file_output_dir/$newname")) {
-					$db->update('known_files', {filename => $newname}, {ed2k => $ed2k, size => $size});
-					$proc_sl->finalize_and_log("Moved to $file_output_dir/$newname");
-				}
-				else {
-					$proc_sl->finalize_and_log("Error moving to $file_output_dir/$newname");
-					exit 2;
-				}
-			}
-		}
-	}
-
+	my $newname = $dir->file($conf->file_naming_scheme->Run($fileinfo));
+	move_file($file, $ed2k, $newname);
 }
 
-sub array_find {
-	my($key, @haystack) = @_;
-	foreach my $straw (@haystack) {
-		return $straw if index($key, $straw) > -1;
+sub move_file {
+	my ($old, $ed2k, $new) = @_;
+	my $sl = $sl->child('Freeform');
+
+	# Doesn't need to be renamed.
+	return if $old->absolute eq $new->absolute;
+
+	$new->dir->mkpath unless -e $new->dir;
+
+	my $display_new = shortest $new->relative, $new;
+
+	if (-e $new) {
+		return $sl->finalize_and_log('Would overwrite existing file: ' . $display_new);
 	}
-	return;
+
+	$sl->update('Moving to ' . $display_new);
+	if (move($old, $new)) {
+		$db->update('known_files', {filename => $new->basename}, {ed2k => $ed2k, size => -s $new});
+		$sl->finalize_and_log('Moved to ' . $display_new);
+	}
+	else {
+		$sl->finalize_and_log('Error moving to ' . $display_new);
+		exit 2;
+	}
 }
 
 sub avdump {
@@ -348,10 +332,9 @@ sub avdump {
 
 sub ed2k_hash {
 	my($file) = @_;
-	my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
 	my $size = -s $file;
 
-	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file_sn, size => $size}, 1)) {
+	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file->basename, size => $size}, 1)) {
 		avdump($file, $size, $r->{ed2k}) if $conf->has_avdump and !$r->{avdumped};
 		return $r->{ed2k};
 	}
@@ -361,7 +344,7 @@ sub ed2k_hash {
 	}
 
 	my $ctx = Digest::ED2K->new;
-	my $fh = file_open('<:mmap:raw', $file);
+	my $fh = $file->open('<:raw');
 	my $ed2k_sl;
 
 	if ($conf->show_hashing_progress) {
@@ -379,10 +362,10 @@ sub ed2k_hash {
 
 	my $ed2k = $ctx->hexdigest;
 	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
-		$db->update('known_files', {filename => $file_sn}, {ed2k => $ed2k, size => $size});
+		$db->update('known_files', {filename => $file->basename}, {ed2k => $ed2k, size => $size});
 	}
 	else {
-		$db->insert('known_files', {ed2k => $ed2k, filename => $file_sn, size => $size});
+		$db->insert('known_files', {ed2k => $ed2k, filename => $file->basename, size => $size});
 	}
 	$ed2k_sl->finalize_and_log('Hashed');
 	return $ed2k;

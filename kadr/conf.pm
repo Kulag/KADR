@@ -1,15 +1,16 @@
 package kadr::conf;
 use Class::Load qw(load_optional_class);
 use File::HomeDir;
+use List::MoreUtils qw(all);
 use Moose;
 use Moose::Util::TypeConstraints;
+use Path::Class;
 use Parse::TitleSyntax;
 use Parse::TitleSyntax::Functions::Regexp;
-use Readonly;
+
 with qw(MooseX::Getopt MooseX::SimpleConfig);
 
-Readonly my $appdir => File::HomeDir->my_home . '/.kadr';
-subtype 'ExistingDir' => as 'Str' => where { -d $_ };
+my $appdir = dir(File::HomeDir->my_home)->subdir('.kadr');
 
 subtype 'Collator', as 'CodeRef';
 coerce 'Collator', from 'Str', via {
@@ -30,6 +31,11 @@ MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
 	'Collator' => '=s'
 );
 
+subtype 'ExistingDir' => as class_type('Path::Class::Dir') => where { -d $_ };
+coerce 'ExistingDir' => from 'Str' => via { dir($_) };
+
+subtype 'ExistingDirs', as 'ArrayRef[ExistingDir]' => where { all { -d $_ } @$_ };
+coerce 'ExistingDirs', from 'ArrayRef', via { [map { dir($_) } @$_] };
 
 class_type('Parse::TitleSyntax');
 coerce 'Parse::TitleSyntax' => from 'Str' => via {
@@ -38,14 +44,15 @@ coerce 'Parse::TitleSyntax' => from 'Str' => via {
 	return $parsets;
 };
 
-has '+configfile' => (default => "$appdir/config.yml", documentation => 'Default: ~/.kadr/config.yml');
+has '+configfile',
+	default => $appdir->file('config.yml').'',
+	documentation => 'Default: ~/.kadr/config.yml';
 
 has 'avdump' => (is => 'rw', isa => 'Str', predicate => 'has_avdump', documentation => "Commandline to run avdump.");
 has 'avdump_timeout' => (is => 'rw', isa => 'Int', default => 30, documentation => "How many seconds to wait for avdump to contact AniDB before retrying.");
 has [qw(anidb_username anidb_password)] => (is => 'rw', isa => 'Str', required => 1);
 has 'cache_timeout_mylist_unwatched' => (is => 'rw', isa => 'Int', required => 1, default => 2*60*60);
 has [qw(cache_timeout_file cache_timeout_mylist_watched)] => (is => 'rw', isa => 'Int', required => 1, default => 12*24*60*60);
-has 'database' => (is => 'rw', isa => 'Str', required => 1, default => "dbi:SQLite:$appdir/db");
 
 has 'collator',
 	coerce => 1,
@@ -53,10 +60,25 @@ has 'collator',
 	is => 'rw',
 	isa => 'Collator';
 
+has 'database',
+	default => 'dbi:SQLite:' . $appdir->file('db'),
+	is => 'rw',
+	isa => 'Str',
+	required => 1;
+
 has 'delete_empty_dirs_in_scanned' => (is => 'rw', isa => 'Str', required => 1, default => 1);
-has 'dont_move' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "Doesn't move or rename files. Useful for testing new file_naming_scheme settings.");
-has [qw(dir_to_put_unwatched_eps dir_to_put_watched_eps)] => (is => 'rw', isa => 'ExistingDir', required => 1);
-has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_watched_eps)] => (is => 'rw', isa => 'ArrayRef[ExistingDir]', required => 1);
+
+has [qw(dir_to_put_unwatched_eps dir_to_put_watched_eps)],
+	coerce => 1,
+	is => 'rw',
+	isa => 'ExistingDir',
+	required => 1;
+
+has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_watched_eps)],
+	coerce => 1,
+	is => 'rw',
+	isa => 'ExistingDirs',
+	required => 1;
 
 has 'expire_cache',
 	default => 1,
