@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # Copyright (c) 2009, Kulag <g.kulag@gmail.com>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
