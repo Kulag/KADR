@@ -124,4 +124,5 @@ has 'time_to_sleep_when_busy' => (is => 'rw', isa => 'Int', required => 1, defau
 has 'update_anidb_records_for_deleted_files' => (is => 'rw', isa => 'Bool', required => 1, default => 0);
 has 'windows_compatible_filenames' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => 'Default: false. Set to true to make Windows not shit bricks.');
 
+__PACKAGE__->meta->make_immutable;
 1;
