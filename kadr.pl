@@ -79,6 +79,8 @@ my $a = AniDB::UDPClient->new({
 	password => $conf->anidb_password,
 	db => $db,
 	time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
+	max_attempts => $conf->query_attempts,
+	timeout => $conf->query_timeout,
 });
 
 my @files = sort(find_files(@{$conf->dirs_to_scan}));
@@ -487,6 +489,8 @@ sub new {
 	$self->{password} = $opts->{password} or die 'AniDB error: Need a password';
 	$self->{db} = $opts->{db} or die 'AniDB error: Need a working database';
 	$self->{time_to_sleep_when_busy} = $opts->{time_to_sleep_when_busy};
+	$self->{max_attempts} = $opts->{max_attempts} || 5;
+	$self->{timeout} = $opts->{timeout} || 15.0;
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
@@ -713,7 +717,6 @@ sub logout {
 	$self;
 }
 
-# Sends and reads the reply. Tries up to 10 times.
 sub _sendrecv {
 	my($self, $query, $vars) = @_;
 	my $recvmsg;
@@ -746,11 +749,10 @@ sub _sendrecv {
 		my $rin = '';
 		my $rout;
 		vec($rin, fileno($self->{handle}), 1) = 1;
-		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, 30.0);
-		
-		$attempts++;
-		die "\nTimeout while waiting for reply.\n" if $attempts == 4;
-        }
+		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $self->{timeout});
+
+		die "\nTimeout while waiting for reply.\n" if ++$attempts == $self->{max_attempts};
+	}
 
 	# Check if the data is compressed.
 	if(substr($recvmsg, 0, 2) eq "\x00\x00") {

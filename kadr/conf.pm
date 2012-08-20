@@ -37,6 +37,19 @@ $if($rematch(%episode_english_name%,'^(Complete Movie|OVA|Special|TV Special)$')
 $if($not($strcmp(%group_short_name%,raw)), '['%group_short_name%']').%file_type%
 EOF
 has 'load_local_cache_into_memory' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Disable to reduce memory usage when doing a longer run. About 15 times faster when kadr doesn't have to talk to anidb.");
+
+has 'query_attempts',
+	default => 5,
+	documentation => 'Number of times to retry a query after a timeout. Default: 5',
+	is => 'rw',
+	isa => 'Int';
+
+has 'query_timeout',
+	default => 15.0,
+	documentation => 'Time to wait for a response to a query. Default: 15.0 seconds',
+	is => 'rw',
+	isa => 'Num';
+
 has 'show_hashing_progress' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Only disable if you think that printing the hashing progess is taking up a significant amount of CPU time when hashing a file.");
 has 'time_to_sleep_when_busy' => (is => 'rw', isa => 'Int', required => 1, default => 10*60, documentation => "How long (in seconds) to sleep if AniDB informs us it's too busy to talk to us.");
 has 'update_anidb_records_for_deleted_files' => (is => 'rw', isa => 'Bool', required => 1, default => 0);
