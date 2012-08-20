@@ -27,9 +27,12 @@ use File::Find;
 use PortIO;
 use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
+use Time::HiRes;
 
 use lib dirname(__FILE__);
 use kadr::conf;
+
+sub TERM_SPEED() { $ENV{KADR_TERM_SPEED} // 0.05 }
 
 $|++;
 $SIG{INT} = "cleanup";
@@ -360,18 +363,20 @@ sub ed2k_hash {
 	my $ctx = Digest::ED2K->new;
 	my $fh = file_open('<:mmap:raw', $file);
 	my $ed2k_sl;
-	if($conf->show_hashing_progress) {
-		$ed2k_sl = Term::StatusLine::XofX->new(parent => $sl, label => 'Hashing', total_item_count => $size);
+
+	if ($conf->show_hashing_progress) {
+		$ed2k_sl = Term::StatusLine::XofX->new(parent => $sl, label => 'Hashing', total_item_count => $size, format => 'percent');
 		while(my $bytes_read = read $fh, my $buffer, Digest::ED2K::CHUNK_SIZE) {
 			$ctx->add($buffer);
-			$ed2k_sl->update("+=$bytes_read");
+			$ed2k_sl->incr($bytes_read);
+			$ed2k_sl->update_term if $ed2k_sl->last_update + TERM_SPEED < Time::HiRes::time;
 		}
 	}
 	else {
 		$ed2k_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Hashing');
 		$ctx->addfile($fh);
 	}
-	close $fh;
+
 	my $ed2k = $ctx->hexdigest;
 	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
 		$db->update('known_files', {filename => $file_sn}, {ed2k => $ed2k, size => $size});
