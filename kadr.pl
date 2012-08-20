@@ -105,7 +105,7 @@ for my $file (@$files) {
 }
 $sl->finalize;
 
-if($conf->update_anidb_records_for_deleted_files) {
+if(!$conf->test && $conf->update_anidb_records_for_deleted_files) {
 	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
 	$sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
 	for my $file (@missing_files) {
@@ -131,7 +131,7 @@ if($conf->update_anidb_records_for_deleted_files) {
 	$sl->finalize;
 }
 
-if ($conf->delete_empty_dirs_in_scanned) {
+if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
 	print "Deleting empty folders in those scanned... ";
 	for(@{$conf->dirs_to_scan}) {
 		finddepth({wanted => sub{rmdir}, follow => 1}, $_);
@@ -181,7 +181,7 @@ sub process_file {
 
 	# Auto-add to mylist.
 	my $mylistinfo = $a->mylist_file_by_fid($fileinfo->{fid});
-	if(!defined $mylistinfo) {
+	if(!defined $mylistinfo && !$conf->test) {
 		$proc_sl->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylistadd($fileinfo->{fid})) {
 			$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}}); # Force an update of this record, it's out of date.
@@ -192,7 +192,7 @@ sub process_file {
 			$proc_sl->finalize_and_log('Error adding to AniDB Mylist');
 		}
 	}
-	elsif($mylistinfo->{state} != 1) { # State 1 == on disk.
+	elsif($mylistinfo->{state} != 1 && !$conf->test) { # TODO: AniDB::UDPClient::MYLIST_STATE_ONHDD
 		$proc_sl->update('Setting AniDB Mylist state to "On HDD"');
 		if($a->mylistedit({lid => $fileinfo->{lid}, state => 1})) {
 			$db->update('anidb_mylist_file', {state => 1}, {fid => $mylistinfo->{fid}});
@@ -270,6 +270,10 @@ sub move_file {
 
 	if (-e $new) {
 		return $sl->finalize_and_log('Would overwrite existing file: ' . $display_new);
+	}
+
+	if ($conf->test) {
+		return $sl->finalize_and_log('Would have moved to: ' . $display_new);
 	}
 
 	$sl->update('Moving to ' . $display_new);
