@@ -777,7 +777,7 @@ sub _sendrecv {
 	}
 	
 	# Check for a server error.
-	if($recvmsg =~ /(T\d+ )?6\d+.*$/) {
+	if ($recvmsg =~ /^(T\d+ )?6\d+/) {
 		die("\nAnidb error:\n$recvmsg");
 	}
 	
