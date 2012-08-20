@@ -24,16 +24,16 @@ use Digest::ED2K;
 use Encode;
 use Expect;
 use File::Copy;
-use File::Basename;
 use File::Find;
+use FindBin;
 use List::AllUtils qw(first none reduce);
 use Path::Class;
 use Term::StatusLine::Freeform;
 use Term::StatusLine::XofX;
 use Time::HiRes;
 
-use lib dirname(__FILE__);
-use kadr::conf;
+use lib "$FindBin::RealBin/lib";
+use App::KADR::Config;
 
 sub TERM_SPEED() { $ENV{KADR_TERM_SPEED} // 0.05 }
 
@@ -44,7 +44,7 @@ $SIG{INT} = "cleanup";
 binmode STDIN, ':encoding(UTF-8)';
 binmode STDOUT, ':encoding(UTF-8)';
 
-my $conf = kadr::conf->new_with_options;
+my $conf = App::KADR::Config->new_with_options;
 
 # A cache to speed up in_list calls.
 my $in_list_cache = {};

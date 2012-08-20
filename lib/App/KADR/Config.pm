@@ -1,4 +1,4 @@
-package kadr::conf;
+package App::KADR::Config;
 use Class::Load qw(load_optional_class);
 use File::HomeDir;
 use List::MoreUtils qw(all);
