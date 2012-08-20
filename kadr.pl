@@ -58,7 +58,7 @@ $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS adbcache_file (`fid` INTEGER PRIMARY
 				 `episode_romaji_name` TEXT, `episode_kanji_name` TEXT, `episode_rating` TEXT, `episode_vote_count` TEXT, `group_name` TEXT,
 				 `group_short_name` TEXT, `updated` INT)}) or die "Could not initialize the database";
 
-unless($conf->dont_expire_cache) {
+if ($conf->expire_cache) {
 	$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
 	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_unwatched) . ' AND watched_eps != eps_with_state_on_hdd');
 	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_watched) . ' AND watched_eps = eps_with_state_on_hdd');

@@ -55,9 +55,14 @@ has 'collator',
 
 has 'delete_empty_dirs_in_scanned' => (is => 'rw', isa => 'Str', required => 1, default => 1);
 has 'dont_move' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "Doesn't move or rename files. Useful for testing new file_naming_scheme settings.");
-has 'dont_expire_cache' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "DEBUG OPTION. Doesn't delete old cached information.");
 has [qw(dir_to_put_unwatched_eps dir_to_put_watched_eps)] => (is => 'rw', isa => 'ExistingDir', required => 1);
 has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_watched_eps)] => (is => 'rw', isa => 'ArrayRef[ExistingDir]', required => 1);
+
+has 'expire_cache',
+	default => 1,
+	documentation => "DEBUG OPTION. Negate to prevent deleting old cached records.",
+	is => 'rw',
+	isa => 'Bool';
 
 has 'file_naming_scheme',
 	coerce => 1,
