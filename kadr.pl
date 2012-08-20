@@ -121,6 +121,14 @@ if($conf->update_anidb_records_for_deleted_files) {
 	$sl->finalize;
 }
 
+if ($conf->delete_empty_dirs_in_scanned) {
+	print "Deleting empty folders in those scanned... ";
+	for(@{$conf->dirs_to_scan}) {
+		finddepth({wanted => sub{rmdir}, follow => 1}, $_);
+	}
+	say "done.";
+}
+
 cleanup();
 
 sub valid_file {
@@ -426,17 +434,8 @@ sub range {
 }
 
 sub cleanup {
-	if(defined $a) {
-		$a->logout();
-	}
-	if($conf->delete_empty_dirs_in_scanned) {
-		print "Deleting empty folders in those scanned... ";
-		for(@{$conf->dirs_to_scan}) {
-			finddepth({wanted => sub{rmdir}, follow => 1}, $_) if -e;
-		}
-		say "done.";
-	}
-	$db->{dbh}->disconnect();
+	$a->logout if $a;
+	$db->{dbh}->disconnect;
 	exit;
 }
 
