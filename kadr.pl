@@ -82,7 +82,12 @@ my $a = AniDB::UDPClient->new({
 	timeout => $conf->query_timeout,
 });
 
-my @files = sort(find_files(@{$conf->dirs_to_scan}));
+my $files = find_files(@{$conf->dirs_to_scan});
+
+print 'Sorting... ';
+$files = $conf->collator->($files);
+say 'done.';
+
 my @ed2k_of_processed_files;
 my $sl = Term::StatusLine::XofX->new(total_item_count => scalar(@files));
 for(@files) {
@@ -170,7 +175,8 @@ sub find_files {
 		close($dh);
 	}
 	$sl->finalize;
-	return @files;
+
+	\@files;
 }
 
 sub process_file {

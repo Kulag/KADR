@@ -1,4 +1,5 @@
 package kadr::conf;
+use Class::Load qw(load_optional_class);
 use File::HomeDir;
 use Moose;
 use Moose::Util::TypeConstraints;
@@ -9,6 +10,26 @@ with qw(MooseX::Getopt MooseX::SimpleConfig);
 
 Readonly my $appdir => File::HomeDir->my_home . '/.kadr';
 subtype 'ExistingDir' => as 'Str' => where { -d $_ };
+
+subtype 'Collator', as 'CodeRef';
+coerce 'Collator', from 'Str', via {
+	if ($_ eq 'auto') {
+		$_ = load_optional_class('Unicode::Collate') ? 'unicode-i' : 'ascii-i';
+	}
+
+	return sub { $_[0] } if $_ eq 'none';
+	return sub { [ sort @{ $_[0] } ] } if $_ eq 'ascii';
+	return sub { [ sort { lc($a) cmp lc($b) } @{ $_[0] } ] } if $_ eq 'ascii-i';
+	if ($_ eq 'unicode-i') {
+		require Unicode::Collate;
+		my $collator = Unicode::Collate->new(level => 1, normalize => undef);
+		return sub { [ $collator->sort(@{ $_[0] }) ] };
+	}
+};
+MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
+	'Collator' => '=s'
+);
+
 
 class_type('Parse::TitleSyntax');
 coerce 'Parse::TitleSyntax' => from 'Str' => via {
@@ -25,6 +46,13 @@ has [qw(anidb_username anidb_password)] => (is => 'rw', isa => 'Str', required =
 has 'cache_timeout_mylist_unwatched' => (is => 'rw', isa => 'Int', required => 1, default => 2*60*60);
 has [qw(cache_timeout_file cache_timeout_mylist_watched)] => (is => 'rw', isa => 'Int', required => 1, default => 12*24*60*60);
 has 'database' => (is => 'rw', isa => 'Str', required => 1, default => "dbi:SQLite:$appdir/db");
+
+has 'collator',
+	coerce => 1,
+	default => 'auto',
+	is => 'rw',
+	isa => 'Collator';
+
 has 'delete_empty_dirs_in_scanned' => (is => 'rw', isa => 'Str', required => 1, default => 1);
 has 'dont_move' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "Doesn't move or rename files. Useful for testing new file_naming_scheme settings.");
 has 'dont_expire_cache' => (is => 'rw', isa => 'Bool', required => 1, default => 0, documentation => "DEBUG OPTION. Doesn't delete old cached information.");
