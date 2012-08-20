@@ -236,7 +236,8 @@ sub process_file {
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
 	# Check if this is the only episode going into the folder.
-	if(
+	# This should be an assignment, but Parse::TitleSyntax evaluates undef as true.
+	$fileinfo->{only_episode_in_folder} = 1 if
 		defined $mylistanimeinfo
 		# This is the only episode from this anime on HDD.
 		&& $mylistanimeinfo->{eps_with_state_on_hdd} =~ /^[a-z]*\d+$/i
@@ -244,13 +245,11 @@ sub process_file {
 		&& $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
 		&& (
 			# This episode is the only watched episode from this anime.
-			($file_output_dir eq $conf->dir_to_put_watched_eps && $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps})
+			($fileinfo->{episode_watched} && $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps})
 			# Or this episode is the only unwatched episode from this anime.
-			|| ($file_output_dir eq $conf->dir_to_put_unwatched_eps && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
-		)
-	) {
-		$fileinfo->{only_episode_in_folder} = 1;
-	}
+			|| (!$fileinfo->{episode_watched} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
+		);
+
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
 	my $newname = $dir->file($conf->file_naming_scheme->Run($fileinfo));
