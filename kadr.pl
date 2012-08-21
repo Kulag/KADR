@@ -440,6 +440,8 @@ use Encode;
 use constant CLIENT_NAME => "kadr";
 use constant CLIENT_VER => 1;
 
+use constant SESSION_TIMEOUT => 35 * 60;
+
 # Threshhold values are specified in packets.
 use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 5;
 use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 100;
@@ -545,6 +547,10 @@ sub file_version {
 	} else {
 		return 1;
 	}
+}
+
+sub has_session {
+	$_[0]->{skey} && (time - $_[0]->{last_command}) > SESSION_TIMEOUT
 }
 
 sub mylistadd {
@@ -681,27 +687,22 @@ sub _mylist_anime_query {
 
 sub login {
 	my($self) = @_;
-	if(!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60)) {
-		my $login_sl = $sl->child('Freeform', value => 'Logging in to AniDB');
-		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => "UTF8", comp => 1});
-		if(defined $msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
-			$self->{skey} = $1;
-			$self->{myaddr} = $2;
-		} else {
-			die "Login Failed: $msg\n";
-		}
-		$login_sl->finalize;
+	return $self if $self->has_session;
+
+	my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => "UTF8", comp => 1});
+	if ($msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
+		$self->{skey} = $1;
+		$self->{myaddr} = $2;
+	} else {
+		die "Login Failed: $msg\n";
 	}
+
 	$self;
 }
 
 sub logout {
 	my($self) = @_;
-	if($self->{skey} && (time - $self->{last_command}) > (35 * 60)) {
-		my $logout_sl = $sl->child('Freeform', value => 'Logging out of AniDB');
-		$self->_sendrecv("LOGOUT");
-		$logout_sl->finalize;
-	}
+	$self->_sendrecv('LOGOUT') if $self->has_session;
 	delete $self->{skey};
 	$self;
 }
@@ -710,8 +711,8 @@ sub _sendrecv {
 	my($self, $query, $vars) = @_;
 	my $recvmsg;
 	my $attempts = 0;
-	
-	$self->login if $query ne "AUTH" && (!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60));
+
+	$self->login if !$self->has_session && $query ne "AUTH";
 
 	$vars->{'s'} = $self->{skey} if $self->{skey};
 	$vars->{'tag'} = "T" . $self->{queries};
