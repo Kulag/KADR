@@ -41,6 +41,8 @@ use constant MYLIST_FILE_ENUM => qw/lid fid eid aid gid date state viewdate stor
 
 use constant MYLIST_ANIME_ENUM => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
 
+use enum qw(:MYLIST_STATE_=0 UNKNOWN HDD CD DELETED);
+
 sub new {
 	my($class, $opts) = @_;
 	my $self = bless {}, $class;

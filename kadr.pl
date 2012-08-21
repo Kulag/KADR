@@ -113,9 +113,9 @@ if(!$conf->test && $conf->update_anidb_records_for_deleted_files) {
 		my $file_status = $sl->child('Freeform', value => 'Checking AniDB record');
 		my $mylistinfo = mylist_file_by_ed2k_size(@$file);
 		if(defined($mylistinfo)) {
-			if($mylistinfo->{state} == 1) {
+			if($mylistinfo->{state} == $a->MYLIST_STATE_HDD) {
 				$file_status->update('Setting AniDB status to "deleted".');
-				$a->mylistedit({lid => $mylistinfo->{lid}, state => 3});
+				$a->mylistedit({lid => $mylistinfo->{lid}, state => $a->MYLIST_STATE_DELETED});
 				$file_status->finalize_and_log('Set AniDB status to "deleted".');
 			}
 			else {
@@ -191,10 +191,10 @@ sub process_file {
 			$proc_sl->finalize_and_log('Error adding to AniDB Mylist');
 		}
 	}
-	elsif($mylistinfo->{state} != 1 && !$conf->test) { # TODO: AniDB::UDPClient::MYLIST_STATE_ONHDD
+	elsif($mylistinfo->{state} != $a->MYLIST_STATE_HDD && !$conf->test) {
 		$proc_sl->update('Setting AniDB Mylist state to "On HDD"');
-		if($a->mylistedit({lid => $fileinfo->{lid}, state => 1})) {
-			$db->update('anidb_mylist_file', {state => 1}, {fid => $mylistinfo->{fid}});
+		if($a->mylistedit({lid => $fileinfo->{lid}, state => $a->MYLIST_STATE_HDD})) {
+			$db->update('anidb_mylist_file', {state => $a->MYLIST_STATE_HDD}, {fid => $mylistinfo->{fid}});
 			$proc_sl->finalize_and_log('Set AniDB Mylist state to "On HDD"');
 		}
 		else {
