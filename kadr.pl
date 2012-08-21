@@ -110,25 +110,24 @@ if(!$conf->test && $conf->update_anidb_records_for_deleted_files) {
 	$sl = App::KADR::Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
 	for my $file (@missing_files) {
 		$sl->update('++', $$file[2]);
-		my $file_status = Term::StatusLine::Freeform->new(parent => $sl, value => 'Checking AniDB record');
-		my $mylistinfo = $a->mylist_file_by_ed2k_size(@$file);
+		my $file_status = $sl->child('Freeform', value => 'Checking AniDB record');
+		my $mylistinfo = mylist_file_by_ed2k_size(@$file);
 		if(defined($mylistinfo)) {
 			if($mylistinfo->{state} == 1) {
 				$file_status->update('Setting AniDB status to "deleted".');
 				$a->mylistedit({lid => $mylistinfo->{lid}, state => 3});
-				$file_status->update('Set AniDB status to "deleted".');
+				$file_status->finalize_and_log('Set AniDB status to "deleted".');
 			}
 			else {
-				$file_status->update('AniDB Mylist status already set.');
+				$file_status->finalize_and_log('AniDB Mylist status already set.');
 			}
 			$db->remove('anidb_mylist_file', {lid => $mylistinfo->{lid}});
 		}
 		else {
-			$file_status->update('No AniDB Mylist record found.');
+			$file_status->finalize_and_log('No AniDB Mylist record found.');
 		}
 		$db->remove('known_files', {ed2k => $$file[0]});
 	}
-	$sl->finalize;
 }
 
 if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
@@ -173,14 +172,14 @@ sub find_files {
 sub process_file {
 	my ($file, $ed2k) = @_;
 	my $file_size = -s $file;
-	my $fileinfo = $a->file_query({ed2k => $ed2k, size => $file_size});
+	my $fileinfo = file_query(ed2k => $ed2k, size => $file_size);
 	my $proc_sl = $sl->child('Freeform');
 
 	# File not in AniDB.
 	return $proc_sl->finalize_and_log('Ignored') unless $fileinfo;
 
 	# Auto-add to mylist.
-	my $mylistinfo = $a->mylist_file_by_fid($fileinfo->{fid});
+	my $mylistinfo = mylist_file_query(fid => $fileinfo->{fid});
 	if(!defined $mylistinfo && !$conf->test) {
 		$proc_sl->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylistadd($fileinfo->{fid})) {
@@ -203,11 +202,11 @@ sub process_file {
 		}
 	}
 
-	my $mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
+	my $mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
 	if(!in_list($fileinfo->{episode_number}, $mylistanimeinfo->{eps_with_state_on_hdd})) {
 		# Our mylistanime record is old. Can happen if the file was not added by kadr.
 		$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}});
-		$mylistanimeinfo = $a->mylist_anime_by_aid($fileinfo->{aid});
+		$mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
 	}
 
 	$fileinfo->{episode_watched} = in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps});
@@ -429,9 +428,78 @@ sub cleanup {
 	exit;
 }
 
+sub file_query {
+	my $query = {@_};
+	my $r;
+
+	# Cached
+	return $r if $r = $db->fetch("adbcache_file", ["*"], $query, 1);
+
+	# Update
+	my $file_sl = $sl->child('Freeform', value => 'Updating file information');
+	$r = $a->file_query($query);
+	return unless $r;
+
+	# Cache
+	$r->{updated} = time;
+	$db->set('adbcache_file', $r, {fid => $r->{fid}});
+
+	$r;
+}
+
+sub mylist_file_query {
+	my $query = {@_};
+	my $r;
+
+	# Cached
+	return $r if $r = $db->fetch("anidb_mylist_file", ["*"], $query, 1);
+
+	# Update
+	my $ml_sl = $sl->child('Freeform', value => 'Updating mylist information');
+	$r = $a->mylist_file_query($query);
+	return unless $r;
+
+	# Cache
+	$r->{updated} = time;
+	$db->set('anidb_mylist_file', $r, {lid => $r->{lid}});
+
+	$r
+}
+
+sub mylist_file_by_ed2k_size {
+	my ($ed2k, $size) = @_;
+
+	my $fileinfo = $db->fetch("adbcache_file", ["*"], {size => $size, ed2k => $ed2k}, 1);
+	if(defined($fileinfo)) {
+		return if !$fileinfo->{lid};
+		
+		$db->remove("anidb_mylist_file", {lid => $fileinfo->{lid}});
+		return mylist_file_query({lid => $fileinfo->{lid}});
+	}
+	return $a->mylist_file_query({size => $size, ed2k => $ed2k});
+}
+
+sub mylist_anime_query {
+	my $query = {@_};
+	my $r;
+
+	# Cached
+	return $r if $r = $db->fetch("anidb_mylist_anime", ["*"], $query, 1);
+
+	# Update
+	my $ml_sl = $sl->child('Freeform', value => 'Updating mylist anime information');
+	$r = $a->mylist_anime_query($query);
+	return unless $r;
+	
+	# Cache
+	$r->{updated} = time;
+	$db->set('anidb_mylist_anime', $r, {aid => $r->{aid}});
+
+	$r
+}
+
 package AniDB::UDPClient;
-use strict;
-use warnings;
+use common::sense;
 use Time::HiRes;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
@@ -478,7 +546,6 @@ sub new {
 	my $self = bless {}, $class;
 	$self->{username} = $opts->{username} or die 'AniDB error: Need a username';
 	$self->{password} = $opts->{password} or die 'AniDB error: Need a password';
-	$self->{db} = $opts->{db} or die 'AniDB error: Need a working database';
 	$self->{time_to_sleep_when_busy} = $opts->{time_to_sleep_when_busy};
 	$self->{max_attempts} = $opts->{max_attempts} || 5;
 	$self->{timeout} = $opts->{timeout} || 15.0;
@@ -501,19 +568,12 @@ sub setup_iohandle {
 sub file_query {
 	my($self, $query) = @_;
 
-	if(my $r = $self->{db}->fetch("adbcache_file", ["*"], $query, 1)) {
-		return $r;
-	}
-
-	my $file_sl = $sl->child('Freeform', value => 'Updating file information');
-
 	$query->{fmask} = FILE_FMASK;
 	$query->{amask} = FILE_AMASK;
 
 	my $recvmsg = $self->_sendrecv("FILE", $query);
 	return unless defined $recvmsg;
 	my($code, $data) = split("\n", $recvmsg);
-	$file_sl->finalize;
 	
 	$code = int((split(" ", $code))[0]);
 	if($code == 220) { # Success
@@ -521,8 +581,6 @@ sub file_query {
 		my @fields = split /\|/, $data;
 		map { $fileinfo{(CODE_220_ENUM)[$_]} = $fields[$_] } 0 .. scalar(CODE_220_ENUM) - 1;
 		
-		$fileinfo{updated} = time;
-		$self->{db}->set('adbcache_file', \%fileinfo, {fid => $fileinfo{fid}});
 		return \%fileinfo;
 	} elsif($code == 322) { # Multiple files found.
 		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
@@ -591,62 +649,23 @@ sub mylist_add_query {
 	return 0; # everything else
 }
 
-sub mylist_file_by_fid {
-	my($self, $fid) = @_;
-	my $mylistinfo = $self->{db}->fetch("anidb_mylist_file", ["*"], {fid => $fid}, 1);
-	return $mylistinfo if defined $mylistinfo;
-	return $self->_mylist_file_query({fid => $fid});;
-}
-
-sub mylist_file_by_lid {
-	my($self, $lid) = @_;
-
-	my $mylistinfo = $self->{db}->fetch("anidb_mylist_file", ["*"], {lid => $lid}, 1);
-	return $mylistinfo if defined $mylistinfo;
-	return $self->_mylist_file_query({lid => $lid});
-}
-
-sub mylist_file_by_ed2k_size {
-	my ($self, $ed2k, $size) = @_;
-
-	my $fileinfo = $self->{db}->fetch("adbcache_file", ["*"], {size => $size, ed2k => $ed2k}, 1);
-	if(defined($fileinfo)) {
-		return if !$fileinfo->{lid};
-		
-		$self->{db}->remove("anidb_mylist_file", {lid => $fileinfo->{lid}});
-		return $self->mylist_file_by_lid($fileinfo->{lid});
-	}
-	return $self->_mylist_file_query({size => $size, ed2k => $ed2k});
-}
-
-sub _mylist_file_query {
+sub mylist_file_query {
 	my($self, $query) = @_;
-	my $mylist_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Updating mylist information');
+	
 	(my $msg = $self->_sendrecv("MYLIST", $query)) =~ s/.*\n//im;
-	$mylist_sl->finalize;
+	
 	my @f = split /\|/, $msg;
 	if(scalar @f) {
 		my %mylistinfo;
 		map { $mylistinfo{(MYLIST_FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
-		$mylistinfo{updated} = time;
-		$self->{db}->set('anidb_mylist_file', \%mylistinfo, {lid => $mylistinfo{lid}});
 		return \%mylistinfo;
 	}
 	undef;
 }
 
-sub mylist_anime_by_aid {
-	my($self, $aid) = @_;
-	my $mylistanimeinfo = $self->{db}->fetch("anidb_mylist_anime", ["*"], {aid => $aid}, 1);
-	return $mylistanimeinfo if defined $mylistanimeinfo;
-	return $self->_mylist_anime_query({aid => $aid});
-}
-
-sub _mylist_anime_query {
+sub mylist_anime_query {
 	my($self, $query) = @_;
-	my $mylist_anime_sl = $sl->child('Freeform', value => 'Updating mylist anime information');
 	my $msg = $self->_sendrecv("MYLIST", $query);
-	$mylist_anime_sl->finalize;
 	my $single_episode = ($msg =~ /^221/);
 	my $success = ($msg =~ /^312/);
 	return if not ($success or $single_episode);
@@ -678,8 +697,6 @@ sub _mylist_anime_query {
 		} else {
 			map { $mylistanimeinfo{(MYLIST_ANIME_ENUM)[$_]} = $f[$_] } 0 .. scalar(MYLIST_ANIME_ENUM) - 1;
 		}
-		$mylistanimeinfo{updated} = time;
-		$self->{db}->set('anidb_mylist_anime', \%mylistanimeinfo, {aid => $mylistanimeinfo{aid}});
 		return \%mylistanimeinfo;
 	}
 	return;
