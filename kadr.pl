@@ -28,12 +28,12 @@ use File::Find;
 use FindBin;
 use List::AllUtils qw(first none reduce);
 use Path::Class;
-use Term::StatusLine::Freeform;
-use Term::StatusLine::XofX;
 use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
 use App::KADR::Config;
+use App::KADR::Term::StatusLine::Freeform;
+use App::KADR::Term::StatusLine::XofX;
 
 sub TERM_SPEED() { $ENV{KADR_TERM_SPEED} // 0.05 }
 
@@ -97,7 +97,7 @@ $files = $conf->collator->($files);
 say 'done.';
 
 my @ed2k_of_processed_files;
-my $sl = Term::StatusLine::XofX->new(total_item_count => scalar @$files);
+my $sl = App::KADR::Term::StatusLine::XofX->new(total_item_count => scalar @$files);
 for my $file (@$files) {
 	$sl->incr->update_label(shortest $file->relative, $file);
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file);
@@ -107,7 +107,7 @@ $sl->finalize;
 
 if(!$conf->test && $conf->update_anidb_records_for_deleted_files) {
 	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
-	$sl = Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
+	$sl = App::KADR::Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
 	for my $file (@missing_files) {
 		$sl->update('++', $$file[2]);
 		my $file_status = Term::StatusLine::Freeform->new(parent => $sl, value => 'Checking AniDB record');
@@ -151,10 +151,10 @@ sub find_files {
 	my @dirs = map { shortest $_, $_->relative } @_;
 	my @files;
 
-	my $sl = Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
+	my $sl = App::KADR::Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
 	for my $dir (@dirs) {
 		$sl->incr;
-		$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
+		$sl->update_label(decode_utf8 $dir) if $sl->last_update + TERM_SPEED < Time::HiRes::time;
 
 		for ($dir->children) {
 			if ($_->is_dir) { push @dirs, $_ }
@@ -174,7 +174,7 @@ sub process_file {
 	my ($file, $ed2k) = @_;
 	my $file_size = -s $file;
 	my $fileinfo = $a->file_query({ed2k => $ed2k, size => $file_size});
-	my $proc_sl = Term::StatusLine::Freeform->new(parent => $sl);
+	my $proc_sl = $sl->child('Freeform');
 
 	# File not in AniDB.
 	return $proc_sl->finalize_and_log('Ignored') unless $fileinfo;
@@ -289,7 +289,7 @@ sub move_file {
 sub avdump {
 	my($file, $size, $ed2k) = @_;
 	my($aved2k, $timedout);
-	my $avsl = Term::StatusLine::XofX->new(parent => $sl, label => 'AvHashing', format => 'percent', total_item_count => 100);
+	my $avsl = $sl->child('XofX', label => 'AvHashing', format => 'percent', total_item_count => 100);
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
 	my $exp = Expect->new($conf->avdump . " -vas -tout:20:6555 \"$esc_file\" 2>&1");
 	$exp->log_stdout(0);
@@ -351,7 +351,7 @@ sub ed2k_hash {
 	my $ed2k_sl;
 
 	if ($conf->show_hashing_progress) {
-		$ed2k_sl = Term::StatusLine::XofX->new(parent => $sl, label => 'Hashing', total_item_count => $size, format => 'percent');
+		$ed2k_sl = $sl->child('XofX', label => 'Hashing', total_item_count => $size, format => 'percent');
 		while(my $bytes_read = read $fh, my $buffer, Digest::ED2K::CHUNK_SIZE) {
 			$ctx->add($buffer);
 			$ed2k_sl->incr($bytes_read);
@@ -359,7 +359,7 @@ sub ed2k_hash {
 		}
 	}
 	else {
-		$ed2k_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Hashing');
+		$ed2k_sl = $sl->child('Freeform', value => 'Hashing');
 		$ctx->addfile($fh);
 	}
 
@@ -503,7 +503,7 @@ sub file_query {
 		return $r;
 	}
 
-	my $file_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Updating file information');
+	my $file_sl = $sl->child('Freeform', value => 'Updating file information');
 
 	$query->{fmask} = FILE_FMASK;
 	$query->{amask} = FILE_AMASK;
@@ -638,7 +638,7 @@ sub mylist_anime_by_aid {
 
 sub _mylist_anime_query {
 	my($self, $query) = @_;
-	my $mylist_anime_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Updating mylist anime information');
+	my $mylist_anime_sl = $sl->child('Freeform', value => 'Updating mylist anime information');
 	my $msg = $self->_sendrecv("MYLIST", $query);
 	$mylist_anime_sl->finalize;
 	my $single_episode = ($msg =~ /^221/);
@@ -682,7 +682,7 @@ sub _mylist_anime_query {
 sub login {
 	my($self) = @_;
 	if(!defined $self->{skey} || (time - $self->{last_command}) > (35 * 60)) {
-		my $login_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Logging in to AniDB');
+		my $login_sl = $sl->child('Freeform', value => 'Logging in to AniDB');
 		my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => "UTF8", comp => 1});
 		if(defined $msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
 			$self->{skey} = $1;
@@ -698,7 +698,7 @@ sub login {
 sub logout {
 	my($self) = @_;
 	if($self->{skey} && (time - $self->{last_command}) > (35 * 60)) {
-		my $logout_sl = Term::StatusLine::Freeform->new(parent => $sl, value => 'Logging out of AniDB');
+		my $logout_sl = $sl->child('Freeform', value => 'Logging out of AniDB');
 		$self->_sendrecv("LOGOUT");
 		$logout_sl->finalize;
 	}
