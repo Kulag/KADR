@@ -110,7 +110,7 @@ sub file_version {
 }
 
 sub has_session {
-	$_[0]->{skey} && (time - $_[0]->{last_command}) > SESSION_TIMEOUT
+	$_[0]->{skey} && (time - $_[0]->{last_command}) < SESSION_TIMEOUT
 }
 
 sub mylistadd {
