@@ -300,6 +300,7 @@ sub _sendrecv {
 	# Check if our session is invalid.
 	if($recvmsg =~ /^501.*|^506.*/) {
 		undef $self->{skey};
+		return if $query eq 'LOGOUT';
 		$self->login();
 		return $self->_sendrecv($query, $vars);
 	}
