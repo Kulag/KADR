@@ -265,8 +265,9 @@ sub _sendrecv {
 		# Receive
 		my $rin = '';
 		my $rout;
+		my $timeout = max $self->{timeout}, $self->_delay($attempts);
 		vec($rin, fileno($self->{handle}), 1) = 1;
-		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $self->{timeout});
+		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $timeout);
 
 		die "\nTimeout while waiting for reply.\n" if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
 	}

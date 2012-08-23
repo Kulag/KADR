@@ -108,7 +108,7 @@ has 'query_attempts',
 
 has 'query_timeout',
 	default => 15.0,
-	documentation => 'Time to wait for a response to a query. Default: 15.0 seconds',
+	documentation => 'Minimum time to wait for a response to a query. Default: 15.0 seconds',
 	is => 'rw',
 	isa => 'Num';
 
