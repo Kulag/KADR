@@ -1,18 +1,21 @@
 package App::KADR::AniDB::UDP::Client;
 use common::sense;
-use Time::HiRes;
+use Encode;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
-use Encode;
+use List::Util qw(min max);
+use Time::HiRes;
 
 use constant CLIENT_NAME => "kadr";
 use constant CLIENT_VER => 1;
 
 use constant SESSION_TIMEOUT => 35 * 60;
+use constant MAX_DELAY => 45 * 60;
 
-# Threshhold values are specified in packets.
-use constant SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 5;
-use constant LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD => 100;
+use constant SHORTTERM_FLOODCONTROL_DELAY => 2;
+use constant LONGTERM_FLOODCONTROL_DELAY => 4;
+use constant QUERIES_FOR_SHORTTERM_FLOODCONTROL => 5;
+use constant QUERIES_FOR_LONGTERM_FLOODCONTROL => 100;
 
 use constant FILE_STATUS_CRCOK  => 0x01;
 use constant FILE_STATUS_CRCERR => 0x02;
@@ -49,7 +52,7 @@ sub new {
 	$self->{username} = $opts->{username} or die 'AniDB error: Need a username';
 	$self->{password} = $opts->{password} or die 'AniDB error: Need a password';
 	$self->{time_to_sleep_when_busy} = $opts->{time_to_sleep_when_busy};
-	$self->{max_attempts} = $opts->{max_attempts} || 5;
+	$self->{max_attempts} = $opts->{max_attempts} || -1;
 	$self->{timeout} = $opts->{timeout} || 15.0;
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
@@ -226,6 +229,15 @@ sub logout {
 	$self;
 }
 
+sub _delay {
+	my ($self, $attempts) = @_;
+	my $base_delay =
+		$self->{queries} > QUERIES_FOR_LONGTERM_FLOODCONTROL ? LONGTERM_FLOODCONTROL_DELAY :
+		$self->{queries} > QUERIES_FOR_SHORTTERM_FLOODCONTROL ? SHORTTERM_FLOODCONTROL_DELAY :
+		0;
+	$self->{last_command} - Time::HiRes::time + min $base_delay * 1.5 ** $attempts, MAX_DELAY;
+}
+
 sub _sendrecv {
 	my($self, $query, $vars) = @_;
 	my $recvmsg;
@@ -239,28 +251,24 @@ sub _sendrecv {
 	$query = encode_utf8($query);
 
 	while(!$recvmsg) {
-		if($self->{queries} > LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
-			while((my $waittime = (30 * ($self->{queries} - LONG_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) + $self->{starttime}) - Time::HiRes::time) > 0) {
-				Time::HiRes::sleep($waittime);
-			}
-		}
-		if($self->{queries} > SHORT_TERM_FLOODCONTROL_ENFORCEMENT_THRESHHOLD) {
-			if($self->{last_command} + 2 > Time::HiRes::time) {
-				Time::HiRes::sleep($self->{last_command} + 2 - Time::HiRes::time);
-			}
-		}
-		
+		# Floodcontrol
+		my $delay = $self->_delay($attempts++);
+		Time::HiRes::sleep($delay) if $delay > 0;
+
+		# Accounting
 		$self->{last_command} = Time::HiRes::time;
 		$self->{queries} += 1;
 
+		# Send
 		send($self->{handle}, $query, 0, $self->{sockaddr}) or die( "Send error: " . $! );
-		
+
+		# Receive
 		my $rin = '';
 		my $rout;
 		vec($rin, fileno($self->{handle}), 1) = 1;
 		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $self->{timeout});
 
-		die "\nTimeout while waiting for reply.\n" if ++$attempts == $self->{max_attempts};
+		die "\nTimeout while waiting for reply.\n" if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
 	}
 
 	# Check if the data is compressed.

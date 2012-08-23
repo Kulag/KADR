@@ -101,8 +101,8 @@ EOF
 has 'load_local_cache_into_memory' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Disable to reduce memory usage when doing a longer run. About 15 times faster when kadr doesn't have to talk to anidb.");
 
 has 'query_attempts',
-	default => 5,
-	documentation => 'Number of times to retry a query after a timeout. Default: 5',
+	default => -1,
+	documentation => 'Number of times to retry a query after a timeout. Default: Unlimited',
 	is => 'rw',
 	isa => 'Int';
 
