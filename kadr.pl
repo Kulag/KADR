@@ -15,7 +15,7 @@
 #
 # KADR was forked from ADBREN v4 Copyright (c) 2008, clip9 <clip9str@gmail.com>
 
-use v5.10;
+use v5.14;
 use common::sense;
 use open qw(:std :utf8);
 use utf8;
@@ -180,11 +180,11 @@ sub process_file {
 	return $sl->child('Freeform')->finalize_and_log('Ignored') unless $fileinfo;
 
 	# Auto-add to mylist.
-	my $mylistinfo = mylist_file_query(fid => $fileinfo->{fid});
+	my $mylistinfo = mylist_file_query($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
 	if(!defined $mylistinfo && !$conf->test) {
 		my $proc_sl = $sl->child('Freeform');
 		$proc_sl->update('Adding to AniDB Mylist');
-		if(my $lid = $a->mylistadd($fileinfo->{fid})) {
+		if(my $lid = $a->mylist_add(fid => $fileinfo->{fid}, state => $a->MYLIST_STATE_HDD)) {
 			$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}}); # Force an update of this record, it's out of date.
 			$db->update('adbcache_file', {lid => $lid}, {fid => $fileinfo->{fid}});
 			$proc_sl->finalize_and_log('Added to AniDB Mylist');
@@ -284,7 +284,7 @@ sub move_file {
 	}
 	else {
 		$sl->finalize_and_log('Error moving to ' . $display_new);
-		exit 2;
+		#exit 2;
 	}
 }
 
@@ -432,15 +432,23 @@ sub cleanup {
 }
 
 sub file_query {
-	my $query = {@_};
+	my %params = @_;
 	my $r;
 
 	# Cached
-	return $r if $r = $db->fetch("adbcache_file", ["*"], $query, 1);
+	return $r if $r = $db->fetch("adbcache_file", ["*"], \%params, 1);
 
 	# Update
 	my $file_sl = $sl->child('Freeform', value => 'Updating file information');
-	$r = $a->file_query($query);
+	$r = eval { $a->file(%params) };
+
+	# Due to unconfigurable fieldlists, the response is occasionally too long,
+	# and gets truncated by the server after compression.
+	if ($@) {
+		die unless $@ =~ /^Error inflating response/;
+		$file_sl->finalize($@);
+	}
+
 	return unless $r;
 
 	# Cache
@@ -469,6 +477,7 @@ sub mylist_file_query {
 	$r
 }
 
+# Checks if we can get the lid from the file cache since lid lookups are faster.
 sub mylist_file_by_ed2k_size {
 	my ($ed2k, $size) = @_;
 

@@ -3,6 +3,7 @@ use common::sense;
 use Encode;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
+use List::MoreUtils qw(mesh);
 use List::Util qw(min max);
 use Time::HiRes;
 
@@ -29,7 +30,7 @@ use constant FILE_STATUS_CEN    => 0x80;
 use constant FILE_FMASK => "7ff8fff8";
 use constant FILE_AMASK => "fefcfcc0";
 
-use constant CODE_220_ENUM => 
+use constant FILE_FIELDS => 
 qw/fid
    aid eid gid lid other_episodes is_deprecated status
    size ed2k md5 sha1 crc32
@@ -40,9 +41,9 @@ qw/fid
    episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
    group_name group_short_name/;
 
-use constant MYLIST_FILE_ENUM => qw/lid fid eid aid gid date state viewdate storage source other filestate/;
+use constant MYLIST_SINGLE_FIELDS => qw/lid fid eid aid gid date state viewdate storage source other filestate/;
 
-use constant MYLIST_ANIME_ENUM => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
+use constant MYLIST_MULTI_FIELDS => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
 
 use enum qw(:MYLIST_STATE_=0 UNKNOWN HDD CD DELETED);
 
@@ -57,43 +58,28 @@ sub new {
 	$self->{starttime} = time - 1;
 	$self->{queries} = 0;
 	$self->{last_command} = 0;
-	$self->setup_iohandle($opts->{port} || 9000);
+	$self->{port} = $opts->{port} || 9000;
+	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
 	my $host = gethostbyname('api.anidb.info') or die($!);
 	$self->{sockaddr} = sockaddr_in(9000, $host) or die($!);
 	$self;
 }
 
-sub setup_iohandle {
-	my($self, $port) = @_;
-	$self->{port} = $port;
-	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
-	$self;
-}
+sub file {
+	my($self, %params) = @_;
 
-sub file_query {
-	my($self, $query) = @_;
+	$params{fmask} = FILE_FMASK;
+	$params{amask} = FILE_AMASK;
 
-	$query->{fmask} = FILE_FMASK;
-	$query->{amask} = FILE_AMASK;
+	my $res = $self->_sendrecv('FILE', \%params);
+	return if !$res || $res->{code} == 320;
 
-	my $recvmsg = $self->_sendrecv("FILE", $query);
-	return unless defined $recvmsg;
-	my($code, $data) = split("\n", $recvmsg);
-	
-	$code = int((split(" ", $code))[0]);
-	if($code == 220) { # Success
-		my %fileinfo;
-		my @fields = split /\|/, $data;
-		map { $fileinfo{(CODE_220_ENUM)[$_]} = $fields[$_] } 0 .. scalar(CODE_220_ENUM) - 1;
-		
-		return \%fileinfo;
-	} elsif($code == 322) { # Multiple files found.
-		die "Error: \"322 MULITPLE FILES FOUND\" not supported.";
-	} elsif($code == 320) { # No such file.
-		return;
-	} else {
-		die "Error: Unexpected return code for file query recieved. Got $code.\n";
-	}
+	die 'Unexpected return code for file query: ' . $res->{code} unless $res->{code} == 220;
+
+	# Parse
+	my @keys = FILE_FIELDS;
+	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
+	+{ mesh @keys, @fields }
 }
 
 sub file_version {
@@ -116,110 +102,18 @@ sub has_session {
 	$_[0]->{skey} && (time - $_[0]->{last_command}) < SESSION_TIMEOUT
 }
 
-sub mylistadd {
-	my $res = shift->mylist_add_query({state => 1, fid => shift});
-	return $res;
-}
-
-sub mylistedit {
-	my ($self, $params) = @_;
-	$params->{edit} = 1;
-	return $self->mylist_add_query($params);
-}
-
-sub mylist_add_query {
-	my ($self, $params) = @_;
-	my $res;
-
-	if ((!defined $params->{edit}) or $params->{edit} == 0) {
-		# Add
-
-		$res = $self->_sendrecv("MYLISTADD", $params);
-
-		if ($res =~ /^210 MYLIST/) { # OK
-			return (split(/\n/, $res))[1];
-		} elsif ($res !~ /^310/) { # any errors other than 310
-			return 0;
-		}
-		# If 310 ("FILE ALREADY IN MYLIST"), retry with edit=1
-		$params->{edit} = 1;
-	}
-	# Edit
-
-	$res = $self->_sendrecv("MYLISTADD", $params);
-
-	if ($res =~ /^311/) { # OK
-		return (split(/\n/, $res))[1];
-	}
-	return 0; # everything else
-}
-
-sub mylist_file_query {
-	my($self, $query) = @_;
-	
-	(my $msg = $self->_sendrecv("MYLIST", $query)) =~ s/.*\n//im;
-	
-	my @f = split /\|/, $msg;
-	if(scalar @f) {
-		my %mylistinfo;
-		map { $mylistinfo{(MYLIST_FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
-		return \%mylistinfo;
-	}
-	undef;
-}
-
-sub mylist_anime_query {
-	my($self, $query) = @_;
-	my $msg = $self->_sendrecv("MYLIST", $query);
-	my $single_episode = ($msg =~ /^221/);
-	my $success = ($msg =~ /^312/);
-	return if not ($success or $single_episode);
-	$msg =~ s/.*\n//im;
-	my @f = split /\|/, $msg;
-	
-	if(scalar @f) {
-		my %mylistanimeinfo;
-		$mylistanimeinfo{aid} = $query->{aid};
-		if($single_episode) {
-			my %mylistinfo;
-			map { $mylistinfo{(MYLIST_FILE_ENUM)[$_]} = $f[$_] } 0 .. $#f;
-			
-			my $fileinfo = $self->file_query({fid => $mylistinfo{fid}});
-			
-			$mylistanimeinfo{anime_title} = $fileinfo->{anime_romaji_name};
-			$mylistanimeinfo{episodes} = '';
-			$mylistanimeinfo{eps_with_state_unknown} = "";
-			
-			if($fileinfo->{episode_number} =~ /^(\w*?)[0]*(\d+)$/) {
-				$mylistanimeinfo{eps_with_state_on_hdd} = "$1$2";
-				$mylistanimeinfo{watched_eps} = ($mylistinfo{viewdate} > 0 ? "$1$2" : "");
-			} else {
-				$mylistanimeinfo{eps_with_state_on_hdd} = $fileinfo->{episode_number};
-				$mylistanimeinfo{watched_eps} = ($mylistinfo{viewdate} > 0 ? $fileinfo->{episode_number} : "");
-			}
-			$mylistanimeinfo{eps_with_state_on_cd} = "";
-			$mylistanimeinfo{eps_with_state_deleted} = "";
-		} else {
-			map { $mylistanimeinfo{(MYLIST_ANIME_ENUM)[$_]} = $f[$_] } 0 .. scalar(MYLIST_ANIME_ENUM) - 1;
-		}
-		return \%mylistanimeinfo;
-	}
-	return;
-}
-
 sub login {
 	my($self) = @_;
 	return $self if $self->has_session;
 
-	my $msg = $self->_sendrecv("AUTH", {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => "UTF8", comp => 1});
-	if ($msg && $msg =~ /20[01]\ ([a-zA-Z0-9]*)\ ([0-9\.\:]).*/) {
+	my $res = $self->_sendrecv('AUTH', {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => 'UTF8', comp => 1});
+	if ($res && ($res->{code} == 200 || $res->{code} == 201) && $res->{header} =~ /^(\w+) ([0-9\.\:]+)/) {
 		$self->{skey} = $1;
 		$self->{myaddr} = $2;
-	} else {
-		die "Login Failed: $msg\n";
+		return $self;
 	}
 
-	$self;
+	die sprintf 'Login failed: %d %s', $res->{code}, $res->{header};
 }
 
 sub logout {
@@ -227,6 +121,152 @@ sub logout {
 	$self->_sendrecv('LOGOUT') if $self->has_session;
 	delete $self->{skey};
 	$self;
+}
+
+sub mylistedit {
+	my ($self, $params) = @_;
+	$params->{edit} = 1;
+	return $self->mylist_add(%$params);
+}
+
+sub mylist_add_query {
+	my ($self, $params) = @_;
+	my ($type, $value) = $self->mylist_add(%$params);
+
+	if ($type eq 'existing_entry' && !$params->{edit}) {
+		$params->{edit} = 1;
+		return $self->mylist_add_query($params);
+	}
+
+	$value;
+}
+
+sub mylist {
+	my ($self, %params) = @_;
+
+	my $res = $self->_sendrecv('MYLIST', \%params);
+
+	# No such entry
+	return if !$res || $res->{code} == 321;
+
+	my ($type, $info);
+	if ($res->{code} == 221) {
+		my @keys = MYLIST_SINGLE_FIELDS;
+		my @values = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
+		
+		$type = 'single';
+		$info = { mesh @keys, @values };
+	}
+	elsif ($res->{code} == 312) {
+		my @keys = MYLIST_MULTI_FIELDS;
+		my %base_info = ($params{aid} ? (aid => $params{aid}) : ());
+		
+		$type = 'multiple';
+		$info = [ map {
+			my @values = (split /\|/, $_)[0 .. @keys - 1];
+			+{ %base_info, mesh @keys, @values }
+		} @{$res->{contents}} ];
+	}
+
+	wantarray ? ($type, $info) : $info;
+}
+
+sub mylist_add {
+	my ($self, %params) = @_;
+	$params{edit} //= 0;
+
+	my $res = $self->_sendrecv('MYLISTADD', \%params);
+
+	# No such entry(s)
+	return if !$res || $res->{code} == 320 || $res->{code} == 330 || $res->{code} == 350 || $res->{code} == 411;
+
+	my ($type, $value);
+	if ($params{edit}) {
+		# Edited
+		if ($res->{code} == 311) {
+			$type = 'edited';
+			$value = int($res->{contents}[0]) || 1;
+		}
+	}
+	else {
+		# Added
+		if ($res->{code} == 210) {
+			$type = $params{fid} || $params{ed2k} ? 'added' : 'added_count';
+			$value = int $res->{contents}[0];
+		}
+		# Entry already exists
+		elsif ($res->{code} == 310) {
+			my @keys = MYLIST_SINGLE_FIELDS;
+			my @values = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
+			
+			$type = 'existing_entry';
+			$value = { mesh @keys, @values };
+		}
+		# Multiple entries
+		elsif ($res->{code} == 322) {
+			$type = 'multiple_entries';
+			$value = [ split /\|/, $res->{contents}[0] ];
+		}
+	}
+
+	wantarray ? ($type => $value) : $value;
+}
+
+sub mylist_anime {
+	my ($self, %params) = @_;
+
+	my ($type, $mylist) = $self->mylist(%params);
+
+	# Not found
+	return unless $mylist;
+
+	# Response was in expected format
+	if ($type eq 'multiple') {
+		die 'Got response for multiple anime' if @$mylist > 1;
+		return $mylist->[0];
+	}
+
+	# Mylist data for this anime consists of one episode.
+
+	# File info is needed to emulate the expected output.
+	my $file = $self->file(fid => $mylist->{fid});
+
+	# Mylist episode numbers are not zero padded as they are in file info.
+	$file->{episode_number} =~ /^(\w*?)[0]*(\d+)$/;
+	my $epno = "$1$2";
+
+	{
+		aid => $params{aid},
+		anime_title => $file->{anime_romaji_name},
+		episodes => $file->{anime_total_episodes},
+		eps_with_state_unknown => ($mylist->{state} == MYLIST_STATE_UNKNOWN ? $epno : ''),
+		eps_with_state_on_hdd => ($mylist->{state} == MYLIST_STATE_HDD ? $epno : ''),
+		eps_with_state_on_cd => ($mylist->{state} == MYLIST_STATE_CD ? $epno : ''),
+		eps_with_state_deleted => ($mylist->{state} == MYLIST_STATE_DELETED ? $epno : ''),
+		watched_eps => ($mylist->{viewdate} > 0 ? $epno : ''),
+	}
+}
+
+sub mylist_anime_query {
+	my($self, $query) = @_;
+	$self->mylist_anime(%$query);
+}
+
+sub mylist_file {
+	my ($self, %params) = @_;
+	my ($type, $info) = $self->mylist(%params);
+
+	# Not found
+	return unless $info;
+
+	die 'Got multiple mylist entries response' unless $type eq 'single';
+
+	$info;
+}
+
+sub mylist_file_query {
+	my ($self, $query) = @_;
+	$self->mylist_file(%$query);
 }
 
 sub _delay {
@@ -238,9 +278,27 @@ sub _delay {
 	$self->{last_command} - Time::HiRes::time + min $base_delay * 1.5 ** $attempts, MAX_DELAY;
 }
 
+sub _response_parse_skeleton {
+	my ($self, $bytes) = @_;
+
+	# Inflate
+	if (substr($bytes, 0, 2) eq "\x00\x00") {
+		my $data = substr($bytes, 2);
+		inflate(\$data, \$bytes) or die 'Error inflating response: ' . $InflateError;
+	}
+
+	my $string = decode_utf8 $bytes;
+
+	# Lines are newline-terminated.
+	my ($header, @contents) = split("\n", $string);
+
+	# Parse header
+	$header =~ s/^(?:(T\d+) )?(\d+) //;
+	{tag => $1, code => int $2, header => $header, contents => \@contents}
+}
+
 sub _sendrecv {
 	my($self, $query, $vars) = @_;
-	my $recvmsg;
 	my $attempts = 0;
 
 	$self->login if !$self->has_session && $query ne "AUTH";
@@ -250,7 +308,9 @@ sub _sendrecv {
 	$query .= ' ' . join('&', map { "$_=$vars->{$_}" } keys %{$vars}) . "\n";
 	$query = encode_utf8($query);
 
-	while(!$recvmsg) {
+	while (1) {
+		die 'Timeout while waiting for reply' if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
+
 		# Floodcontrol
 		my $delay = $self->_delay($attempts++);
 		Time::HiRes::sleep($delay) if $delay > 0;
@@ -263,58 +323,46 @@ sub _sendrecv {
 		send($self->{handle}, $query, 0, $self->{sockaddr}) or die( "Send error: " . $! );
 
 		# Receive
+		my $buf;
 		my $rin = '';
 		my $rout;
 		my $timeout = max $self->{timeout}, $self->_delay($attempts);
 		vec($rin, fileno($self->{handle}), 1) = 1;
-		recv($self->{handle}, $recvmsg, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $timeout);
+		recv($self->{handle}, $buf, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $timeout);
+		next unless $buf;
 
-		die "\nTimeout while waiting for reply.\n" if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
-	}
+		# Parse
+		my $res = $self->_response_parse_skeleton($buf);
 
-	# Check if the data is compressed.
-	if(substr($recvmsg, 0, 2) eq "\x00\x00") {
-		my $data = substr($recvmsg, 2);
-		if(!inflate(\$data, \$recvmsg)) {
-			warn "\nError inflating packet: $InflateError";
-			return;
+		# Temporary IP ban
+		die 'Banned' if $res->{code} == 555;
+
+		# Server busy
+		if ($res->{code} == 602) {
+			Time::HiRes::sleep($self->{time_to_sleep_when_busy});
+			$attempts = 0;
+			next;
 		}
-	}
-	
-	$recvmsg = decode_utf8($recvmsg);
 
-	if($recvmsg =~ /^555/) {
-		print "\nBanned, exiting.";
-		exit(1);
+		# Server-side timeout
+		next if $res->{code} == 604;
+
+		# Tag mismatch
+		next unless $res->{tag} && $res->{tag} eq $vars->{tag};
+
+		# Server error
+		die sprintf 'AniDB error: %d %s', $res->{code}, $res->{header} if $res->{code} > 599 && $res->{code} < 700;
+
+		# Login first / Invalid session
+		if ($res->{code} == 501 || $res->{code} == 506) {
+			undef $self->{skey};
+			return if $query eq 'LOGOUT';
+			$self->login;
+			return $self->_sendrecv($query, $vars);
+		}
+
+		return $res;
 	}
-	
-	if($recvmsg =~ /^602/) {
-		print "\nAniDB is too busy, will retry in $self->{time_to_sleep_when_busy} seconds.";
-		Time::HiRes::sleep($self->{time_to_sleep_when_busy});
-		return $self->_sendrecv($query, $vars);
-	}
-	
-	# Check for a server error.
-	if ($recvmsg =~ /^(T\d+ )?6\d+/) {
-		die("\nAnidb error:\n$recvmsg");
-	}
-	
-	# Check that the answer we received matches the query we sent.
-	$recvmsg =~ s/^(T\d+) (.*)/$2/;
-	if(not defined($1) or $1 ne $vars->{tag}) {
-		warn "\nPort changing\n";
-		$self->logout->setup_iohandle($self->{port} + 1)->_sendrecv($query, $vars);
-	}
-	
-	# Check if our session is invalid.
-	if($recvmsg =~ /^501.*|^506.*/) {
-		undef $self->{skey};
-		return if $query eq 'LOGOUT';
-		$self->login();
-		return $self->_sendrecv($query, $vars);
-	}
-	
-	return $recvmsg;
 }
 
 sub DESTROY {
