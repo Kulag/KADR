@@ -40,10 +40,9 @@ sub TERM_SPEED() { $ENV{KADR_TERM_SPEED} // 0.05 }
 
 sub shortest(@) { reduce { length($a) < length($b) ? $a : $b } @_ }
 
-$|++;
-$SIG{INT} = "cleanup";
-binmode STDIN, ':encoding(UTF-8)';
-binmode STDOUT, ':encoding(UTF-8)';
+$SIG{INT} = \&cleanup;
+STDOUT->autoflush(1);
+STDOUT->binmode(':utf8');
 
 my $conf = App::KADR::Config->new_with_options;
 
@@ -176,14 +175,14 @@ sub process_file {
 	my ($file, $ed2k) = @_;
 	my $file_size = -s $file;
 	my $fileinfo = file_query(ed2k => $ed2k, size => $file_size);
-	my $proc_sl = $sl->child('Freeform');
 
 	# File not in AniDB.
-	return $proc_sl->finalize_and_log('Ignored') unless $fileinfo;
+	return $sl->child('Freeform')->finalize_and_log('Ignored') unless $fileinfo;
 
 	# Auto-add to mylist.
 	my $mylistinfo = mylist_file_query(fid => $fileinfo->{fid});
 	if(!defined $mylistinfo && !$conf->test) {
+		my $proc_sl = $sl->child('Freeform');
 		$proc_sl->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylistadd($fileinfo->{fid})) {
 			$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}}); # Force an update of this record, it's out of date.
@@ -195,6 +194,7 @@ sub process_file {
 		}
 	}
 	elsif($mylistinfo->{state} != $a->MYLIST_STATE_HDD && !$conf->test) {
+		my $proc_sl = $sl->child('Freeform');
 		$proc_sl->update('Setting AniDB Mylist state to "On HDD"');
 		if($a->mylistedit({lid => $fileinfo->{lid}, state => $a->MYLIST_STATE_HDD})) {
 			$db->update('anidb_mylist_file', {state => $a->MYLIST_STATE_HDD}, {fid => $mylistinfo->{fid}});
@@ -260,7 +260,6 @@ sub process_file {
 
 sub move_file {
 	my ($old, $ed2k, $new) = @_;
-	my $sl = $sl->child('Freeform');
 
 	# Doesn't need to be renamed.
 	return if $old->absolute eq $new->absolute;
@@ -268,6 +267,7 @@ sub move_file {
 	$new->dir->mkpath unless -e $new->dir;
 
 	my $display_new = shortest $new->relative, $new;
+	my $sl = $sl->child('Freeform');
 
 	if (-e $new) {
 		return $sl->finalize_and_log('Would overwrite existing file: ' . $display_new);

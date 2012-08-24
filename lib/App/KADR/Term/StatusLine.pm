@@ -10,7 +10,7 @@ use constant DUMB => (!$ENV{TERM} || $ENV{TERM} eq 'dumb');
 requires qw(_to_text update);
 
 has 'child_separator' => (is => 'rw', isa => 'Str', default => ': ');
-has 'label' => (is => 'rw', isa => 'Str', predicate => 'has_label');
+has 'label' => (is => 'rw', isa => 'Str', predicate => 'has_label', trigger => sub { $_[0]->update_term });
 has 'label_separator' => (is => 'rw', isa => 'Str', default => ' ');
 has 'log_lines' => (is => 'rw', isa => 'ArrayRef', default => sub { [] });
 has 'parent' => (is => 'rw', does => __PACKAGE__, predicate => 'has_parent');
@@ -20,13 +20,6 @@ has '_last_update',
 	default => Time::HiRes::time,
 	is => 'rw',
 	reader => 'last_update';
-
-after qw(label) => sub {
-	my($self, $update) = @_;
-	if($update) {
-		shift->update_term;
-	}
-};
 
 method child($type, %params?) {
 	$type = __PACKAGE__ . '::' . $type;
