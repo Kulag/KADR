@@ -99,7 +99,10 @@ say 'done.';
 my @ed2k_of_processed_files;
 my $sl = App::KADR::Term::StatusLine::XofX->new(total_item_count => scalar @$files);
 for my $file (@$files) {
+	next unless -e $file;
+
 	$sl->incr->update_label(shortest $file->relative, $file);
+
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file);
 	process_file($file, $ed2k);
 }
