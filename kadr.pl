@@ -28,6 +28,7 @@ use File::Find;
 use FindBin;
 use List::AllUtils qw(first none reduce);
 use Path::Class;
+use POSIX ();
 use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
@@ -283,8 +284,14 @@ sub move_file {
 		$sl->finalize_and_log('Moved to ' . $display_new);
 	}
 	else {
-		$sl->finalize_and_log('Error moving to ' . $display_new);
-		#exit 2;
+		my $name_max = POSIX::pathconf($new->dir, POSIX::_PC_NAME_MAX);
+		if ($name_max < length $new->basename) {
+			$sl->finalize('File name exceeds maximum length for folder (' . $name_max . '): ' . $display_new);
+		}
+		else {
+			$sl->finalize_and_log('Error moving to ' . $display_new);
+			exit 2;
+		}
 	}
 }
 
