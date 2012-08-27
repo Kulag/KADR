@@ -90,7 +90,7 @@ has 'file_naming_scheme',
 	coerce => 1,
 	default => <<'EOF',
 $if(%only_episode_in_folder%,,%anime_romaji_name%/)%anime_romaji_name%
-$if($rematch(%episode_english_name%,'^(Complete Movie|OVA|Special|TV Special)$'),,
+$if(%is_primary_episode%,,
  - %episode_number%$ifgreater(%file_version%,1,v%file_version%,) - %episode_english_name%)
 $if($not($strcmp(%group_short_name%,raw)), '['%group_short_name%']').%file_type%
 EOF

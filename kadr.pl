@@ -253,6 +253,15 @@ sub process_file {
 			|| (!$fileinfo->{episode_watched} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
 		);
 
+	$fileinfo->{is_primary_episode} = 1 if
+		# This is the only episode.
+		int($fileinfo->{anime_total_episodes}) == 1 && int($fileinfo->{episode_number}) == 1
+		# And this file contains the entire episode.
+		&& !$fileinfo->{other_episodes}
+		# And it has a generic episode name.
+		# Usually equal to the anime_type except for movies where multiple episodes may exist for split releases.
+		&& ($fileinfo->{episode_english_name} eq $fileinfo->{anime_type} || $fileinfo->{episode_english_name} eq 'Complete Movie');
+
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
 	my $newname = $dir->file($conf->file_naming_scheme->Run($fileinfo));
