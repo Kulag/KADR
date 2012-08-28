@@ -29,11 +29,11 @@ MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
 	'Collator' => '=s'
 );
 
-subtype 'ExistingDir' => as class_type('Path::Class::Dir') => where { -d $_ };
-coerce 'ExistingDir' => from 'Str' => via { dir($_) };
+subtype 'ExistingDir' => as class_type('App::KADR::Path::Dir') => where { -d $_ };
+coerce 'ExistingDir' => from 'Str' => via { dir($_)->absolute };
 
 subtype 'ExistingDirs', as 'ArrayRef[ExistingDir]' => where { all { -d $_ } @$_ };
-coerce 'ExistingDirs', from 'ArrayRef', via { [map { dir($_) } @$_] };
+coerce 'ExistingDirs', from 'ArrayRef', via { [map { dir($_)->absolute } @$_] };
 
 subtype 'FileTemplate', as 'Str', where { !/\n/ };
 coerce 'FileTemplate', from 'Str', via { s/[\r\n]//g; $_ };
