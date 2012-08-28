@@ -77,7 +77,7 @@ if($conf->load_local_cache_into_memory) {
 	$db->cache([
 		{table => 'known_files', indices => ['filename', 'size']},
 		{table => 'adbcache_file', indices => ['ed2k', 'size']},
-		{table => 'anidb_mylist_file', indices => ['fid']},
+		{table => 'anidb_mylist_file', indices => ['lid']},
 		{table => 'anidb_mylist_anime', indices => ['aid']},
 	]);
 }
