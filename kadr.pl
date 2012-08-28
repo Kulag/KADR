@@ -29,6 +29,7 @@ use FindBin;
 use List::AllUtils qw(first none reduce);
 use Path::Class;
 use POSIX ();
+use Template;
 use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
@@ -89,6 +90,9 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 	max_attempts => $conf->query_attempts,
 	timeout => $conf->query_timeout,
 });
+
+my $tt = Template->new->service;
+my $template = $tt->context->template(\($conf->file_naming_scheme));
 
 my $files = find_files(@{$conf->dirs_to_scan});
 
@@ -239,8 +243,7 @@ sub process_file {
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
 	# Check if this is the only episode going into the folder.
-	# This should be an assignment, but Parse::TitleSyntax evaluates undef as true.
-	$fileinfo->{only_episode_in_folder} = 1 if
+	$fileinfo->{only_episode_in_folder} =
 		defined $mylistanimeinfo
 		# This is the only episode from this anime on HDD.
 		&& $mylistanimeinfo->{eps_with_state_on_hdd} =~ /^[a-z]*\d+$/i
@@ -253,7 +256,7 @@ sub process_file {
 			|| (!$fileinfo->{episode_watched} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
 		);
 
-	$fileinfo->{is_primary_episode} = 1 if
+	$fileinfo->{is_primary_episode} =
 		# This is the only episode.
 		int($fileinfo->{anime_total_episodes}) == 1 && int($fileinfo->{episode_number}) == 1
 		# And this file contains the entire episode.
@@ -264,8 +267,9 @@ sub process_file {
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname = $dir->file($conf->file_naming_scheme->Run($fileinfo));
-	move_file($file, $ed2k, $newname);
+	my $newname = $tt->process($template, $fileinfo)
+		or die $tt->error;
+	move_file($file, $ed2k, $dir->file($newname));
 }
 
 sub move_file {

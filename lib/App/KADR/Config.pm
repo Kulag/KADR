@@ -5,8 +5,6 @@ use List::MoreUtils qw(all);
 use Moose;
 use Moose::Util::TypeConstraints;
 use Path::Class;
-use Parse::TitleSyntax;
-use Parse::TitleSyntax::Functions::Regexp;
 
 with qw(MooseX::Getopt MooseX::SimpleConfig);
 
@@ -37,12 +35,8 @@ coerce 'ExistingDir' => from 'Str' => via { dir($_) };
 subtype 'ExistingDirs', as 'ArrayRef[ExistingDir]' => where { all { -d $_ } @$_ };
 coerce 'ExistingDirs', from 'ArrayRef', via { [map { dir($_) } @$_] };
 
-class_type('Parse::TitleSyntax');
-coerce 'Parse::TitleSyntax' => from 'Str' => via {
-	my $parsets = Parse::TitleSyntax->new($_);
-	$parsets->AddFunctions(Parse::TitleSyntax::Functions::Regexp->new($parsets));
-	return $parsets;
-};
+subtype 'FileTemplate', as 'Str', where { !/\n/ };
+coerce 'FileTemplate', from 'Str', via { s/[\r\n]//g; $_ };
 
 has '+configfile',
 	default => $appdir->file('config.yml').'',
@@ -89,13 +83,18 @@ has 'expire_cache',
 has 'file_naming_scheme',
 	coerce => 1,
 	default => <<'EOF',
-$if(%only_episode_in_folder%,,%anime_romaji_name%/)%anime_romaji_name%
-$if(%is_primary_episode%,,
- - %episode_number%$ifgreater(%file_version%,1,v%file_version%,) - %episode_english_name%)
-$if($not($strcmp(%group_short_name%,raw)), '['%group_short_name%']').%file_type%
+[% UNLESS only_episode_in_folder %][% anime_romaji_name %]/[% END %]
+[% anime_romaji_name %]
+[% IF is_primary_episode %]
+[% IF file_version > 1 %] v[% file_version %][% END %]
+[% ELSE %]
+ - [% episode_number %][% IF file_version > 1 %]v[% file_version %][% END %] - [% episode_english_name %]
+[% END %]
+[% UNLESS group_short_name == 'raw' %] [[% group_short_name %]][% END %]
+.[%file_type%]
 EOF
 	is => 'rw',
-	isa => 'Parse::TitleSyntax',
+	isa => 'FileTemplate',
 	required => 1;
 
 has 'load_local_cache_into_memory' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Disable to reduce memory usage when doing a longer run. About 15 times faster when kadr doesn't have to talk to anidb.");
