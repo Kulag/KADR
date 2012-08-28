@@ -1,6 +1,7 @@
 package App::KADR::Path;
 use common::sense;
 use Class::Load ();
+use File::Spec::Memoized;
 use Sub::Exporter -setup => {
 	exports => [
 		dir => \&_build_dir,
