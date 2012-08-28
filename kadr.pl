@@ -38,7 +38,7 @@ use App::KADR::Config;
 use App::KADR::Term::StatusLine::Freeform;
 use App::KADR::Term::StatusLine::XofX;
 
-sub TERM_SPEED() { $ENV{KADR_TERM_SPEED} // 0.05 }
+use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
 
 sub shortest(@) { reduce { length($a) < length($b) ? $a : $b } @_ }
 
@@ -106,6 +106,7 @@ for my $file (@$files) {
 	next unless -e $file;
 
 	$sl->incr->update_label(shortest $file->relative, $file);
+	$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
 
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file);
 	process_file($file, $ed2k);
@@ -187,8 +188,7 @@ sub process_file {
 	# Auto-add to mylist.
 	my $mylistinfo = mylist_file_query($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
 	if(!defined $mylistinfo && !$conf->test) {
-		my $proc_sl = $sl->child('Freeform');
-		$proc_sl->update('Adding to AniDB Mylist');
+		my $proc_sl = $sl->child('Freeform')->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylist_add(fid => $fileinfo->{fid}, state => $a->MYLIST_STATE_HDD)) {
 			$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}}); # Force an update of this record, it's out of date.
 			$db->update('adbcache_file', {lid => $lid}, {fid => $fileinfo->{fid}});
@@ -199,8 +199,7 @@ sub process_file {
 		}
 	}
 	elsif($mylistinfo->{state} != $a->MYLIST_STATE_HDD && !$conf->test) {
-		my $proc_sl = $sl->child('Freeform');
-		$proc_sl->update('Setting AniDB Mylist state to "On HDD"');
+		my $proc_sl = $sl->child('Freeform')->update('Setting AniDB Mylist state to "On HDD"');
 		if($a->mylistedit({lid => $fileinfo->{lid}, state => $a->MYLIST_STATE_HDD})) {
 			$db->update('anidb_mylist_file', {state => $a->MYLIST_STATE_HDD}, {fid => $mylistinfo->{fid}});
 			$proc_sl->finalize_and_log('Set AniDB Mylist state to "On HDD"');
@@ -373,7 +372,7 @@ sub ed2k_hash {
 	my $ed2k_sl;
 
 	if ($conf->show_hashing_progress) {
-		$ed2k_sl = $sl->child('XofX', label => 'Hashing', total_item_count => $size, format => 'percent');
+		$ed2k_sl = $sl->child('XofX', label => 'Hashing', total_item_count => $size, format => 'percent')->update_term;
 		while(my $bytes_read = read $fh, my $buffer, Digest::ED2K::CHUNK_SIZE) {
 			$ctx->add($buffer);
 			$ed2k_sl->incr($bytes_read);
@@ -381,7 +380,7 @@ sub ed2k_hash {
 		}
 	}
 	else {
-		$ed2k_sl = $sl->child('Freeform', value => 'Hashing');
+		$ed2k_sl = $sl->child('Freeform')->update('Hashing');
 		$ctx->addfile($fh);
 	}
 
@@ -459,7 +458,7 @@ sub file_query {
 	return $r if $r = $db->fetch("adbcache_file", ["*"], \%params, 1);
 
 	# Update
-	my $file_sl = $sl->child('Freeform', value => 'Updating file information');
+	my $file_sl = $sl->child('Freeform')->update('Updating file information');
 	$r = eval { $a->file(%params) };
 
 	# Due to unconfigurable fieldlists, the response is occasionally too long,
@@ -486,7 +485,7 @@ sub mylist_file_query {
 	return $r if $r = $db->fetch("anidb_mylist_file", ["*"], $query, 1);
 
 	# Update
-	my $ml_sl = $sl->child('Freeform', value => 'Updating mylist information');
+	my $ml_sl = $sl->child('Freeform')->update('Updating mylist information');
 	$r = $a->mylist_file_query($query);
 	return unless $r;
 
@@ -519,10 +518,10 @@ sub mylist_anime_query {
 	return $r if $r = $db->fetch("anidb_mylist_anime", ["*"], $query, 1);
 
 	# Update
-	my $ml_sl = $sl->child('Freeform', value => 'Updating mylist anime information');
+	my $ml_sl = $sl->child('Freeform')->update('Updating mylist anime information');
 	$r = $a->mylist_anime_query($query);
 	return unless $r;
-	
+
 	# Cache
 	$r->{updated} = time;
 	$db->set('anidb_mylist_anime', $r, {aid => $r->{aid}});

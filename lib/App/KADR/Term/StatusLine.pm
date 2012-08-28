@@ -52,6 +52,8 @@ method update_term {
 	print $out . $line;
 	$self->_last_line($line);
 	$self->_last_update(Time::HiRes::time);
+
+	$self;
 }
 
 sub finalize {

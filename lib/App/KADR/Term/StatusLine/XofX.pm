@@ -39,7 +39,7 @@ coerce 'App::KADR::Term::StatusLine::XofX::Format' => from 'CodeRef' => via { re
 has 'current_item_count' => (is => 'rw', isa => 'App::KADR::Term::StatusLine::XofX::Count', coerce => 1, default => 0);
 has 'format' => (is => 'rw', isa => 'App::KADR::Term::StatusLine::XofX::Format', coerce => 1, default => 'x/x');
 has 'total_item_count' => (is => 'rw', isa => 'App::KADR::Term::StatusLine::XofX::Count', required => 1, coerce => 1);
-has 'update_label' => (is => 'rw', predicate => 'has_update_label', trigger => sub { $_[0]->update_term });
+has 'update_label' => (is => 'rw', predicate => 'has_update_label');
 has 'update_label_separator' => (is => 'rw', isa => 'Str', default => ' ');
 
 around 'current_item_count' => sub {
@@ -69,11 +69,6 @@ after 'total_item_count' => sub {
 	}
 };
 
-sub BUILD {
-	my $self = shift;
-	$self->update_term;
-}
-
 method _to_text {
 	my $text = $self->format->($self);
 	$text .= $self->update_label_separator . $self->update_label if $self->has_update_label;
@@ -86,11 +81,11 @@ sub incr {
 	$self;
 }
 
-method update($item_count, $update_label?) {
-	$self->current_item_count($item_count);
+method update($update_label?) {
 	if(defined $update_label) {
 		$self->update_label($update_label);
 	}
+	$self->update_term;
 }
 
 __PACKAGE__->meta->make_immutable;
