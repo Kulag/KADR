@@ -4,7 +4,8 @@ use File::HomeDir;
 use List::MoreUtils qw(all);
 use Moose;
 use Moose::Util::TypeConstraints;
-use Path::Class;
+
+use App::KADR::Path 'dir';
 
 with qw(MooseX::Getopt MooseX::SimpleConfig);
 

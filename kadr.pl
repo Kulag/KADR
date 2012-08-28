@@ -27,7 +27,6 @@ use File::Copy;
 use File::Find;
 use FindBin;
 use List::AllUtils qw(first none reduce);
-use Path::Class;
 use POSIX ();
 use Template;
 use Time::HiRes;
@@ -35,6 +34,7 @@ use Time::HiRes;
 use lib "$FindBin::RealBin/lib";
 use App::KADR::AniDB::UDP::Client;
 use App::KADR::Config;
+use App::KADR::Path -all;
 use App::KADR::Term::StatusLine::Freeform;
 use App::KADR::Term::StatusLine::XofX;
 
