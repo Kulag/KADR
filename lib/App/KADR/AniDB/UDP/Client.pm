@@ -7,6 +7,8 @@ use List::MoreUtils qw(mesh);
 use List::Util qw(min max);
 use Time::HiRes;
 
+use App::KADR::AniDB::EpisodeNumber;
+
 use constant CLIENT_NAME => "kadr";
 use constant CLIENT_VER => 1;
 
@@ -232,8 +234,7 @@ sub mylist_anime {
 	my $file = $self->file(fid => $mylist->{fid});
 
 	# Mylist episode numbers are not zero padded as they are in file info.
-	$file->{episode_number} =~ /^(\w*?)[0]*(\d+)$/;
-	my $epno = "$1$2";
+	my $epno = EpisodeNumber($file->{episode_number});
 
 	{
 		aid => $params{aid},
