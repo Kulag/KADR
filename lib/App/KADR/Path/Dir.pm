@@ -5,10 +5,50 @@ use App::KADR::Path::File;
 
 extends 'Path::Class::Dir';
 
-sub file_class { 'App::KADR::Path::File' }
+my %cache;
+
+sub file_class() { 'App::KADR::Path::File' }
 
 sub is_absolute {
 	$_[0]->{is_absolute} //= $_[0]->SUPER::is_absolute;
+}
+
+sub new {
+	my $class = ref $_[0] ? ref shift : shift;
+
+	if (@_ == 1) {
+		# If the only arg is undef, it's probably a mistake. Without this
+		# special case here, we'd return the root directory, which is a
+		# lousy thing to do to someone when they made a mistake. Return
+		# undef instead.
+		return if !defined $_[0];
+
+		# No-op
+		return $_[0] if ref $_[0] eq $class;
+	}
+
+	my $spec = $class->_spec;
+
+	# Compile args into single string
+	my $path
+		= !@_         ? $spec->curdir
+		: $_[0] eq '' ? $spec->rootdir
+		:               $spec->catdir(@_);
+
+	# Try to return an cached class for the path.
+	$cache{$path} //= do {
+		# This is a new path
+		my $self = $class->Path::Class::Entity::new;
+		$self->{string} = $path;
+
+		# Volume
+		($self->{volume}, my $dirs) = $spec->splitpath($path, 1);
+
+		# Dirs
+		$self->{dirs} = [ $spec->splitdir($dirs) ];
+
+		$self;
+	};
 }
 
 sub relative {
@@ -18,9 +58,7 @@ sub relative {
 		: $self->{_relative}{$self->_spec->curdir} //= $self->SUPER::relative;
 }
 
-sub stringify {
-	$_[0]->{_stringify} //= $_[0]->SUPER::stringify;
-}
+sub stringify { $_[0]{string} }
 
 sub subsumes {
 	my ($self, $other) = @_;
@@ -43,12 +81,20 @@ App::KADR::Path::Dir - like L<Path::Class::Dir>, but faster
 =head1 DESCRIPTION
 
 App::KADR::Path::Dir is an optimized and memoized subclass of
-L<Path::Class::Dir>.
+L<Path::Class::Dir>. Identical logical paths use the same instance for
+performance.
 
 =head1 METHODS
 
 App::KADR::Path::Dir inherits all methods from L<Path::Class::Dir> and
 implements the following new ones.
+
+=head2 C<new>
+
+	my $dir = App::KADR::Path::Dir->new('/home', ...);
+	my $dir = dir('/home', ...);
+
+Turn a path into a dir. This static method is memoized.
 
 =head2 C<file_class>
 
