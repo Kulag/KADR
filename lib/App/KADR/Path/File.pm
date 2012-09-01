@@ -5,10 +5,34 @@ use App::KADR::Path::Dir;
 
 extends 'Path::Class::File';
 
-sub dir_class { 'App::KADR::Path::Dir' }
+my %cache;
+
+sub dir_class() { 'App::KADR::Path::Dir' }
 
 sub is_absolute {
 	$_[0]->{is_absolute} //= $_[0]->SUPER::is_absolute;
+}
+
+sub new {
+	my $class = shift;
+	my ($volume, $file_dirs, $base) = $class->_spec->splitpath(pop);
+
+	# Dir
+	my $dir
+		= $file_dirs                        ? $class->dir_class->new(@_, $file_dirs)
+		: @_ == 1 && ref $_[0] eq dir_class ? $_[0]
+		: @_                                ? $class->dir_class->new(@_)
+		:                                     ();
+
+	# Check for cached file
+	$cache{$dir || '.'}->{$base} //= do {
+		my $self = $class->Path::Class::Entity::new;
+
+		$self->{dir}  = $dir;
+		$self->{file} = $base;
+
+		$self;
+	};
 }
 
 sub relative {
@@ -31,12 +55,20 @@ L<App::KADR::Path::File> - like L<Path::Class::File>, but faster
 =head1 DESCRIPTION
 
 L<App::KADR::Path::File> is an optimized and memoized subclass of
-L<Path::Class::File>.
+L<Path::Class::File>. Identical logical paths use the same instance for
+performance.
 
 =head1 METHODS
 
 L<App::KADR::Path::File> inherits all methods from L<Path::Class::File> and
 implements the following new ones.
+
+=head2 C<new>
+
+	my $file = App::KADR::Path::File->new('/home', ...);
+	my $file = file('/home', ...);
+
+Turn a path into a file. This static method is memoized.
 
 =head2 C<dir_class>
 
@@ -56,7 +88,7 @@ Check if file is absolute. This method is memoized.
 	my $relative_file = $file->relative('..');
 
 Turn file into a file relative to another dir.
-The other file defaults to the current directory.
+The other dir defaults to the current directory.
 
 =head2 C<stringify>
 
