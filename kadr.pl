@@ -275,7 +275,7 @@ sub move_file {
 	my ($old, $ed2k, $new) = @_;
 
 	# Doesn't need to be renamed.
-	return if $old->absolute eq $new->absolute;
+	return if $old eq $new || $old->absolute eq $new->absolute;
 
 	$new->dir->mkpath unless -e $new->dir;
 
