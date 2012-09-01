@@ -26,11 +26,11 @@ sub subsumes {
 	my ($self, $other) = @_;
 
 	# Path::Class::Dir::subsumes does not detect the File class correctly
-	$other = $other->dir if blessed $other && $other->isa('Path::Class::File');
+	$other = $other->dir if blessed $other && !$other->is_dir;
 
 	# Memoize
 	my $key = $other . '';
-	$self->{_subsumes}{$key} = $self->SUPER::subsumes($key) unless exists $self->{_subsumes}{$key};
+	$self->{_subsumes}{$key} = $self->SUPER::subsumes($other) unless exists $self->{_subsumes}{$key};
 	$self->{_subsumes}{$key}
 }
 
