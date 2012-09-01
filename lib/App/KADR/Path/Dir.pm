@@ -3,14 +3,51 @@ use Moose;
 
 use App::KADR::Path::File;
 
-extends 'Path::Class::Dir';
+extends 'Path::Class::Dir', 'App::KADR::Path::Entity';
 
 my %cache;
 
 sub file_class() { 'App::KADR::Path::File' }
 
+sub children {
+	my ($self, %opts) = @_;
+
+	my $dh = $self->open or die 'Can\'t open directory ' . $self . ': ' . $!;
+	my $spec = $self->_spec;
+
+	my $not_all = !$opts{all};
+	my ($updir, $curdir);
+	if ($not_all) {
+		$updir = $spec->updir;
+		$curdir = $spec->curdir;
+	}
+
+	my $no_hidden = $opts{no_hidden};
+
+	my $is_dir_exists = $self->can('is_dir_exists');
+
+	my @out;
+	while (defined(my $entry_name = $self->_decode_path(scalar $dh->read))) {
+		next if $not_all && ($entry_name eq $updir || $entry_name eq $curdir);
+
+		my $entry = $is_dir_exists->($spec->catfile($self, $entry_name))
+			? $self->subdir($entry_name)
+			: $self->file($entry_name);
+
+		next if $no_hidden && $entry->is_hidden;
+
+		push @out, $entry;
+	}
+
+	@out;
+}
+
 sub is_absolute {
 	$_[0]->{is_absolute} //= $_[0]->SUPER::is_absolute;
+}
+
+sub is_hidden {
+	$_[0]{dirs}[-1] =~ /^\./;
 }
 
 sub new {
@@ -87,7 +124,7 @@ performance.
 =head1 METHODS
 
 App::KADR::Path::Dir inherits all methods from L<Path::Class::Dir> and
-implements the following new ones.
+L<App::KADR::Path::Entity> and implements the following new ones.
 
 =head2 C<new>
 
@@ -95,6 +132,15 @@ implements the following new ones.
 	my $dir = dir('/home', ...);
 
 Turn a path into a dir. This static method is memoized.
+
+=head2 C<children>
+
+	my @children = $dir->children;
+	my @children = $dir->children(all => 0, no_hidden => 0); # Defaults
+
+Gather a list of this dir's children, filtered by options.
+If C<all>, the current and parent directories will be included.
+If C<no_hidden>, entries that are hidden will not be included.
 
 =head2 C<file_class>
 
@@ -107,6 +153,12 @@ File class in use by this dir.
 	my $is_absolute = $dir->is_absolute;
 
 Check if dir is absolute. This method is memoized.
+
+=head2 C<is_hidden>
+
+	my $is_hidden = $dir->is_hidden;
+
+Check if dir is hidden.
 
 =head2 C<relative>
 
@@ -133,4 +185,4 @@ This method is memoized.
 
 =head1 SEE ALSO
 
-	L<App::KADR::Path::File>, L<Path::Class::Dir>
+	L<App::KADR::Path::File>, L<App::KADR::Path::Entity>, and L<Path::Class::Dir>

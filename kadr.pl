@@ -161,12 +161,13 @@ sub find_files {
 	my $sl = App::KADR::Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
 	for my $dir (@dirs) {
 		$sl->incr;
-		$sl->update(decode_utf8 shortest $dir, $dir->relative) if $sl->last_update + TERM_SPEED < Time::HiRes::time;
+		if ($sl->last_update + TERM_SPEED < Time::HiRes::time) {
+			$sl->update(shortest $dir, $dir->relative);
+		}
 
 		for ($dir->children) {
 			if ($_->is_dir) { push @dirs, $_ }
 			else {
-				$_ = file(decode_utf8 $_);
 				push @files, $_ if valid_file
 			}
 		}

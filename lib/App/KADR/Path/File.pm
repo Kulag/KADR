@@ -3,7 +3,7 @@ use Moose;
 
 use App::KADR::Path::Dir;
 
-extends 'Path::Class::File';
+extends 'Path::Class::File', 'App::KADR::Path::Entity';
 
 my %cache;
 
@@ -11,6 +11,10 @@ sub dir_class() { 'App::KADR::Path::Dir' }
 
 sub is_absolute {
 	$_[0]->{is_absolute} //= $_[0]->SUPER::is_absolute;
+}
+
+sub is_hidden {
+	$_[0]{file} =~ /^\./;
 }
 
 sub new {
@@ -61,7 +65,7 @@ performance.
 =head1 METHODS
 
 L<App::KADR::Path::File> inherits all methods from L<Path::Class::File> and
-implements the following new ones.
+L<App::KADR::Path::Entity> and implements the following new ones.
 
 =head2 C<new>
 
@@ -82,6 +86,12 @@ Dir class in use by this file.
 
 Check if file is absolute. This method is memoized.
 
+=head2 C<is_hidden>
+
+	my $is_hidden = $file->is_hidden;
+
+Check if file is hidden.
+
 =head2 C<relative>
 
 	my $relative_file = $file->relative;
@@ -99,4 +109,4 @@ Turn file into a string. This method is memoized.
 
 =head1 SEE ALSO
 
-	L<App::KADR::Path::Dir>, L<Path::Class::File>
+	L<App::KADR::Path::Dir>, L<App::KADR::Path::Entity>, and L<Path::Class::File>
