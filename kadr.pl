@@ -108,8 +108,9 @@ for my $file (@$files) {
 	$sl->incr->update_label(shortest $file->relative, $file);
 	$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
 
-	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file);
-	process_file($file, $ed2k);
+	my $file_size = $file->size;
+	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size);
+	process_file($file, $ed2k, $file_size);
 }
 $sl->finalize;
 
@@ -179,8 +180,7 @@ sub find_files {
 }
 
 sub process_file {
-	my ($file, $ed2k) = @_;
-	my $file_size = -s $file;
+	my ($file, $ed2k, $file_size) = @_;
 	my $fileinfo = file_query(ed2k => $ed2k, size => $file_size);
 
 	# File not in AniDB.
@@ -356,8 +356,7 @@ sub avdump {
 }
 
 sub ed2k_hash {
-	my($file) = @_;
-	my $size = -s $file;
+	my($file, $size) = @_;
 
 	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file->basename, size => $size}, 1)) {
 		avdump($file, $size, $r->{ed2k}) if $conf->has_avdump and !$r->{avdumped};
