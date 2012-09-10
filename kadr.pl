@@ -101,11 +101,17 @@ $files = $conf->collator->($files);
 say 'done.';
 
 my @ed2k_of_processed_files;
-my $sl = App::KADR::Term::StatusLine::XofX->new(total_item_count => scalar @$files);
+my $current_file;
+my $sl = App::KADR::Term::StatusLine::Fractional->new(
+	current => \@ed2k_of_processed_files,
+	max => scalar @$files,
+	update_label => sub { shortest $current_file->relative, $current_file },
+);
+
 for my $file (@$files) {
 	next unless -e $file;
 
-	$sl->incr->update_label(shortest $file->relative, $file);
+	$current_file = $file;
 	$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
 
 	my $file_size = $file->size;
