@@ -109,7 +109,7 @@ my $sl = App::KADR::Term::StatusLine::Fractional->new(
 );
 
 for my $file (@$files) {
-	next unless -e $file;
+	next unless $file->is_file_exists;
 
 	$current_file = $file;
 	$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
@@ -156,8 +156,7 @@ if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
 cleanup();
 
 sub valid_file {
-	return if /\.part$/;
-	return unless -f $_;
+	return if substr($_->basename, -5) eq '.part';
 	1;
 }
 
