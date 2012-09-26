@@ -313,7 +313,8 @@ sub _sendrecv {
 	$query = encode_utf8($query);
 
 	while (1) {
-		die 'Timeout while waiting for reply' if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
+		die 'Timeout while waiting for reply'
+			if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
 
 		# Floodcontrol
 		my $delay = $self->_delay($attempts++);
@@ -321,10 +322,11 @@ sub _sendrecv {
 
 		# Accounting
 		$self->{last_command} = Time::HiRes::time;
-		$self->{queries} += 1;
+		$self->{queries}++;
 
 		# Send
-		send($self->{handle}, $query, 0, $self->{sockaddr}) or die( "Send error: " . $! );
+		send($self->{handle}, $query, 0, $self->{sockaddr})
+			or die 'Send error: ' . $!;
 
 		# Receive
 		my $buf;
@@ -332,7 +334,11 @@ sub _sendrecv {
 		my $rout;
 		my $timeout = max $self->{timeout}, $self->_delay($attempts);
 		vec($rin, fileno($self->{handle}), 1) = 1;
-		recv($self->{handle}, $buf, 1500, 0) or die("Recv error:" . $!) if select($rout = $rin, undef, undef, $timeout);
+		if (select($rout = $rin, undef, undef, $timeout)) {
+			recv($self->{handle}, $buf, 1500, 0)
+				or die 'Recv error: ' . $!;
+		}
+
 		next unless $buf;
 
 		# Parse
@@ -355,14 +361,14 @@ sub _sendrecv {
 		next unless $res->{tag} && $res->{tag} eq $vars->{tag};
 
 		# Server error
-		die sprintf 'AniDB error: %d %s', $res->{code}, $res->{header} if $res->{code} > 599 && $res->{code} < 700;
+		die sprintf 'AniDB error: %d %s', $res->{code}, $res->{header}
+			if $res->{code} > 599 && $res->{code} < 700;
 
 		# Login first / Invalid session
 		if ($res->{code} == 501 || $res->{code} == 506) {
-			undef $self->{skey};
 			return if $query eq 'LOGOUT';
-			$self->login;
 			return $self->_sendrecv($query, $vars);
+			delete $self->{skey};
 		}
 
 		return $res;
