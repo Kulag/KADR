@@ -63,7 +63,7 @@ sub new {
 	$self->{port} = $opts->{port} || 9000;
 	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
 	my $host = gethostbyname('api.anidb.info') or die($!);
-	$self->{sockaddr} = sockaddr_in(9000, $host) or die($!);
+	$self->{sockaddr} = sockaddr_in(9000, $host);
 	$self;
 }
 
