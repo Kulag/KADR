@@ -282,19 +282,22 @@ sub _delay {
 sub _response_parse_skeleton {
 	my ($self, $bytes) = @_;
 
-	# Inflate
+	# Inflate compressed responses.
 	if (substr($bytes, 0, 2) eq "\x00\x00") {
+		# Remove "compressed" flag
 		my $data = substr($bytes, 2);
-		inflate(\$data, \$bytes) or die 'Error inflating response: ' . $InflateError;
+
+		inflate(\$data, \$bytes)
+			or die 'Error inflating response: ' . $InflateError;
 	}
 
 	my $string = decode_utf8 $bytes;
 
-	# Lines are newline-terminated.
+	# Contents are newline-terminated.
 	my ($header, @contents) = split("\n", $string);
 
-	# Parse header
 	$header =~ s/^(?:(T\d+) )?(\d+) //;
+	# Parse header.
 	{tag => $1, code => int $2, header => $header, contents => \@contents}
 }
 
