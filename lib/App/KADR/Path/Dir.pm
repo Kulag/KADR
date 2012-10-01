@@ -104,9 +104,7 @@ sub subsumes {
 	$other = $other->dir if blessed $other && !$other->is_dir;
 
 	# Memoize
-	my $key = $other . '';
-	$self->{_subsumes}{$key} = $self->SUPER::subsumes($other) unless exists $self->{_subsumes}{$key};
-	$self->{_subsumes}{$key}
+	$self->{_subsumes}{$other} //= $self->SUPER::subsumes($other);
 }
 
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
