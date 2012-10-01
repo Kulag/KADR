@@ -1,1 +1,8 @@
 *~
+*.patch
+Build
+MANIFEST*.bak
+MYMETA.*
+_build/
+blib/
+*.tmp
