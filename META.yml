@@ -71,4 +71,5 @@ requires:
   perl: v5.14.0
 resources:
   license: http://opensource.org/licenses/ISC
+  repository: https://github.com/Kulag/KADR
 version: 1

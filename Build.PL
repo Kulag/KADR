@@ -33,6 +33,7 @@ my $build = Module::Build->new(
 	meta_merge => {
 		resources => {
 			license => 'http://opensource.org/licenses/ISC',
+			repository => 'https://github.com/Kulag/KADR',
 		},
 	},
 );

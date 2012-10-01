@@ -97,7 +97,10 @@
    "resources" : {
       "license" : [
          "http://opensource.org/licenses/ISC"
-      ]
+      ],
+      "repository" : {
+         "url" : "https://github.com/Kulag/KADR"
+      }
    },
    "version" : "1"
 }
