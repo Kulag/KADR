@@ -28,6 +28,7 @@ my $build = Module::Build->new(
 		"MooseX::SimpleConfig" => "0",
 		"MooseX::Types::Stringlike" => "0",
 		"Template" => "0",
+		"YAML::XS" => "0",
 	},
 );
 
