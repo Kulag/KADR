@@ -20,7 +20,6 @@ sub intersection {
 
 	return if $self->{tag} ne $other->{tag};
 
-	# Implement Number::Tolerant::intersection ourself since it Carp::confess'es our performance away. T_T
 	my ($min) = sort {$b<=>$a} $self->{min}, $other->{min};
 	return unless defined $min;
 
