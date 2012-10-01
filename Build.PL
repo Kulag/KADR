@@ -4,7 +4,7 @@ use Module::Build;
 
 my $build = Module::Build->new(
 	module_name => "App::KADR",
-	license => "isc",
+	license => "open_source",
 	dist_abstract => "Kulag's AniDB Renamer",
 	dist_version => 1,
 	dist_author => 'Kulag <g.kulag@gmail.com>',
@@ -29,6 +29,11 @@ my $build = Module::Build->new(
 		"MooseX::Types::Stringlike" => "0",
 		"Template" => "0",
 		"YAML::XS" => "0",
+	},
+	meta_merge => {
+		resources => {
+			license => 'http://opensource.org/licenses/ISC',
+		},
 	},
 );
 
