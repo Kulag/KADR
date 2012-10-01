@@ -1,7 +1,6 @@
 package App::KADR::Term::StatusLine;
 use v5.10;
 use Moose::Role;
-use Method::Signatures;
 use Time::HiRes;
 
 use common::sense;
@@ -21,25 +20,30 @@ has '_last_update',
 	is => 'rw',
 	reader => 'last_update';
 
-method child($type, %params?) {
+sub child {
+	my ($self, $type, %params) = @_;
 	$type = __PACKAGE__ . '::' . $type;
 	Class::Load::load_class($type);
 	$type->new(parent => $self, %params);
 }
 
-method log($line) {
+sub log {
+	my ($self, $line) = @_;
 	push @{$self->log_lines}, $line;
 	$self->update_term;
 }
 
-method to_text {
+sub to_text {
+	my $self = shift;
 	join '',
 		($self->has_parent ? $self->parent->to_text . $self->parent->child_separator : ()),
 		($self->has_label ? $self->label . $self->label_separator : ()),
 		$self->_to_text;
 }
 
-method update_term {
+sub update_term {
+	my $self = shift;
+
 	# First blank the last status line to prevent trailing garbage.
 	my $out = $self->_blank_line;
 
@@ -73,7 +77,9 @@ sub finalize {
 
 *finalize_and_log = *finalize;
 
-method _pop_all_log_lines {
+sub _pop_all_log_lines {
+	my $self = shift;
+
 	my @lines = (@{$self->log_lines}, ($self->has_parent ? $self->parent->_pop_all_log_lines : ()));
 	$self->log_lines([]);
 	return @lines;

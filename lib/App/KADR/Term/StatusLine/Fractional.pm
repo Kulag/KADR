@@ -1,6 +1,5 @@
 package App::KADR::Term::StatusLine::Fractional;
 use v5.10;
-use Method::Signatures;
 use Moose;
 use MooseX::Types -declare => [ qw(Format) ];
 use MooseX::Types::Moose qw(ArrayRef CodeRef Int ScalarRef Str);
@@ -21,7 +20,8 @@ coerce Format,
 	from Str,
 	via {
 		my $format = $_;
-		$formats{$format} or method { sprintf($format, $self->get_current, $self->get_max) }
+		$formats{$format}
+			or sub { sprintf($format, $_[0]->get_current, $_[0]->get_max) }
 	};
 
 has 'current',
@@ -64,7 +64,9 @@ has 'update_label_separator',
 	}
 }
 
-method _to_text {
+sub _to_text {
+	my $self = shift;
+
 	my $text = $self->format->($self);
 	$text .= $self->update_label_separator . $self->get_update_label if $self->has_update_label;
 	$text
@@ -76,18 +78,25 @@ sub incr {
 	$self;
 }
 
-method format_as_fraction {
+sub format_as_fraction {
+	my $self = shift;
+
 	sprintf('%d/%d', $self->get_current, $self->get_max)
 }
 
-method format_as_percent {
+sub format_as_percent {
+	my $self = shift;
+
 	sprintf('%.0f%%', $self->get_current / $self->get_max * 100);
 }
 
-method update($update_label?) {
+sub update {
+	my ($self, $update_label) = @_;
+
 	if(defined $update_label) {
 		$self->update_label($update_label);
 	}
+
 	$self->update_term;
 }
 
