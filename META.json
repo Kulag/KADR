@@ -1,7 +1,7 @@
 {
    "abstract" : "Kulag's AniDB Renamer",
    "author" : [
-      "Kulag <g.kulag.com>"
+      "Kulag <g.kulag@gmail.com>"
    ],
    "dynamic_config" : 1,
    "generated_by" : "Module::Build version 0.4003, CPAN::Meta::Converter version 2.112150",
@@ -36,6 +36,7 @@
             "MooseX::SimpleConfig" : 0,
             "MooseX::Types::Stringlike" : 0,
             "Template" : 0,
+            "YAML::XS" : 0,
             "common::sense" : 0,
             "enum" : 0,
             "perl" : "v5.14.0"
