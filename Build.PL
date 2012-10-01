@@ -4,7 +4,7 @@ use Module::Build;
 
 my $build = Module::Build->new(
 	module_name => "App::KADR",
-	license => "bsd",
+	license => "isc",
 	dist_abstract => "Kulag's AniDB Renamer",
 	dist_version => 1,
 	dist_author => 'Kulag <g.kulag@gmail.com>',

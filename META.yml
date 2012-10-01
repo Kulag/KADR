@@ -7,7 +7,7 @@ configure_requires:
   Module::Build: 0.40
 dynamic_config: 1
 generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.112150'
-license: bsd
+license: isc
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
@@ -69,5 +69,5 @@ requires:
   enum: 0
   perl: v5.14.0
 resources:
-  license: http://opensource.org/licenses/bsd-license.php
+  license: http://opensource.org/licenses/ISC
 version: 1
