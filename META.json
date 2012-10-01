@@ -29,6 +29,7 @@
             "Expect" : "0",
             "File::Copy" : "0",
             "File::Find" : "0",
+            "File::ShareDir" : "1.00",
             "File::Spec::Memoized" : "0",
             "List::AllUtils" : "0",
             "Moose" : "0",
