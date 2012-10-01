@@ -36,6 +36,7 @@ my $build = Module::Build->new(
 			repository => 'https://github.com/Kulag/KADR',
 		},
 	},
+	share_dir => 'share',
 );
 
 $build->create_build_script;
