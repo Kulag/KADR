@@ -378,7 +378,7 @@ sub ed2k_hash {
 
 	if ($conf->show_hashing_progress) {
 		$ed2k_sl = $sl->child('XofX', label => 'Hashing', total_item_count => $size, format => 'percent')->update_term;
-		while(my $bytes_read = read $fh, my $buffer, Digest::ED2K::CHUNK_SIZE) {
+		while (my $bytes_read = read $fh, my $buffer, 4096) {
 			$ctx->add($buffer);
 			$ed2k_sl->incr($bytes_read);
 			$ed2k_sl->update_term if $ed2k_sl->last_update + TERM_SPEED < Time::HiRes::time;
