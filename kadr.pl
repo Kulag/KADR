@@ -274,6 +274,16 @@ sub process_file {
 
 	my $newname = $tt->process($template, $fileinfo)
 		or die $tt->error;
+
+	# We can't end filenames or dirnames in a dot on windows
+	if ($conf->windows_compatible_filenames) {
+		my ($vol,$dirs,$filename) = File::Spec->splitpath($newname);
+		my @dirs = File::Spec->splitdir($dirs);
+		s!\.$!．! foreach (@dirs, $filename);
+		$dirs = File::Spec->catdir(@dirs);
+		$newname = File::Spec->catpath($vol, $dirs, $filename);
+	}
+
 	move_file($file, $ed2k, $dir->file($newname));
 }
 
