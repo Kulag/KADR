@@ -40,7 +40,7 @@ use App::KADR::Term::StatusLine::XofX;
 
 use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
 
-sub shortest(@) { reduce { length($a) < length($b) ? $a : $b } @_ }
+sub shortest(@) { reduce { length($b) < length($a) ? $b : $a } @_ }
 
 $SIG{INT} = \&cleanup;
 STDOUT->autoflush(1);
