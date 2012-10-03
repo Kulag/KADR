@@ -92,7 +92,7 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 	timeout => $conf->query_timeout,
 });
 
-my $tt = Template->new->service;
+my $tt = Template->new(EVAL_PERL => 1)->service;
 my $template = $tt->context->template(\($conf->file_naming_scheme));
 
 my @files = find_files(@{$conf->dirs_to_scan});
