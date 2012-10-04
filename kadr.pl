@@ -36,8 +36,8 @@ use lib "$FindBin::RealBin/lib";
 use App::KADR::AniDB::UDP::Client;
 use App::KADR::Config;
 use App::KADR::Path -all;
+use App::KADR::Term::StatusLine::Fractional;
 use App::KADR::Term::StatusLine::Freeform;
-use App::KADR::Term::StatusLine::XofX;
 
 use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
 
@@ -144,7 +144,7 @@ sub find_files {
 	my @dirs = @_;
 	my @files;
 
-	my $sl = App::KADR::Term::StatusLine::XofX->new(label => 'Scanning Directory', total_item_count => sub { scalar(@dirs) });
+	my $sl = App::KADR::Term::StatusLine::Fractional->new(label => 'Scanning Directory', max => \@dirs);
 	for my $dir (@dirs) {
 		$sl->incr;
 		if ($sl->last_update + TERM_SPEED < Time::HiRes::time) {
@@ -296,7 +296,7 @@ sub move_file {
 sub avdump {
 	my($file, $size, $ed2k) = @_;
 	my($aved2k, $timedout);
-	my $avsl = $sl->child('XofX', label => 'AvHashing', format => 'percent', total_item_count => 100);
+	my $avsl = $sl->child('Fractional', label => 'AvHashing', format => 'percent', max => 100);
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
 	my $exp = Expect->new($conf->avdump . " -vas -tout:20:6555 \"$esc_file\" 2>&1");
 	$exp->log_stdout(0);
@@ -357,7 +357,7 @@ sub ed2k_hash {
 	my $ed2k_sl;
 
 	if ($conf->show_hashing_progress) {
-		$ed2k_sl = $sl->child('XofX', label => 'Hashing', total_item_count => $size, format => 'percent')->update_term;
+		$ed2k_sl = $sl->child('Fractional', label => 'Hashing', max => $size, format => 'percent');
 		while (my $bytes_read = read $fh, my $buffer, 4096) {
 			$ctx->add($buffer);
 			$ed2k_sl->incr($bytes_read);
