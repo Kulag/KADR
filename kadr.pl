@@ -483,15 +483,15 @@ sub file_query {
 }
 
 sub mylist_file_query {
-	my $query = {@_};
+	my %params = @_;
 	my $r;
 
 	# Cached
-	return $r if $r = $db->fetch("anidb_mylist_file", ["*"], $query, 1);
+	return $r if $r = $db->fetch("anidb_mylist_file", ["*"], \%params, 1);
 
 	# Update
 	my $ml_sl = $sl->child('Freeform')->update('Updating mylist information');
-	$r = $a->mylist_file_query($query);
+	$r = $a->mylist_file(%params);
 	return unless $r;
 
 	# Cache
@@ -516,15 +516,15 @@ sub mylist_file_by_ed2k_size {
 }
 
 sub mylist_anime_query {
-	my $query = {@_};
+	my %params = @_;
 	my $r;
 
 	# Cached
-	return $r if $r = $db->fetch("anidb_mylist_anime", ["*"], $query, 1);
+	return $r if $r = $db->fetch('anidb_mylist_anime', ['*'], \%params, 1);
 
 	# Update
 	my $ml_sl = $sl->child('Freeform')->update('Updating mylist anime information');
-	$r = $a->mylist_anime_query($query);
+	$r = $a->mylist_anime(%params);
 	return unless $r;
 
 	# Cache
