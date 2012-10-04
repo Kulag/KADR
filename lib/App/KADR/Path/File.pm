@@ -9,6 +9,8 @@ my %cache;
 
 sub dir_class() { 'App::KADR::Path::Dir' }
 
+sub has_dir { defined $_[0]{dir} }
+
 sub is_absolute {
 	$_[0]->{is_absolute} //= $_[0]->SUPER::is_absolute;
 }
