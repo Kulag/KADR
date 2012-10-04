@@ -256,8 +256,18 @@ sub process_file {
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname = $tt->process($template, $fileinfo)
+	my $newname = file($tt->process($template, $fileinfo))
 		or die $tt->error;
+
+	# We can't end file/dir names in a dot on windows.
+	if ($conf->windows_compatible_filenames) {
+		$newname = file(
+			map { s/\.$//; $_ }
+			($newname->has_dir ? $newname->dir->dir_list : ()),
+			$newname->basename
+		);
+	}
+
 	move_file($file, $ed2k, $dir->file($newname));
 }
 
