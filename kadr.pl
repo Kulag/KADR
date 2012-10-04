@@ -92,7 +92,7 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 	timeout => $conf->query_timeout,
 });
 
-my $tt = Template->new->service;
+my $tt = Template->new(EVAL_PERL => 1)->service;
 my $template = $tt->context->template(\($conf->file_naming_scheme));
 
 my @files = find_files(@{$conf->dirs_to_scan});
@@ -137,6 +137,9 @@ cleanup();
 
 sub valid_file {
 	return if substr($_->basename, -5) eq '.part';
+	return if substr($_->basename, 0, 1) eq '.';
+	return if $_->basename eq 'Thumbs.db';
+	return if $_->basename eq 'desktop.ini';
 	1;
 }
 
@@ -217,6 +220,9 @@ sub process_file {
 		}
 	}
 
+	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
+	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
+
 	for(keys %$fileinfo) {
 		$fileinfo->{$_} =~ s/\//∕/g;
 		$fileinfo->{$_} =~ s/\`/'/g;
@@ -224,8 +230,6 @@ sub process_file {
 			$fileinfo->{$_} =~ tr!\?"\\<>\|:\*!？”￥＜＞｜：＊!;
 		}
 	}
-	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
-	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
 	# Check if this is the only episode going into the folder.
 	$fileinfo->{only_episode_in_folder} =
@@ -254,6 +258,16 @@ sub process_file {
 
 	my $newname = $tt->process($template, $fileinfo)
 		or die $tt->error;
+
+	# We can't end filenames or dirnames in a dot on windows
+	if ($conf->windows_compatible_filenames) {
+		my ($vol,$dirs,$filename) = File::Spec->splitpath($newname);
+		my @dirs = File::Spec->splitdir($dirs);
+		s!\.$!．! foreach (@dirs, $filename);
+		$dirs = File::Spec->catdir(@dirs);
+		$newname = File::Spec->catpath($vol, $dirs, $filename);
+	}
+
 	move_file($file, $ed2k, $dir->file($newname));
 }
 
