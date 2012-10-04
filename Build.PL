@@ -22,6 +22,7 @@ my $build = Module::Build->new(
 		"File::Copy" => "0",
 		"File::Find" => "0",
 		"File::Spec::Memoized" => "0",
+		'Guard' => 0,
 		"List::AllUtils" => "0",
 		"Moose" => "0",
 		"MooseX::Getopt" => "0",

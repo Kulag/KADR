@@ -26,6 +26,7 @@ use Expect;
 use File::Copy;
 use File::Find;
 use FindBin;
+use Guard;
 use List::AllUtils qw(first none reduce);
 use POSIX ();
 use Template;
@@ -120,29 +121,8 @@ for my $file (@files) {
 }
 $sl->finalize;
 
-if(!$conf->test && $conf->update_anidb_records_for_deleted_files) {
-	my @missing_files = @{$db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files WHERE ed2k NOT IN (' . join(',', map { "'$_'" } @ed2k_of_processed_files) . ') ORDER BY filename')};
-	$sl = App::KADR::Term::StatusLine::XofX->new(label => 'Missing File', total_item_count => scalar(@missing_files));
-	for my $file (@missing_files) {
-		$sl->update('++', $$file[2]);
-		my $file_status = $sl->child('Freeform', value => 'Checking AniDB record');
-		my $mylistinfo = mylist_file_by_ed2k_size(@$file);
-		if(defined($mylistinfo)) {
-			if($mylistinfo->{state} == $a->MYLIST_STATE_HDD) {
-				$file_status->update('Setting AniDB status to "deleted".');
-				$a->mylistedit({lid => $mylistinfo->{lid}, state => $a->MYLIST_STATE_DELETED});
-				$file_status->finalize_and_log('Set AniDB status to "deleted".');
-			}
-			else {
-				$file_status->finalize_and_log('AniDB Mylist status already set.');
-			}
-			$db->remove('anidb_mylist_file', {lid => $mylistinfo->{lid}});
-		}
-		else {
-			$file_status->finalize_and_log('No AniDB Mylist record found.');
-		}
-		$db->remove('known_files', {ed2k => $$file[0]});
-	}
+if ($conf->update_anidb_records_for_deleted_files) {
+	update_mylist_state_for_missing_files(\@ed2k_of_processed_files, $a->MYLIST_STATE_DELETED);
 }
 
 if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
@@ -455,6 +435,79 @@ sub cleanup {
 	exit;
 }
 
+sub update_mylist_state_for_missing_files {
+	my ($have_files, $set_state) = @_;
+	$set_state //= $a->MYLIST_STATE_DELETED;
+	my $set_state_name = $a->mylist_state_name_for($set_state);
+
+	# Missing files.
+	# Would need to bind/interpolate too many values to "NOT IN ()", this is faster.
+	my $all_files = $db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files');
+	my %have_files;
+	@have_files{ @$have_files } = ();
+	my @missing_files
+		= $conf->collator->(sub { $_[0][2] },
+			grep { !exists $have_files{$_->[0]} } @$all_files
+		);
+
+	# Don't print if no missing files.
+	return unless @missing_files;
+
+	$sl = App::KADR::Term::StatusLine::Fractional->new(
+		label => 'Missing File',
+		max => scalar @missing_files,
+	);
+
+	for my $file (@missing_files) {
+		my ($ed2k, $size, $name) = @$file;
+
+		# Forget file regardless of other processing.
+		scope_guard {
+			return if $conf->test;
+			$db->remove('known_files', {ed2k => $ed2k, size => $size});
+		};
+
+		$sl->incr->update($name);
+
+		# File mylist information.
+		my $lid = get_cached_lid(ed2k => $ed2k, size => $size);
+		my $mylist_file;
+		if ($lid) {
+			# Update mylist record so we don't overwrite a user-set state.
+			$db->delete('anidb_mylist_file', {lid => $lid});
+			$mylist_file = mylist_file_query(lid => $lid);
+		}
+		else {
+			# Not in cache.
+			$mylist_file = mylist_file_query(ed2k => $ed2k, size => $size);
+			$lid = $mylist_file->{lid} if $mylist_file;
+		}
+
+		# File not in mylist.
+		next unless $mylist_file;
+
+		# Don't overwrite user-set status.
+		unless ($mylist_file->{state} == $a->MYLIST_STATE_HDD) {
+			$sl->child('Freeform')
+				->finalize('AniDB Mylist status already set.');
+			next;
+		}
+
+		my $update_sl
+			= $sl->child('Freeform')
+				->update('Setting mylist state to ' . $set_state_name);
+
+		next if $conf->test;
+
+		# Try to edit
+		$a->mylist_add(edit => 1, lid => $lid, state => $set_state)
+			or die 'Error setting mylist state';
+
+		$update_sl->finalize('Mylist state set to ' . $set_state_name);
+		$db->update('anidb_mylist_file', {state => $set_state}, {lid => $lid});
+	}
+}
+
 sub file_query {
 	my %params = @_;
 	my $r;
@@ -482,6 +535,14 @@ sub file_query {
 	$r;
 }
 
+sub get_cached_lid {
+	my %params = @_;
+	return unless exists $params{fid} || exists $params{ed2k};
+
+	my $file = $db->fetch('adbcache_file', ['lid'], {size => $params{size}, ed2k => $params{ed2k}}, 1);
+	$file->{lid};
+}
+
 sub mylist_file_query {
 	my %params = @_;
 	my $r;
@@ -501,20 +562,6 @@ sub mylist_file_query {
 	$db->set('anidb_mylist_file', $r, {lid => $r->{lid}});
 
 	$r
-}
-
-# Checks if we can get the lid from the file cache since lid lookups are faster.
-sub mylist_file_by_ed2k_size {
-	my ($ed2k, $size) = @_;
-
-	my $fileinfo = $db->fetch("adbcache_file", ["*"], {size => $size, ed2k => $ed2k}, 1);
-	if(defined($fileinfo)) {
-		return if !$fileinfo->{lid};
-		
-		$db->remove("anidb_mylist_file", {lid => $fileinfo->{lid}});
-		return mylist_file_query({lid => $fileinfo->{lid}});
-	}
-	return $a->mylist_file_query({size => $size, ed2k => $ed2k});
 }
 
 sub mylist_anime_query {

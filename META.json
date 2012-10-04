@@ -31,6 +31,7 @@
             "File::Find" : "0",
             "File::ShareDir" : "1.00",
             "File::Spec::Memoized" : "0",
+            "Guard" : "0",
             "List::AllUtils" : "0",
             "Moose" : "0",
             "MooseX::Getopt" : "0",
