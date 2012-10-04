@@ -49,6 +49,13 @@ use constant MYLIST_MULTI_FIELDS => qw/anime_title episodes eps_with_state_unkno
 
 use enum qw(:MYLIST_STATE_=0 UNKNOWN HDD CD DELETED);
 
+my %MYLIST_STATE_NAMES = (
+	MYLIST_STATE_UNKNOWN, 'unknown',
+	MYLIST_STATE_HDD, 'on HDD',
+	MYLIST_STATE_CD, 'on removable media',
+	MYLIST_STATE_DELETED, 'deleted',
+);
+
 sub new {
 	my($class, $opts) = @_;
 	my $self = bless {}, $class;
@@ -268,6 +275,11 @@ sub mylist_file {
 sub mylist_file_query {
 	my ($self, $query) = @_;
 	$self->mylist_file(%$query);
+}
+
+sub mylist_state_name_for {
+	my ($self, $state_id) = @_;
+	$MYLIST_STATE_NAMES{$state_id};
 }
 
 sub _delay {
