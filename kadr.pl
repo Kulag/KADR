@@ -27,7 +27,7 @@ use File::Copy;
 use File::Find;
 use FindBin;
 use Guard;
-use List::AllUtils qw(first none reduce);
+use List::AllUtils qw(any first none reduce);
 use POSIX ();
 use Template;
 use Time::HiRes;
@@ -127,8 +127,15 @@ if ($conf->update_anidb_records_for_deleted_files) {
 
 if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
 	print "Deleting empty folders in those scanned... ";
-	for(@{$conf->dirs_to_scan}) {
-		finddepth({wanted => sub{rmdir}, follow => 1}, $_);
+	my @scan_dirs = @{$conf->dirs_to_scan};
+	for(@scan_dirs) {
+		finddepth({
+			wanted => sub {
+				rmdir unless any {$File::Find::name eq $_} @scan_dirs
+			},
+			no_chdir => 1,
+			follow => 1,
+		}, $_);
 	}
 	say "done.";
 }
