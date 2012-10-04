@@ -547,6 +547,12 @@ sub mylist_file_query {
 	my %params = @_;
 	my $r;
 
+	# Try to get a cached lid if passed fid / ed2k & size
+	if (my $lid = get_cached_lid(%params)) {
+		delete @params{qw(fid ed2k size)};
+		$params{lid} = $lid;
+	}
+
 	# Cached
 	if ($params{lid}) {
 		return $r if $r = $db->fetch('anidb_mylist_file', ['*'], {lid => $params{lid}}, 1);
