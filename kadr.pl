@@ -127,9 +127,17 @@ if ($conf->update_anidb_records_for_deleted_files) {
 
 if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
 	print "Deleting empty folders in those scanned... ";
-	for(@{$conf->dirs_to_scan}) {
-		finddepth({wanted => sub{rmdir}, follow => 1}, $_);
-	}
+
+	my @scan_dirs = @{$conf->dirs_to_scan};
+	my %keep;
+	@keep{ @scan_dirs } = ();
+
+	finddepth({
+		follow => 1,
+		no_chdir => 1,
+		wanted => sub { rmdir unless exists $keep{$_} },
+	}, @scan_dirs);
+
 	say "done.";
 }
 
