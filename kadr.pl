@@ -488,7 +488,7 @@ sub update_mylist_state_for_missing_files {
 		my $mylist_file;
 		if ($lid) {
 			# Update mylist record so we don't overwrite a user-set state.
-			$db->delete('anidb_mylist_file', {lid => $lid});
+			$db->remove('anidb_mylist_file', {lid => $lid});
 			$mylist_file = mylist_file_query(lid => $lid);
 		}
 		else {
