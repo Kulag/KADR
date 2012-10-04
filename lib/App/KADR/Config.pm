@@ -17,12 +17,35 @@ coerce 'Collator', from 'Str', via {
 		$_ = load_optional_class('Unicode::Collate') ? 'unicode' : 'ascii';
 	}
 
-	return sub { @_ } if $_ eq 'none';
-	return sub { sort { lc($a) cmp lc($b) } @_ } if $_ eq 'ascii';
+	return sub { ref $_[0] eq 'CODE' ? @_[1..$#_] : @_ }
+		if $_ eq 'none';
+
+	if ($_ eq 'ascii') {
+		return sub {
+			return sort { lc($a) cmp lc($b) } @_
+				unless ref $_[0] eq 'CODE';
+
+			my $keygen = shift;
+			map { $_->[1] }
+				sort { $a->[0] cmp $b->[0] }
+				map { [lc $keygen->($_), $_] }
+				@_;
+		};
+	}
+
 	if ($_ eq 'unicode') {
 		require Unicode::Collate;
 		my $collator = Unicode::Collate->new(level => 1, normalize => undef);
-		return sub { $collator->sort(@_) };
+		return sub {
+			return $collator->sort(@_)
+				unless ref $_[0] eq 'CODE';
+
+			my $keygen = shift;
+			map { $_->[1] }
+				sort { $a->[0] cmp $b->[0] }
+				map { [$collator->getSortKey($keygen->($_)), $_] }
+				@_;
+		};
 	}
 };
 MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
