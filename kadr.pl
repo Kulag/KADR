@@ -94,21 +94,21 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 my $tt = Template->new->service;
 my $template = $tt->context->template(\($conf->file_naming_scheme));
 
-my $files = find_files(@{$conf->dirs_to_scan});
+my @files = find_files(@{$conf->dirs_to_scan});
 
 print 'Sorting... ';
-$files = $conf->collator->($files);
+@files = $conf->collator->(@files);
 say 'done.';
 
 my @ed2k_of_processed_files;
 my $current_file;
 my $sl = App::KADR::Term::StatusLine::Fractional->new(
 	current => \@ed2k_of_processed_files,
-	max => scalar @$files,
+	max => scalar @files,
 	update_label => sub { shortest $current_file->relative, $current_file },
 );
 
-for my $file (@$files) {
+for my $file (@files) {
 	next unless $file->is_file_exists;
 
 	$current_file = $file;
@@ -181,7 +181,7 @@ sub find_files {
 
 	$sl->log(sprintf 'Found %d files in %d directories.', scalar @files, scalar @dirs);
 
-	\@files;
+	@files;
 }
 
 sub process_file {
