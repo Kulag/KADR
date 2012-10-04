@@ -487,7 +487,9 @@ sub mylist_file_query {
 	my $r;
 
 	# Cached
-	return $r if $r = $db->fetch("anidb_mylist_file", ["*"], \%params, 1);
+	if ($params{lid}) {
+		return $r if $r = $db->fetch('anidb_mylist_file', ['*'], {lid => $params{lid}}, 1);
+	}
 
 	# Update
 	my $ml_sl = $sl->child('Freeform')->update('Updating mylist information');
