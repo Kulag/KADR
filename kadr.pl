@@ -104,16 +104,16 @@ say 'done.';
 my @ed2k_of_processed_files;
 my $current_file;
 my $sl = App::KADR::Term::StatusLine::Fractional->new(
-	current => \@ed2k_of_processed_files,
 	max => scalar @files,
 	update_label => sub { shortest $current_file->relative, $current_file },
 );
 
 for my $file (@files) {
-	next unless $file->is_file_exists;
-
+	$sl->incr;
 	$current_file = $file;
 	$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
+
+	next unless $file->is_file_exists;
 
 	my $file_size = $file->size;
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size);
