@@ -125,6 +125,12 @@ EOF
 	isa => 'Str',
 	required => 1;
 
+has 'hash_only',
+	default => 0,
+	documentation => "Do not connect to AniDB, avdump or move files around; only hashes.",
+	is => 'rw',
+	isa => 'Bool';
+
 has 'load_local_cache_into_memory' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Disable to reduce memory usage when doing a longer run. About 15 times faster when kadr doesn't have to talk to anidb.");
 
 has 'query_attempts',

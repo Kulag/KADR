@@ -85,13 +85,16 @@ if($conf->load_local_cache_into_memory) {
 	]);
 }
 
-my $a = App::KADR::AniDB::UDP::Client->new({
-	username => $conf->anidb_username,
-	password => $conf->anidb_password,
-	time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
-	max_attempts => $conf->query_attempts,
-	timeout => $conf->query_timeout,
-});
+my $a;
+unless ($conf->hash_only) {
+	$a = App::KADR::AniDB::UDP::Client->new({
+		username => $conf->anidb_username,
+		password => $conf->anidb_password,
+		time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
+		max_attempts => $conf->query_attempts,
+		timeout => $conf->query_timeout,
+	});
+}
 
 # Path template.
 my $pathname_filter
@@ -130,11 +133,11 @@ for my $file (@files) {
 		next;
 	}
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size, $mtime);
-	process_file($file, $ed2k, $file_size);
+	process_file($file, $ed2k, $file_size) unless $conf->hash_only;
 }
 $sl->finalize;
 
-if ($conf->update_anidb_records_for_deleted_files) {
+if ($conf->update_anidb_records_for_deleted_files && !$conf->hash_only) {
 	update_mylist_state_for_missing_files(\@ed2k_of_processed_files, $a->MYLIST_STATE_DELETED);
 }
 
@@ -379,7 +382,7 @@ sub ed2k_hash {
 		return $r->{ed2k};
 	}
 
-	if($conf->has_avdump) {
+	if($conf->has_avdump && !$conf->hash_only) {
 		return avdump($file, $size, $mtime);
 	}
 
