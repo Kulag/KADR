@@ -62,7 +62,10 @@ subtype 'FileTemplate', as 'Str', where { !/\n/ };
 coerce 'FileTemplate', from 'Str', via { s/[\r\n]//g; $_ };
 
 has '+configfile',
-	default => $appdir->file('config.yml').'',
+	default => sub{[
+		$appdir->file('config.yml').'',
+		$appdir->file('login.yml').''
+		]},
 	documentation => 'Default: ~/.kadr/config.yml';
 
 has 'avdump' => (is => 'rw', isa => 'Str', predicate => 'has_avdump', documentation => "Commandline to run avdump.");

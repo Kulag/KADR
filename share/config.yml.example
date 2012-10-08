@@ -3,6 +3,7 @@
 # Commented out options show their defaults. The others are required.
 
 # Your AniDB username and password.
+# These can optionally be moved to a separate file at ~/.kadr/login.yml
 anidb_username: 
 anidb_password: 
 
