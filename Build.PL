@@ -13,6 +13,7 @@ my $build = Module::Build->new(
 		"perl" => "5.14.0",
 		"Class::Load" => "0",
 		"common::sense" => "0",
+		"Date::Format" => "0",
 		"DBD::SQLite" => "0",
 		"DBI" => "0",
 		"Digest::ED2K" => "0",

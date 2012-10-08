@@ -32,6 +32,9 @@ use constant FILE_STATUS_CEN    => 0x80;
 use constant FILE_FMASK => "7ff8fff8";
 use constant FILE_AMASK => "fefcfcc0";
 
+use constant EPISODE_FIELDS =>
+qw/eid aid length rating votes epno eng romaji kanji aired/;
+
 use constant FILE_FIELDS => 
 qw/fid
    aid eid gid lid other_episodes is_deprecated status
@@ -72,6 +75,19 @@ sub new {
 	my $host = gethostbyname('api.anidb.info') or die($!);
 	$self->{sockaddr} = sockaddr_in(9000, $host);
 	$self;
+}
+
+sub episode {
+	my($self, %params) = @_;
+
+	my $res = $self->_sendrecv('EPISODE', \%params);
+	return if !$res || $res->{code} == 340;
+
+	die 'Unexpected return code for file query: ' . $res->{code} unless $res->{code} == 240;
+
+	my @keys = EPISODE_FIELDS;
+	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
+	+{ mesh @keys, @fields }
 }
 
 sub file {
