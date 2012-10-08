@@ -40,7 +40,7 @@ use App::KADR::Term::StatusLine::Fractional;
 use App::KADR::Term::StatusLine::Freeform;
 use App::KADR::Util qw(:pathname_filter shortest);
 
-use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
+use constant TERM_SPEED       => $ENV{KADR_TERM_SPEED}       // 0.05;
 use constant MTIME_DIFF_LIMIT => $ENV{KADR_MTIME_DIFF_LIMIT} // 10;
 
 scope_guard \&cleanup;
