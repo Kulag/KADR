@@ -27,7 +27,7 @@ use File::Copy;
 use File::Find;
 use FindBin;
 use Guard;
-use List::AllUtils qw(first none reduce);
+use List::AllUtils qw(first none);
 use POSIX ();
 use Template;
 use Time::HiRes;
@@ -38,11 +38,9 @@ use App::KADR::Config;
 use App::KADR::Path -all;
 use App::KADR::Term::StatusLine::Fractional;
 use App::KADR::Term::StatusLine::Freeform;
-use App::KADR::Util qw(:pathname_filter);
+use App::KADR::Util qw(:pathname_filter shortest);
 
 use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
-
-sub shortest(@) { reduce { length($b) < length($a) ? $b : $a } @_ }
 
 $SIG{INT} = \&cleanup;
 STDOUT->autoflush(1);
