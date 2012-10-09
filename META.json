@@ -39,6 +39,7 @@
             "MooseX::SimpleConfig" : "0",
             "MooseX::Types::Stringlike" : "0",
             "Template" : "0",
+            "Sub::Exporter" : "0",
             "YAML::XS" : "0",
             "common::sense" : "0",
             "enum" : "0",
@@ -89,6 +90,10 @@
       },
       "App::KADR::Term::StatusLine::Freeform" : {
          "file" : "lib/App/KADR/Term/StatusLine/Freeform.pm",
+         "version" : 0
+      },
+      "App::KADR::Util" : {
+         "file" : "lib/App/KADR/Util.pm",
          "version" : 0
       }
    },

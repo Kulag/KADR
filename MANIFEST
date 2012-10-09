@@ -11,9 +11,11 @@ lib/App/KADR/Path/File.pm
 lib/App/KADR/Term/StatusLine.pm
 lib/App/KADR/Term/StatusLine/Fractional.pm
 lib/App/KADR/Term/StatusLine/Freeform.pm
+lib/App/KADR/Util.pm
 MANIFEST			This list of files
 META.json
 META.yml
 README
 share/config.yml.example
 t/episode_number.t
+t/util.t
