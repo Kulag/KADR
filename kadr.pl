@@ -236,7 +236,6 @@ sub process_file {
 
 	for(keys %$fileinfo) {
 		$fileinfo->{$_} =~ s/\//∕/g;
-		$fileinfo->{$_} =~ s/\`/'/g;
 		if($conf->windows_compatible_filenames) {
 			$fileinfo->{$_} =~ tr!\?"\\<>\|:\*!？”￥＜＞｜：＊!;
 		}
@@ -555,6 +554,9 @@ sub file_query {
 
 	return unless $r;
 
+	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
+	$r->{$_} =~ tr/`/'/ for keys %$r;
+
 	# Cache
 	$r->{updated} = time;
 	$db->set('adbcache_file', $r, {fid => $r->{fid}});
@@ -608,6 +610,9 @@ sub mylist_anime_query {
 	my $ml_sl = $sl->child('Freeform')->update('Updating mylist anime information');
 	$r = $a->mylist_anime(%params);
 	return unless $r;
+
+	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
+	$r->{$_} =~ tr/`/'/ for keys %$r;
 
 	# Cache
 	$r->{updated} = time;
