@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 
-use common::sense;
+use Test::More tests => 8;
+use Test::Exception ();
 
 {
 	package TestClass;
@@ -10,9 +11,16 @@ use common::sense;
 
 	has 'my_ro',
 		is => 'ro';
+
+	# strict refs off
+	Test::Exception::lives_ok {
+		my $a;
+		$a = @{ $a->[0] };
+	} 'common::sense loaded';
 }
 
-use Test::More tests => 7;
+
+use common::sense;
 
 ok !TestClass->can('has'), 'namespace is clean';
 

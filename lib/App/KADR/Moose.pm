@@ -44,8 +44,17 @@ sub import {
 	my $into = $opts->{into} ||= scalar caller;
 	my $mutable = delete $opts->{mutable};
 
+	$self->$moose_import($opts);
+
+	# use common::sense
+	strict->unimport;
+	warnings->unimport;
+	common::sense->import;
+
+	# Require a perl version.
 	feature->import($FEATURE_VERSION);
 
+	# Cleanliness
 	namespace::autoclean->import(-cleanee => $into);
 	$into->true::import;
 
@@ -54,6 +63,4 @@ sub import {
 			$into->meta->make_immutable;
 		};
 	}
-
-	goto &$moose_import;
 }
