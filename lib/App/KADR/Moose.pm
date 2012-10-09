@@ -9,7 +9,7 @@ use true;
 
 use common::sense;
 
-my $FEATURE_VERSION = ':14';
+my $FEATURE_VERSION = ':5.14';
 
 my ($moose_import) = Moose::Exporter->setup_import_methods(
 	with_meta => [qw(has)],
