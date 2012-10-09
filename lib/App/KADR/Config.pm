@@ -61,11 +61,12 @@ coerce 'ExistingDirs', from 'ArrayRef', via { [map { dir($_)->absolute } @$_] };
 subtype 'FileTemplate', as 'Str', where { !/\n/ };
 coerce 'FileTemplate', from 'Str', via { s/[\r\n]//g; $_ };
 
+my @default_config_files
+	= map { $_->stringify } grep { $_->is_file_exists }
+		$appdir->file('config.yml'), $appdir->file('login.yml');
+
 has '+configfile',
-	default => sub{[
-		$appdir->file('config.yml').'',
-		$appdir->file('login.yml').''
-		]},
+	default => sub{ [@default_config_files] },
 	documentation => 'Default: ~/.kadr/config.yml';
 
 has 'avdump' => (is => 'rw', isa => 'Str', predicate => 'has_avdump', documentation => "Commandline to run avdump.");
