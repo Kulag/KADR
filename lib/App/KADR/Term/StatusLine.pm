@@ -1,5 +1,6 @@
 package App::KADR::Term::StatusLine;
 use v5.10;
+use Class::Load ();
 use Moose::Role;
 use Time::HiRes;
 
