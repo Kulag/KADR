@@ -35,7 +35,12 @@ sub has($;@) {
 }
 
 sub import {
-	my ($self, $opts) = @_;
+	my $self = shift;
+
+	Moose->throw_error('Usage: use ' . __PACKAGE__ . ' (key => value, ...)')
+		if @_ % 2 == 1 && ref $_[0] ne 'HASH';
+
+	my $opts = @_ == 1 ? shift : {@_};
 	my $into = $opts->{into} ||= scalar caller;
 	my $mutable = delete $opts->{mutable};
 
