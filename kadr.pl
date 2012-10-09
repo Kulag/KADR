@@ -267,8 +267,8 @@ sub process_file {
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname = file($tt->process($template, $fileinfo))
-		or die $tt->error;
+	my $newname = $tt->process($template, $fileinfo) or die $tt->error;
+	$newname = file($newname);
 
 	# We can't end file/dir names in a dot on windows.
 	if ($conf->windows_compatible_filenames) {
