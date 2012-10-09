@@ -90,10 +90,6 @@
       "App::KADR::Term::StatusLine::Freeform" : {
          "file" : "lib/App/KADR/Term/StatusLine/Freeform.pm",
          "version" : 0
-      },
-      "App::KADR::Term::StatusLine::XofX" : {
-         "file" : "lib/App/KADR/Term/StatusLine/XofX.pm",
-         "version" : 0
       }
    },
    "release_status" : "stable",
