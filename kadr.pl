@@ -159,7 +159,7 @@ sub find_files {
 	for my $dir (@dirs) {
 		$sl->incr;
 		if ($sl->last_update + TERM_SPEED < Time::HiRes::time) {
-			$sl->update(shortest $dir, $dir->relative);
+			$sl->update(shortest $dir->relative, $dir);
 		}
 
 		for ($dir->children) {
@@ -180,7 +180,10 @@ sub process_file {
 	my $fileinfo = file_query(ed2k => $ed2k, size => $file_size);
 
 	# File not in AniDB.
-	return $sl->child('Freeform')->finalize_and_log('Ignored') unless $fileinfo;
+	unless ($fileinfo) {
+		$sl->child('Freeform')->finalize('Ignored');
+		return;
+	}
 
 	# Auto-add to mylist.
 	my $mylistinfo = mylist_file_query($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
@@ -291,17 +294,19 @@ sub move_file {
 	my $sl = $sl->child('Freeform');
 
 	if (-e $new) {
-		return $sl->finalize_and_log('Would overwrite existing file: ' . $display_new);
+		$sl->finalize('Would overwrite existing file: ' . $display_new);
+		return;
 	}
 
 	if ($conf->test) {
-		return $sl->finalize_and_log('Would have moved to: ' . $display_new);
+		$sl->finalize('Would have moved to: ' . $display_new);
+		return;
 	}
 
 	$sl->update('Moving to ' . $display_new);
 	if (move($old, $new)) {
 		$db->update('known_files', {filename => $new->basename}, {ed2k => $ed2k, size => -s $new});
-		$sl->finalize_and_log('Moved to ' . $display_new);
+		$sl->finalize('Moved to ' . $display_new);
 	}
 	else {
 		my $name_max = POSIX::pathconf($new->dir, POSIX::_PC_NAME_MAX);
@@ -309,7 +314,7 @@ sub move_file {
 			$sl->finalize('File name exceeds maximum length for folder (' . $name_max . '): ' . $display_new);
 		}
 		else {
-			$sl->finalize_and_log('Error moving to ' . $display_new);
+			$sl->finalize('Error moving to ' . $display_new);
 			exit 2;
 		}
 	}
