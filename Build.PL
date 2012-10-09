@@ -24,17 +24,23 @@ my $build = Module::Build->new(
 		"File::Find" => "0",
 		"File::Spec::Memoized" => "0",
 		'Guard' => 0,
+		'Hook::AfterRuntime' => 0,
 		"List::AllUtils" => "0",
 		"Moose" => "0",
+		'Moose::Exporter' => 0,
+		'MooseX::Attribute::Chained' => 0,
 		"MooseX::Getopt" => "0",
 		"MooseX::SimpleConfig" => "0",
 		"MooseX::Types::Stringlike" => "0",
+		'namespace::autoclean' => 0,
 		"Text::Xslate" => "0",
 		'Sub::Exporter' => 0,
+		'true::VERSION' => 0,
 		"YAML::XS" => "0",
 	},
 	configure_requires => {
 		'Test::More' => 0,
+		'Test::Exception' => 0,
 	},
 	meta_merge => {
 		resources => {

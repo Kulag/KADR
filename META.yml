@@ -5,6 +5,7 @@ author:
 build_requires: {}
 configure_requires:
   Module::Build: 0.40
+  Test::Exception: 0
   Test::More: 0
 dynamic_config: 1
 generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.120921'
@@ -63,8 +64,11 @@ requires:
   File::ShareDir: 1.00
   File::Spec::Memoized: 0
   Guard: 0
+  Hook::AfterRuntime: 0
   List::AllUtils: 0
   Moose: 0
+  Moose::Exporter: 0
+  MooseX::Attribute::Chained: 0
   MooseX::Getopt: 0
   MooseX::SimpleConfig: 0
   MooseX::Types::Stringlike: 0
@@ -73,7 +77,9 @@ requires:
   YAML::XS: 0
   common::sense: 0
   enum: 0
+  namespace::autoclean: 0
   perl: v5.14.0
+  true::VERSION: 0
 resources:
   license: http://opensource.org/licenses/ISC
   repository: https://github.com/Kulag/KADR
