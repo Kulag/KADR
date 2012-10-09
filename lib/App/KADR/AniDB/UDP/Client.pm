@@ -291,6 +291,15 @@ sub _delay {
 	$self->{last_command} - Time::HiRes::time + min $base_delay * 1.5 ** $attempts, MAX_DELAY;
 }
 
+sub _next_tag {
+	(
+		$_[0]->{_next_tag_generator} ||= do {
+			my $i;
+			sub { sprintf 'T%x', ++$i };
+		}
+	)->();
+}
+
 sub _response_parse_skeleton {
 	my ($self, $bytes) = @_;
 
@@ -308,8 +317,8 @@ sub _response_parse_skeleton {
 	# Contents are newline-terminated.
 	my ($header, @contents) = split("\n", $string);
 
-	$header =~ s/^(?:(T\d+) )?(\d+) //;
 	# Parse header.
+	$header =~ s/^(?:(T[0-9a-f]+) )?(\d+) //;
 	{tag => $1, code => int $2, header => $header, contents => \@contents}
 }
 
@@ -324,7 +333,7 @@ sub _sendrecv {
 
 	# Prepare request
 	$params->{s} = $self->{skey} if $self->{skey};
-	$params->{tag} = 'T' . $self->{queries};
+	$params->{tag} = $self->_next_tag;
 
 	my $req_str
 		= $command . ' '
