@@ -29,7 +29,7 @@ use FindBin;
 use Guard;
 use List::AllUtils qw(first none);
 use POSIX ();
-use Template;
+use Text::Xslate;
 use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
@@ -91,12 +91,16 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 	timeout => $conf->query_timeout,
 });
 
+# Path template.
 my $pathname_filter
 	= $conf->windows_compatible_filenames
 	? \&pathname_filter_windows
 	: \&pathname_filter;
-my $tt = Template->new(EVAL_PERL => 1)->service;
-my $template = $tt->context->template(\($conf->file_naming_scheme));
+my $tx = Text::Xslate->new(
+	function => {html_escape => $pathname_filter},
+	path => {'path.tx' => $conf->file_naming_scheme},
+	syntax => 'TTerse',
+);
 
 my @files = find_files(@{$conf->dirs_to_scan});
 
@@ -237,8 +241,6 @@ sub process_file {
 	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
-	$fileinfo->{$_} = $pathname_filter->($fileinfo->{$_}) for keys %$fileinfo;
-
 	# Check if this is the only episode going into the folder.
 	$fileinfo->{only_episode_in_folder} =
 		defined $mylistanimeinfo
@@ -264,8 +266,7 @@ sub process_file {
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname = $tt->process($template, $fileinfo) or die $tt->error;
-	$newname = file($newname);
+	my $newname = file($tx->render('path.tx', $fileinfo));
 
 	# We can't end file/dir names in a dot on windows.
 	if ($conf->windows_compatible_filenames) {

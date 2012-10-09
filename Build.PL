@@ -28,7 +28,7 @@ my $build = Module::Build->new(
 		"MooseX::Getopt" => "0",
 		"MooseX::SimpleConfig" => "0",
 		"MooseX::Types::Stringlike" => "0",
-		"Template" => "0",
+		"Text::Xslate" => "0",
 		'Sub::Exporter' => 0,
 		"YAML::XS" => "0",
 	},
