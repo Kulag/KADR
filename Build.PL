@@ -31,6 +31,9 @@ my $build = Module::Build->new(
 		"Template" => "0",
 		"YAML::XS" => "0",
 	},
+	configure_requires => {
+		'Test::More' => 0,
+	},
 	meta_merge => {
 		resources => {
 			license => 'http://opensource.org/licenses/ISC',

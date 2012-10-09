@@ -16,7 +16,8 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.40"
+            "Module::Build" : "0.40",
+            "Test::More" : "0"
          }
       },
       "runtime" : {
