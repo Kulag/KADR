@@ -314,15 +314,22 @@ sub _response_parse_skeleton {
 }
 
 sub _sendrecv {
-	my($self, $query, $vars) = @_;
+	my ($self, $command, $params) = @_;
 	my $attempts = 0;
 
-	$self->login if !$self->has_session && $query ne "AUTH";
+	# Auto-login
+	unless ($self->has_session || $command eq 'AUTH') {
+		$self->login;
+	}
 
-	$vars->{'s'} = $self->{skey} if $self->{skey};
-	$vars->{'tag'} = "T" . $self->{queries};
-	$query .= ' ' . join('&', map { "$_=$vars->{$_}" } keys %{$vars}) . "\n";
-	$query = encode_utf8($query);
+	# Prepare request
+	$params->{s} = $self->{skey} if $self->{skey};
+	$params->{tag} = 'T' . $self->{queries};
+
+	my $req_str
+		= $command . ' '
+		. join('&', map { $_ . '=' . $params->{$_} } keys %$params) . "\n";
+	$req_str = encode_utf8 $req_str;
 
 	while (1) {
 		die 'Timeout while waiting for reply'
@@ -337,7 +344,7 @@ sub _sendrecv {
 		$self->{queries}++;
 
 		# Send
-		send($self->{handle}, $query, 0, $self->{sockaddr})
+		send($self->{handle}, $req_str, 0, $self->{sockaddr})
 			or die 'Send error: ' . $!;
 
 		# Receive
@@ -370,7 +377,7 @@ sub _sendrecv {
 		next if $res->{code} == 604;
 
 		# Tag mismatch
-		next unless $res->{tag} && $res->{tag} eq $vars->{tag};
+		next unless $res->{tag} && $res->{tag} eq $params->{tag};
 
 		# Server error
 		die sprintf 'AniDB error: %d %s', $res->{code}, $res->{header}
@@ -378,9 +385,9 @@ sub _sendrecv {
 
 		# Login first / Invalid session
 		if ($res->{code} == 501 || $res->{code} == 506) {
-			return if $query eq 'LOGOUT';
-			return $self->_sendrecv($query, $vars);
 			delete $self->{skey};
+			return if $command eq 'LOGOUT';
+			return $self->_sendrecv($command, $params);
 		}
 
 		return $res;
