@@ -38,6 +38,7 @@ use App::KADR::Config;
 use App::KADR::Path -all;
 use App::KADR::Term::StatusLine::Fractional;
 use App::KADR::Term::StatusLine::Freeform;
+use App::KADR::Util qw(:pathname_filter);
 
 use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
 
@@ -92,6 +93,10 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 	timeout => $conf->query_timeout,
 });
 
+my $pathname_filter
+	= $conf->windows_compatible_filenames
+	? \&pathname_filter_windows
+	: \&pathname_filter;
 my $tt = Template->new(EVAL_PERL => 1)->service;
 my $template = $tt->context->template(\($conf->file_naming_scheme));
 
@@ -234,12 +239,7 @@ sub process_file {
 	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
-	for(keys %$fileinfo) {
-		$fileinfo->{$_} =~ s/\//∕/g;
-		if($conf->windows_compatible_filenames) {
-			$fileinfo->{$_} =~ tr!\?"\\<>\|:\*!？”￥＜＞｜：＊!;
-		}
-	}
+	$fileinfo->{$_} = $pathname_filter->($fileinfo->{$_}) for keys %$fileinfo;
 
 	# Check if this is the only episode going into the folder.
 	$fileinfo->{only_episode_in_folder} =
