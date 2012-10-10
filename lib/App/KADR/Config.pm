@@ -58,9 +58,6 @@ coerce 'ExistingDir' => from 'Str' => via { dir($_)->absolute };
 subtype 'ExistingDirs', as 'ArrayRef[ExistingDir]' => where { all { -d $_ } @$_ };
 coerce 'ExistingDirs', from 'ArrayRef', via { [map { dir($_)->absolute } @$_] };
 
-subtype 'FileTemplate', as 'Str', where { !/\n/ };
-coerce 'FileTemplate', from 'Str', via { s/[\r\n]//g; $_ };
-
 my @default_config_files
 	= map { $_->stringify } grep { $_->is_file_exists }
 		$appdir->file('config.yml'), $appdir->file('login.yml');
@@ -108,20 +105,24 @@ has 'expire_cache',
 	isa => 'Bool';
 
 has 'file_naming_scheme',
-	coerce => 1,
 	default => <<'EOF',
-[% UNLESS only_episode_in_folder %][% anime_romaji_name %]/[% END %]
-[% anime_romaji_name %]
-[% IF is_primary_episode %]
-[% IF file_version > 1 %] v[% file_version %][% END %]
-[% ELSE %]
- - [% episode_number %][% IF file_version > 1 %]v[% file_version %][% END %] - [% episode_english_name %]
-[% END %]
-[% UNLESS group_short_name == 'raw' %] [[% group_short_name %]][% END %]
-.[%file_type%]
+: if not $only_episode_in_folder {
+<: $anime_romaji_name :>/
+: }
+<: $anime_romaji_name :>
+: if $is_primary_episode {
+:   if $file_version > 1 { print ' v' ~ $file_version }
+: }
+: else {
+ - <: $episode_number :>
+:   if $file_version > 1 { print 'v' ~ $file_version }
+ - <: $episode_english_name :>
+: }
+: if $group_short_name != 'raw' { print ' [' ~ $group_short_name ~ ']' }
+.<: $file_type :>
 EOF
 	is => 'rw',
-	isa => 'FileTemplate',
+	isa => 'Str',
 	required => 1;
 
 has 'load_local_cache_into_memory' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Disable to reduce memory usage when doing a longer run. About 15 times faster when kadr doesn't have to talk to anidb.");

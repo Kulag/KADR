@@ -99,7 +99,6 @@ my $pathname_filter
 my $tx = Text::Xslate->new(
 	function => {html_escape => $pathname_filter},
 	path => {'path.tx' => $conf->file_naming_scheme},
-	syntax => 'TTerse',
 );
 
 my @files = find_files(@{$conf->dirs_to_scan});
@@ -266,12 +265,12 @@ sub process_file {
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname = file($tx->render('path.tx', $fileinfo));
+	my $newname = file( $tx->render('path.tx', $fileinfo) =~ s{[\r\n]}{}gr );
 
 	# We can't end file/dir names in a dot on windows.
 	if ($conf->windows_compatible_filenames) {
 		$newname = file(
-			map { s/\.$//; $_ }
+			map { s{\.$}{}r }
 			($newname->has_dir ? $newname->dir->dir_list : ()),
 			$newname->basename
 		);
