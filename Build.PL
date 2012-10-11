@@ -20,6 +20,7 @@ my $build = Module::Build->new(
 		"enum" => "0",
 		"Expect" => "0",
 		"File::Copy" => "0",
+		'File::HomeDir' => 0,
 		"File::Find" => "0",
 		"File::Spec::Memoized" => "0",
 		'Guard' => 0,
