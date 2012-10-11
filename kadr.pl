@@ -42,9 +42,10 @@ use App::KADR::Util qw(:pathname_filter shortest);
 
 use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
 
+scope_guard \&cleanup;
 $SIG{INT} = \&cleanup;
+
 STDOUT->autoflush(1);
-STDOUT->binmode(':utf8');
 
 my $conf = App::KADR::Config->new_with_options;
 
@@ -143,8 +144,6 @@ if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
 
 	say "done.";
 }
-
-cleanup();
 
 sub valid_file {
 	return if substr($_->basename, -5) eq '.part';
@@ -455,7 +454,7 @@ sub range {
 
 sub cleanup {
 	$a->logout if $a;
-	$db->{dbh}->disconnect;
+	$db->{dbh}->disconnect if $db;
 	exit;
 }
 
