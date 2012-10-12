@@ -252,9 +252,11 @@ sub process_file {
 	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
+	$fileinfo->{episode}->{is_special} = $fileinfo->{episode}->{number} =~ /^[PCOST]/;
+
 	$fileinfo->{episode}->{number} =
 		sprintf "\%0".length($fileinfo->{anime_total_episodes} || $fileinfo->{anime_highest_episode_number})."d",
-		$fileinfo->{episode}->{number} unless $fileinfo->{episode}->{number} =~ /^[PCOST]/;
+		$fileinfo->{episode}->{number} unless $fileinfo->{episode}->{is_special};
 
 	# Check if this is the only episode going into the folder.
 	$fileinfo->{only_episode_in_folder} =
