@@ -1,6 +1,8 @@
 package App::KADR::Moose;
 use v5.14;
 use Hook::AfterRuntime;
+use List::Util qw(first);
+use List::MoreUtils qw(firstidx);
 use Moose ();
 use Moose::Exporter ();
 use MooseX::Attribute::Chained ();
@@ -16,6 +18,20 @@ my ($moose_import) = Moose::Exporter->setup_import_methods(
 	also => [qw(Moose)],
 	install => [qw(unimport init_meta)],
 );
+
+sub build_importer {
+	my ($class, $moose_import, $import) = @_;
+
+	sub {
+		my $self = shift;
+		my $opts = _get_extra_argument(\@_);
+		my $into = $opts->{into} ||= scalar caller;
+
+		$self->$import($opts, \@_) if $import;
+		$self->$moose_import(@_);
+		$class->import_base($into);
+	}
+}
 
 sub has($;@) {
 	my $meta = shift;
@@ -34,17 +50,28 @@ sub has($;@) {
 	$meta->add_attribute($_, %options) for @$attrs;
 }
 
-sub import {
-	my $self = shift;
+*import = __PACKAGE__->build_importer($moose_import, sub {
+	my ($self, $opts, $args) = @_;
+	my $into = $opts->{into};
+	
+	my $meta_name = 'meta';
+	if ((my $i = firstidx { $_ eq '-meta_name' } @$args) >= 0) {
+		$meta_name = $args->[$i+1];
+	}
 
-	Moose->throw_error('Usage: use ' . __PACKAGE__ . ' (key => value, ...)')
-		if @_ % 2 == 1 && ref $_[0] ne 'HASH';
+	# Mutable.
+	if ((my $idx = firstidx { $_ eq '-mutable' } @$args) >= 0) {
+		splice @$args, $idx, 1;
+	}
+	else {
+		after_runtime {
+			$into->$meta_name->make_immutable;
+		};
+	}
+});
 
-	my $opts = @_ == 1 ? shift : {@_};
-	my $into = $opts->{into} ||= scalar caller;
-	my $mutable = delete $opts->{mutable};
-
-	$self->$moose_import($opts);
+sub import_base {
+	my ($self, $into) = @_;
 
 	# use common::sense
 	strict->unimport;
@@ -57,10 +84,16 @@ sub import {
 	# Cleanliness
 	namespace::autoclean->import(-cleanee => $into);
 	$into->true::import;
+}
 
-	unless ($mutable) {
-		after_runtime {
-			$into->meta->make_immutable;
-		};
+sub _get_extra_argument {
+	my $args = shift;
+
+	if (my $extra = first { ref $_ eq 'HASH' } @$args) {
+		return $extra;
 	}
+
+	my $extra = {};
+	push $args, $extra;
+	$extra;
 }

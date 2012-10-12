@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 use Test::Exception ();
 
 {
@@ -18,7 +18,7 @@ use Test::Exception ();
 
 {
 	package TestClass;
-	use App::KADR::Moose;
+	use App::KADR::Moose -meta_name => 'moo';
 
 	with 'TestRole';
 
@@ -34,12 +34,18 @@ use Test::Exception ();
 	} 'common::sense loaded by ::Moose';
 }
 
+{
+	package TestMutable;
+	use App::KADR::Moose -mutable;
+}
 
 use common::sense;
 
 ok !TestClass->can('has'), 'namespace is clean';
 
-my $meta = TestClass->meta;
+ok(TestClass->can('moo'), 'import args passed to Moose correctly');
+
+my $meta = TestClass->moo;
 
 my $rw = $meta->get_attribute('my_rw');
 ok $rw->has_read_method, 'my_rw is rw';
@@ -58,3 +64,5 @@ ok $meta->is_immutable, 'metaclass immutable';
 	ok $ra->has_read_method, 'role_attr readable';
 	ok $ra->has_write_method, 'role_attr writable';
 }
+
+ok !TestMutable->meta->is_immutable, 'mutable flag works';
