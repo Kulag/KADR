@@ -9,7 +9,7 @@ use true;
 
 use common::sense;
 
-my $FEATURE_VERSION = ':5.14';
+sub FEATURE_VERSION() { ':5.14' }
 
 my ($moose_import) = Moose::Exporter->setup_import_methods(
 	with_meta => [qw(has)],
@@ -52,7 +52,7 @@ sub import {
 	common::sense->import;
 
 	# Require a perl version.
-	feature->import($FEATURE_VERSION);
+	feature->import(FEATURE_VERSION);
 
 	# Cleanliness
 	namespace::autoclean->import(-cleanee => $into);
