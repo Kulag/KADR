@@ -6,7 +6,7 @@ use Test::More tests => 8;
 use App::KADR::Util qw(:pathname_filter shortest);
 
 is pathname_filter('/?"<>|:*!\\'), '∕?"<>|:*!\\', 'unix pathname filter';
-is pathname_filter_windows('/?"<>|:*!\\'), '∕？”＜＞｜：＊!￥', 'windows pathname filter';
+is pathname_filter_windows('/?"<>|:*!\\'), '∕？”⟨⟩❘∶＊!⧵', 'windows pathname filter';
 
 is shortest(qw(ab c)), 'c', 'shortest argument returned';
 is shortest(qw(a b c)), 'a', 'argument order preserved';
