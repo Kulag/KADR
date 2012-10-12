@@ -55,6 +55,9 @@ my $in_list_cache = {};
 
 my $db = DBI::SpeedySimple->new($conf->database);
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS known_files (`filename` TEXT, `size` INT, `ed2k` TEXT PRIMARY KEY, `mtime` INT, `avdumped` INT);}) and
+$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS episode (`eid` INTEGER PRIMARY KEY, `aid` INT, `length` INT, `rating` INT,
+                 `vote_count` INT, `number` VARCHAR(10), `english_name` TEXT, `romaji_name` TEXT, `kanji_name` TEXT,
+                 `air_date` INT, `updated` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_file (`lid` INT, `fid` INTEGER PRIMARY KEY, `eid` INT, `aid` INT, `gid` INT,
 				 `date` INT, `state` INT, `viewdate` INT, `storage` TEXT, `source` TEXT, `other` TEXT, `filestate` TEXT, `updated` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_anime (`aid` INTEGER PRIMARY KEY, `anime_title` TEXT, `episodes` INT,
@@ -66,12 +69,12 @@ $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS adbcache_file (`fid` INTEGER PRIMARY
 				 `file_type` TEXT, `dub_language` TEXT, `sub_language` TEXT, `length` INT, `description` TEXT, `air_date` INT,
 				 `anime_total_episodes` INT, `anime_highest_episode_number` INT, `anime_year` INT, `anime_type` INT, `anime_related_aids` TEXT,
 				 `anime_related_aid_types` TEXT, `anime_categories` TEXT, `anime_romaji_name` TEXT, `anime_kanji_name` TEXT, `anime_english_name` TEXT,
-				 `anime_other_name` TEXT, `anime_short_names` TEXT, `anime_synonyms` TEXT, `episode_number` TEXT, `episode_english_name` TEXT,
-				 `episode_romaji_name` TEXT, `episode_kanji_name` TEXT, `episode_rating` TEXT, `episode_vote_count` TEXT, `group_name` TEXT,
-				 `group_short_name` TEXT, `updated` INT)}) or die "Could not initialize the database";
+				 `anime_other_name` TEXT, `anime_short_names` TEXT, `anime_synonyms` TEXT, `group_name` TEXT, `group_short_name` TEXT,
+				 `updated` INT)}) or die "Could not initialize the database";
 
 if ($conf->expire_cache) {
 	$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
+	$db->{dbh}->do('DELETE FROM episode WHERE updated < ' . (time - $conf->cache_timeout_episode));
 	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_unwatched) . ' AND watched_eps != eps_with_state_on_hdd');
 	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_watched) . ' AND watched_eps = eps_with_state_on_hdd');
 }
@@ -79,6 +82,8 @@ if ($conf->expire_cache) {
 if($conf->load_local_cache_into_memory) {
 	$db->cache([
 		{table => 'known_files', indices => ['filename', 'size', 'mtime']},
+		{table => 'episode', indices => ['eid']},
+		{table => 'episode', indices => ['aid', 'number']},
 		{table => 'adbcache_file', indices => ['ed2k', 'size']},
 		{table => 'anidb_mylist_file', indices => ['lid']},
 		{table => 'anidb_mylist_anime', indices => ['aid']},
@@ -196,6 +201,8 @@ sub process_file {
 		return;
 	}
 
+	$fileinfo->{episode} = episode_query(eid => $fileinfo->{eid});
+
 	# Auto-add to mylist.
 	my $mylistinfo = mylist_file_query($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
 	if(!defined $mylistinfo && !$conf->test) {
@@ -221,17 +228,17 @@ sub process_file {
 	}
 
 	my $mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
-	if(!in_list($fileinfo->{episode_number}, $mylistanimeinfo->{eps_with_state_on_hdd})) {
+	if(!in_list($fileinfo->{episode}->{number}, $mylistanimeinfo->{eps_with_state_on_hdd})) {
 		# Our mylistanime record is old. Can happen if the file was not added by kadr.
 		$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}});
 		$mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
 	}
 
-	$fileinfo->{episode_watched} = in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps});
+	$fileinfo->{episode}->{watched} = in_list($fileinfo->{episode}->{number}, $mylistanimeinfo->{watched_eps});
 
 	# Watched / Unwatched directories.
 	my $dir = first { $_->subsumes($file) } @{$conf->dirs_to_scan};
-	if ($fileinfo->{episode_watched}) {
+	if ($fileinfo->{episode}->{watched}) {
 		if (none { $_->subsumes($dir) } @{$conf->valid_dirs_for_watched_eps}) {
 			$dir = $conf->dir_to_put_watched_eps;
 		}
@@ -251,22 +258,22 @@ sub process_file {
 		# This is the only episode from this anime on HDD.
 		&& $mylistanimeinfo->{eps_with_state_on_hdd} =~ /^[a-z]*\d+$/i
 		# And this is it.
-		&& $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
+		&& $fileinfo->{episode}->{number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
 		&& (
 			# This episode is the only watched episode from this anime.
-			($fileinfo->{episode_watched} && $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps})
+			($fileinfo->{episode}->{watched} && $fileinfo->{episode}->{number} eq $mylistanimeinfo->{watched_eps})
 			# Or this episode is the only unwatched episode from this anime.
-			|| (!$fileinfo->{episode_watched} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
+			|| (!$fileinfo->{episode}->{watched} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
 		);
 
 	$fileinfo->{is_primary_episode} =
 		# This is the only episode.
-		int($fileinfo->{anime_total_episodes}) == 1 && int($fileinfo->{episode_number}) == 1
+		int($fileinfo->{anime_total_episodes}) == 1 && int($fileinfo->{episode}->{number}) == 1
 		# And this file contains the entire episode.
 		&& !$fileinfo->{other_episodes}
 		# And it has a generic episode name.
 		# Usually equal to the anime_type except for movies where multiple episodes may exist for split releases.
-		&& ($fileinfo->{episode_english_name} eq $fileinfo->{anime_type} || $fileinfo->{episode_english_name} eq 'Complete Movie');
+		&& ($fileinfo->{episode}->{english_name} eq $fileinfo->{anime_type} || $fileinfo->{episode}->{english_name} eq 'Complete Movie');
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
@@ -561,6 +568,23 @@ sub file_query {
 	$r->{updated} = time;
 	$db->set('adbcache_file', $r, {fid => $r->{fid}});
 
+	$r;
+}
+
+sub episode_query {
+	my %params = @_;
+	my $r = $db->fetch('episode', ['*'], \%params, 1);
+	return $r if $r;
+
+	my $ep_sl = $sl->child('Freeform')->update('Updating episode information');
+	$r = $a->episode(%params);
+	return unless $r;
+
+	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
+	$r->{$_} =~ tr/`/'/ for keys %$r;
+
+	$r->{updated} = time;
+	$db->set('episode', $r, {eid => $r->{eid}});
 	$r;
 }
 

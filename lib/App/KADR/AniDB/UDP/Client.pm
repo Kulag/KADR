@@ -30,7 +30,10 @@ use constant FILE_STATUS_UNC    => 0x40;
 use constant FILE_STATUS_CEN    => 0x80;
 
 use constant FILE_FMASK => "7ff8fff8";
-use constant FILE_AMASK => "fefcfcc0";
+use constant FILE_AMASK => "fefc00c0";
+
+use constant EPISODE_FIELDS =>
+qw/eid aid length rating vote_count number english_name romaji_name kanji_name air_date/;
 
 use constant FILE_FIELDS => 
 qw/fid
@@ -40,7 +43,6 @@ qw/fid
    dub_language sub_language length description air_date
    anime_total_episodes anime_highest_episode_number anime_year anime_type anime_related_aids anime_related_aid_types anime_categories
    anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
-   episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
    group_name group_short_name/;
 
 use constant MYLIST_SINGLE_FIELDS => qw/lid fid eid aid gid date state viewdate storage source other filestate/;
@@ -72,6 +74,20 @@ sub new {
 	my $host = gethostbyname('api.anidb.info') or die($!);
 	$self->{sockaddr} = sockaddr_in(9000, $host);
 	$self;
+}
+
+sub episode {
+	my ($self, %params) = @_;
+
+	$params{epno} = delete $params{number} if exists $params{number};
+	my $res = $self->_sendrecv('EPISODE', \%params);
+	return if !$res || $res->{code} == 340;
+
+	die 'Unexpected return code for file query: ' . $res->{code} unless $res->{code} == 240;
+
+	my @keys = EPISODE_FIELDS;
+	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
+	+{ mesh @keys, @fields }
 }
 
 sub file {

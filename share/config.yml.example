@@ -68,9 +68,9 @@ dir_to_put_watched_eps: /home/me/anime/watched
 #   :   if $file_version > 1 { print ' v' ~ $file_version }
 #   : }
 #   : else {
-#    - <: $episode_number :>
+#    - <: $episode.number :>
 #   :   if $file_version > 1 { print 'v' ~ $file_version }
-#    - <: $episode_english_name :>
+#    - <: $episode.english_name :>
 #   : }
 #   : if $group_short_name != 'raw' { print ' [' ~ $group_short_name ~ ']' }
 #   .<: $file_type :>
