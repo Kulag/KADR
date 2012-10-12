@@ -19,6 +19,7 @@ use v5.14;
 use common::sense;
 use open qw(:std :utf8);
 use utf8;
+use Date::Format;
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
@@ -54,6 +55,7 @@ my $in_list_cache = {};
 
 my $db = DBI::SpeedySimple->new($conf->database);
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS known_files (`filename` TEXT, `size` INT, `ed2k` TEXT PRIMARY KEY, `avdumped` INT);}) and
+$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anime_first_air (`aid` INTEGER PRIMARY KEY, `date` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_file (`lid` INT, `fid` INTEGER PRIMARY KEY, `eid` INT, `aid` INT, `gid` INT,
 				 `date` INT, `state` INT, `viewdate` INT, `storage` TEXT, `source` TEXT, `other` TEXT, `filestate` TEXT, `updated` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_anime (`aid` INTEGER PRIMARY KEY, `anime_title` TEXT, `episodes` INT,
@@ -78,6 +80,7 @@ if ($conf->expire_cache) {
 if($conf->load_local_cache_into_memory) {
 	$db->cache([
 		{table => 'known_files', indices => ['filename', 'size']},
+		{table => 'anime_first_air', indices => ['aid']},
 		{table => 'adbcache_file', indices => ['ed2k', 'size']},
 		{table => 'anidb_mylist_file', indices => ['lid']},
 		{table => 'anidb_mylist_anime', indices => ['aid']},
@@ -189,6 +192,8 @@ sub process_file {
 		$sl->child('Freeform')->finalize('Ignored');
 		return;
 	}
+
+	%$fileinfo = ( %$fileinfo, date_to_season( first_air_date(aid => $fileinfo->{aid}) ) );
 
 	# Auto-add to mylist.
 	my $mylistinfo = mylist_file_query($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
@@ -531,6 +536,34 @@ sub update_mylist_state_for_missing_files {
 	}
 }
 
+sub date_to_season {
+	my ($timestamp) = @_;
+
+	return () unless $timestamp;
+
+	# This is meant to be applied to the first air date
+	# Sometimes shows start airing a few weeks before their
+	# designated season so some leeway should be allowed.
+	# These quarters roughly correspond to syoboi's.
+	my @quarter_map = (
+		0, 1, 1, # 0th month, Jan, Feb
+		2, 2, 2, # March, April, May
+		3, 3, 3, # June, July, Aug
+		4, 4, 4, # Sept, Oct, Nov,
+		1        # Dec counts as 1st quarter of next year
+	);
+	# Each quarter corresponds to a season
+	my @season_map = qw{0 Winter Spring Summer Autumn};
+
+	my ($yr, $mo) = split /-/, time2str('%Y-%m', $timestamp, "UTC");;
+	$yr += 1 if $mo == 12; # We consider December as Winter of next year
+	return (
+		season_year    => $yr,
+		season_quarter => $quarter_map[$mo],
+		season         => $season_map[$quarter_map[$mo]],
+	);
+}
+
 sub file_query {
 	my %params = @_;
 	my $r;
@@ -559,6 +592,20 @@ sub file_query {
 	$db->set('adbcache_file', $r, {fid => $r->{fid}});
 
 	$r;
+}
+
+sub first_air_date {
+	my %params = @_;
+	my $r = $db->fetch("anime_first_air", ["date"], \%params, 1);
+
+	return $r->{date} if $r;
+
+	$r = $a->episode(epno => 1, %params);
+
+	return unless $r && $r->{aired};
+
+	$db->insert('anime_first_air', {aid => $params{aid}, date => $r->{aired}});
+	return $r->{aired};
 }
 
 sub get_cached_lid {
