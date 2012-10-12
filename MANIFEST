@@ -5,6 +5,7 @@ lib/App/KADR/AniDB/EpisodeNumber/Range.pm
 lib/App/KADR/AniDB/UDP/Client.pm
 lib/App/KADR/Config.pm
 lib/App/KADR/Moose.pm
+lib/App/KADR/Moose/Role.pm
 lib/App/KADR/Path.pm
 lib/App/KADR/Path/Dir.pm
 lib/App/KADR/Path/Entity.pm

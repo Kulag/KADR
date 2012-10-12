@@ -27,6 +27,12 @@ provides:
   App::KADR::Config:
     file: lib/App/KADR/Config.pm
     version: 0
+  App::KADR::Moose:
+    file: lib/App/KADR/Moose.pm
+    version: 0
+  App::KADR::Moose::Role:
+    file: lib/App/KADR/Moose/Role.pm
+    version: 0
   App::KADR::Path:
     file: lib/App/KADR/Path.pm
     version: 0
