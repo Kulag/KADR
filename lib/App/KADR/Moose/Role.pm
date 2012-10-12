@@ -17,3 +17,17 @@ my ($moose_import) = Moose::Exporter->setup_import_methods(
 );
 
 *import = App::KADR::Moose->build_importer($moose_import);
+
+=head1 NAME
+
+App::KADR::Moose::Role - Moose::Role policy
+
+=head1 SYNPOSIS
+
+	package Bar;
+	use App::KADR::Moose::Role;
+
+=head1 DESCRIPTION
+
+App::KADR::Moose::Role makes your class a Moose role with some with some
+default imports and attribute options. See L<App::KADR::Moose> for details.

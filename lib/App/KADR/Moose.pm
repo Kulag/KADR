@@ -97,3 +97,31 @@ sub _get_extra_argument {
 	push $args, $extra;
 	$extra;
 }
+
+=head1 NAME
+
+App::KADR::Moose - Moose policy
+
+=head1 SYNPOSIS
+
+	package Foo;
+	use App::KADR::Moose;
+	# Implicit
+	# use common::sense;
+	# use namespace::autoclean;
+	# use true;
+
+	# Implicitly is 'rw' and traits Chained.
+	has 'attr';
+
+	# Implicit
+	__PACKAGE__->meta->make_immutable;
+
+=head1 DESCRIPTION
+
+App::KADR::Moose makes your class a Moose class with some default imports
+and attribute options.
+
+=head1 SEE ALSO
+
+L<Moose>, L<common::sense>, L<namespace::autoclean>, L<true>
