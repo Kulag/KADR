@@ -87,7 +87,12 @@ sub episode {
 
 	my @keys = EPISODE_FIELDS;
 	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
-	+{ mesh @keys, @fields }
+	my $ret = { mesh @keys, @fields };
+
+	if ($ret->{number} !~ /^[PCOST]/) {
+		$ret->{number} = int($ret->{number});
+	}
+	$ret
 }
 
 sub file {
