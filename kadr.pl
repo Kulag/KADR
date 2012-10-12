@@ -40,7 +40,8 @@ use App::KADR::Term::StatusLine::Fractional;
 use App::KADR::Term::StatusLine::Freeform;
 use App::KADR::Util qw(:pathname_filter shortest);
 
-use constant TERM_SPEED => $ENV{KADR_TERM_SPEED} // 0.05;
+use constant TERM_SPEED       => $ENV{KADR_TERM_SPEED}       // 0.05;
+use constant MTIME_DIFF_LIMIT => $ENV{KADR_MTIME_DIFF_LIMIT} // 10;
 
 scope_guard \&cleanup;
 $SIG{INT} = \&cleanup;
@@ -53,7 +54,7 @@ my $conf = App::KADR::Config->new_with_options;
 my $in_list_cache = {};
 
 my $db = DBI::SpeedySimple->new($conf->database);
-$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS known_files (`filename` TEXT, `size` INT, `ed2k` TEXT PRIMARY KEY, `avdumped` INT);}) and
+$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS known_files (`filename` TEXT, `size` INT, `ed2k` TEXT PRIMARY KEY, `mtime` INT, `avdumped` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_file (`lid` INT, `fid` INTEGER PRIMARY KEY, `eid` INT, `aid` INT, `gid` INT,
 				 `date` INT, `state` INT, `viewdate` INT, `storage` TEXT, `source` TEXT, `other` TEXT, `filestate` TEXT, `updated` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_anime (`aid` INTEGER PRIMARY KEY, `anime_title` TEXT, `episodes` INT,
@@ -77,7 +78,7 @@ if ($conf->expire_cache) {
 
 if($conf->load_local_cache_into_memory) {
 	$db->cache([
-		{table => 'known_files', indices => ['filename', 'size']},
+		{table => 'known_files', indices => ['filename', 'size', 'mtime']},
 		{table => 'adbcache_file', indices => ['ed2k', 'size']},
 		{table => 'anidb_mylist_file', indices => ['lid']},
 		{table => 'anidb_mylist_anime', indices => ['aid']},
@@ -123,7 +124,12 @@ for my $file (@files) {
 	next unless $file->is_file_exists;
 
 	my $file_size = $file->size;
-	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size);
+	my $mtime     = $file->stat->mtime;
+	if (time() - $mtime < MTIME_DIFF_LIMIT) {
+		$sl->child('Freeform')->finalize('Being Modified');
+		next;
+	}
+	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size, $mtime);
 	process_file($file, $ed2k, $file_size);
 }
 $sl->finalize;
@@ -317,7 +323,7 @@ sub move_file {
 }
 
 sub avdump {
-	my($file, $size, $ed2k) = @_;
+	my($file, $size, $mtime, $ed2k) = @_;
 	my($aved2k, $timedout);
 	my $avsl = $sl->child('Fractional', label => 'AvHashing', format => 'percent', max => 100);
 	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
@@ -358,21 +364,23 @@ sub avdump {
 	}
 	else {
 		my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
-		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file_sn, size => $size}, {filename => $file_sn, size => $size});
+		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file_sn, size => $size, mtime => $mtime},
+			{filename => $file_sn, size => $size});
 		return $aved2k;
 	}
 }
 
 sub ed2k_hash {
-	my($file, $size) = @_;
+	my($file, $size, $mtime) = @_;
 
-	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'], {filename => $file->basename, size => $size}, 1)) {
-		avdump($file, $size, $r->{ed2k}) if $conf->has_avdump and !$r->{avdumped};
+	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'],
+		{filename => $file->basename, size => $size, mtime => $mtime}, 1)) {
+		avdump($file, $size, $mtime, $r->{ed2k}) if $conf->has_avdump and !$r->{avdumped};
 		return $r->{ed2k};
 	}
 
 	if($conf->has_avdump) {
-		return avdump($file, $size);
+		return avdump($file, $size, $mtime);
 	}
 
 	my $ctx = Digest::ED2K->new;
@@ -394,10 +402,10 @@ sub ed2k_hash {
 
 	my $ed2k = $ctx->hexdigest;
 	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
-		$db->update('known_files', {filename => $file->basename}, {ed2k => $ed2k, size => $size});
+		$db->update('known_files', {filename => $file->basename, mtime => $mtime}, {ed2k => $ed2k, size => $size});
 	}
 	else {
-		$db->insert('known_files', {ed2k => $ed2k, filename => $file->basename, size => $size});
+		$db->insert('known_files', {ed2k => $ed2k, filename => $file->basename, size => $size, mtime => $mtime});
 	}
 	$ed2k_sl->finalize_and_log('Hashed');
 	return $ed2k;
