@@ -263,6 +263,8 @@ sub process_file {
 		sprintf "\%0".length($fileinfo->{anime}->{total_episodes} || $fileinfo->{anime}->{highest_episode_number})."d",
 		$fileinfo->{episode}->{number} unless $fileinfo->{episode}->{is_special};
 
+	$fileinfo->{anime}->{is_ongoing} = !$fileinfo->{anime}->{end_date};
+
 	# Check if this is the only episode going into the folder.
 	$fileinfo->{only_episode_in_folder} =
 		defined $mylistanimeinfo
