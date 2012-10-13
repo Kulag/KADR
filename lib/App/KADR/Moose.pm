@@ -31,10 +31,18 @@ sub build_importer {
 		my $self = shift;
 		my $opts = _get_extra_argument(\@_);
 		my $into = $opts->{into} ||= scalar caller;
+		my $clean = 1;
+
+		if ((my $i = firstidx { $_ eq '-noclean' } @_) >= 0) {
+			splice @_, $i, 2;
+			$clean = 0;
+		}
 
 		$self->$import($opts, \@_) if $import;
 		$self->$moose_import(@_);
 		$class->import_base($into);
+
+		namespace::autoclean->import(-cleanee => $into) if $clean;
 	}
 }
 
@@ -97,7 +105,6 @@ sub import_base {
 	feature->import(FEATURE_VERSION);
 
 	# Cleanliness
-	namespace::autoclean->import(-cleanee => $into);
 	$into->true::import;
 }
 

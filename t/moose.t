@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Exception ();
 
 {
@@ -35,6 +35,12 @@ use Test::Exception ();
 }
 
 {
+	package TestNoclean;
+	use App::KADR::Moose -noclean => 1;
+	*dont_clean = sub {};
+}
+
+{
 	package TestMutable;
 	use App::KADR::Moose -mutable;
 }
@@ -58,6 +64,8 @@ ok !$ro->has_write_method, 'my_ro not made writable';
 is $ro->builder, '_build_my_ro', 'my_ro has builder';
 is $ro->clearer, 'clear_my_ro';
 is $ro->predicate, 'has_my_ro';
+
+ok(TestNoclean->can('dont_clean'), '-noclean works');
 
 {
 	my $attr = $meta->get_attribute('_private');
