@@ -70,7 +70,10 @@ has 'avdump' => (is => 'rw', isa => 'Str', predicate => 'has_avdump', documentat
 has 'avdump_timeout' => (is => 'rw', isa => 'Int', default => 30, documentation => "How many seconds to wait for avdump to contact AniDB before retrying.");
 has [qw(anidb_username anidb_password)] => (is => 'rw', isa => 'Str', required => 1);
 has 'cache_timeout_mylist_unwatched' => (is => 'rw', isa => 'Int', required => 1, default => 2*60*60);
-has [qw(cache_timeout_file cache_timeout_mylist_watched)] => (is => 'rw', isa => 'Int', required => 1, default => 12*24*60*60);
+has [qw(cache_timeout_episode
+        cache_timeout_anime
+        cache_timeout_file
+        cache_timeout_mylist_watched)] => (is => 'rw', isa => 'Int', required => 1, default => 12*24*60*60);
 
 has 'collator',
 	coerce => 1,
@@ -107,16 +110,16 @@ has 'expire_cache',
 has 'file_naming_scheme',
 	default => <<'EOF',
 : if not $only_episode_in_folder {
-<: $anime_romaji_name :>/
+<: $anime.romaji_name :>/
 : }
-<: $anime_romaji_name :>
+<: $anime.romaji_name :>
 : if $is_primary_episode {
 :   if $file_version > 1 { print ' v' ~ $file_version }
 : }
 : else {
- - <: $episode_number :>
+ - <: $episode.number :>
 :   if $file_version > 1 { print 'v' ~ $file_version }
- - <: $episode_english_name :>
+ - <: $episode.english_name :>
 : }
 : if $group_short_name != 'raw' { print ' [' ~ $group_short_name ~ ']' }
 .<: $file_type :>
