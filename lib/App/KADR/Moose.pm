@@ -43,7 +43,9 @@ sub has($;@) {
 	my %options = (definition_context => Moose::Util::_caller_info(), @_);
 	my $attrs = ref $name eq 'ARRAY' ? $name : [$name];
 
+	$options{builder} = '_build_' . $name if $options{builder} eq '1';
 	$options{is} //= 'rw';
+
 	$options{traits} //= [];
 	push @{$options{traits}}, 'Chained' unless $options{traits} ~~ 'Chained';
 
