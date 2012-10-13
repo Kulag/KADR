@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More tests => 14;
+use Test::More tests => 18;
 use Test::Exception ();
 
 {
@@ -24,7 +24,8 @@ use Test::Exception ();
 
 	has 'my_rw';
 
-	has 'my_ro', is => 'ro', builder => 1;
+	has 'my_ro', is => 'ro', builder => 1, clearer => 1, predicate => 1;
+	has '_private', clearer => 1, predicate => 1;
 
 	# strict refs off
 	Test::Exception::lives_ok {
@@ -53,7 +54,16 @@ ok $rw->has_write_method, 'my_rw writable';
 my $ro = $meta->get_attribute('my_ro');
 ok $ro->has_read_method, 'my_ro readable';
 ok !$ro->has_write_method, 'my_ro not made writable';
+
 is $ro->builder, '_build_my_ro', 'my_ro has builder';
+is $ro->clearer, 'clear_my_ro';
+is $ro->predicate, 'has_my_ro';
+
+{
+	my $attr = $meta->get_attribute('_private');
+	is $attr->clearer, '_clear_private';
+	is $attr->predicate, '_has_private';
+}
 
 ok grep(sub { $_ eq 'Chained' }, $rw->applied_traits), 'accessors chainable';
 

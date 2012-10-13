@@ -13,6 +13,11 @@ use common::sense;
 
 sub FEATURE_VERSION() { ':5.14' }
 
+my %prefix = (
+	clearer => 'clear',
+	predicate => 'has',
+);
+
 my ($moose_import) = Moose::Exporter->setup_import_methods(
 	with_meta => [qw(has)],
 	also => [qw(Moose)],
@@ -45,6 +50,14 @@ sub has($;@) {
 
 	$options{builder} = '_build_' . $name if $options{builder} eq '1';
 	$options{is} //= 'rw';
+
+	my $default_template = $name =~ /^_/ ? '_%s%s' : '%s_%s';
+	my $default_for = sub {
+		my $opt = shift;
+		$options{$opt} = sprintf $default_template, $prefix{$opt}, $name
+			if $options{$opt} eq '1';
+	};
+	$default_for->($_) for qw(clearer predicate);
 
 	$options{traits} //= [];
 	push @{$options{traits}}, 'Chained' unless $options{traits} ~~ 'Chained';
