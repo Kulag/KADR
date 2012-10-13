@@ -61,9 +61,9 @@ dir_to_put_watched_eps: /home/me/anime/watched
 #
 # file_naming_scheme: |
 #   : if not $only_episode_in_folder {
-#   <: $anime_romaji_name :>/
+#   <: $anime.romaji_name :>/
 #   : }
-#   <: $anime_romaji_name :>
+#   <: $anime.romaji_name :>
 #   : if $is_primary_episode {
 #   :   if $file_version > 1 { print ' v' ~ $file_version }
 #   : }
