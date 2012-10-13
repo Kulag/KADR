@@ -17,6 +17,7 @@
       "configure" : {
          "requires" : {
             "Module::Build" : "0.40",
+            "Test::Exception" : "0",
             "Test::More" : "0"
          }
       },
@@ -34,8 +35,11 @@
             "File::ShareDir" : "1.00",
             "File::Spec::Memoized" : "0",
             "Guard" : "0",
+            "Hook::AfterRuntime" : "0",
             "List::AllUtils" : "0",
             "Moose" : "0",
+            "Moose::Exporter" : "0",
+            "MooseX::Attribute::Chained" : "0",
             "MooseX::Getopt" : "0",
             "MooseX::SimpleConfig" : "0",
             "MooseX::Types::Stringlike" : "0",
@@ -44,7 +48,9 @@
             "YAML::XS" : "0",
             "common::sense" : "0",
             "enum" : "0",
-            "perl" : "v5.14.0"
+            "namespace::autoclean" : "0",
+            "perl" : "v5.14.0",
+            "true::VERSION" : "0"
          }
       }
    },
@@ -63,6 +69,14 @@
       },
       "App::KADR::Config" : {
          "file" : "lib/App/KADR/Config.pm",
+         "version" : 0
+      },
+      "App::KADR::Moose" : {
+         "file" : "lib/App/KADR/Moose.pm",
+         "version" : 0
+      },
+      "App::KADR::Moose::Role" : {
+         "file" : "lib/App/KADR/Moose/Role.pm",
          "version" : 0
       },
       "App::KADR::Path" : {
