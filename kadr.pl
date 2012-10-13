@@ -385,20 +385,15 @@ sub ed2k_hash {
 
 	my $ctx = Digest::ED2K->new;
 	my $fh = $file->open('<:raw');
-	my $ed2k_sl;
+	my $ed2k_sl = $sl->child('Fractional', label => 'Hashing', max => $size, format => 'percent');
 
-	if ($conf->show_hashing_progress) {
-		$ed2k_sl = $sl->child('Fractional', label => 'Hashing', max => $size, format => 'percent');
-		while (my $bytes_read = read $fh, my $buffer, 4096) {
-			$ctx->add($buffer);
-			$ed2k_sl->incr($bytes_read);
-			$ed2k_sl->update_term if $ed2k_sl->last_update + TERM_SPEED < Time::HiRes::time;
-		}
+	while (my $bytes_read = $fh->read(my $buffer, 4096)) {
+		$ctx->add($buffer);
+		$ed2k_sl->incr($bytes_read);
+		$ed2k_sl->update_term if $ed2k_sl->last_update + TERM_SPEED < Time::HiRes::time;
 	}
-	else {
-		$ed2k_sl = $sl->child('Freeform')->update('Hashing');
-		$ctx->addfile($fh);
-	}
+
+	$ed2k_sl->finalize('Hashed');
 
 	my $ed2k = $ctx->hexdigest;
 	if($db->exists('known_files', {ed2k => $ed2k, size => $size})) {
@@ -407,7 +402,7 @@ sub ed2k_hash {
 	else {
 		$db->insert('known_files', {ed2k => $ed2k, filename => $file->basename, size => $size, mtime => $mtime});
 	}
-	$ed2k_sl->finalize_and_log('Hashed');
+
 	return $ed2k;
 }
 

@@ -78,9 +78,6 @@ dir_to_put_watched_eps: /home/me/anime/watched
 # Timeout for AniDB queries.
 # query_timeout: 15.0
 
-# Hashing progress display can be disabled. Not really useful anymore.
-# show_hashing_progress: 1
-
 # Enable to set the state of missing file to "deleted" on AniDB.
 # update_anidb_records_for_deleted_files: 0
 

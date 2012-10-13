@@ -139,8 +139,6 @@ has 'query_timeout',
 	is => 'rw',
 	isa => 'Num';
 
-has 'show_hashing_progress' => (is => 'rw', isa => 'Bool', default => 1, documentation => "Only disable if you think that printing the hashing progess is taking up a significant amount of CPU time when hashing a file.");
-
 has 'test',
 	default => 0,
 	documentation => 'Test mode, make no changes.',
