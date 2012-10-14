@@ -89,7 +89,7 @@ my $a = App::KADR::AniDB::UDP::Client->new({
 	username => $conf->anidb_username,
 	password => $conf->anidb_password,
 	time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
-	max_attempts => $conf->query_attempts,
+	($conf->query_attempts > -1 ? (max_attempts => $conf->query_attempts) : ()),
 	timeout => $conf->query_timeout,
 });
 

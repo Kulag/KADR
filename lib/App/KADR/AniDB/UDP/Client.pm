@@ -1,13 +1,17 @@
 package App::KADR::AniDB::UDP::Client;
-use common::sense;
+use App::KADR::AniDB::EpisodeNumber;
+use App::KADR::AniDB::Types qw(UserName);
+use App::KADR::Moose -noclean => 1;
 use Encode;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
 use List::MoreUtils qw(mesh);
 use List::Util qw(min max);
+use MooseX::Types::Moose qw(Int Num Str);
 use Time::HiRes;
 
-use App::KADR::AniDB::EpisodeNumber;
+use constant API_HOST => 'api.anidb.net';
+use constant API_PORT => 9000;
 
 use constant CLIENT_NAME => "kadr";
 use constant CLIENT_VER => 1;
@@ -15,10 +19,10 @@ use constant CLIENT_VER => 1;
 use constant SESSION_TIMEOUT => 35 * 60;
 use constant MAX_DELAY => 45 * 60;
 
-use constant SHORTTERM_FLOODCONTROL_DELAY => 2;
-use constant LONGTERM_FLOODCONTROL_DELAY => 4;
-use constant QUERIES_FOR_SHORTTERM_FLOODCONTROL => 5;
-use constant QUERIES_FOR_LONGTERM_FLOODCONTROL => 100;
+use constant LONGTERM_RATELIMIT_DELAY      => 4;
+use constant LONGTERM_RATELIMIT_THRESHOLD  => 100;
+use constant SHORTTERM_RATELIMIT_DELAY     => 2;
+use constant SHORTTERM_RATELIMIT_THRESHOLD => 5;
 
 use constant FILE_STATUS_CRCOK  => 0x01;
 use constant FILE_STATUS_CRCERR => 0x02;
@@ -56,23 +60,19 @@ my %MYLIST_STATE_NAMES = (
 	MYLIST_STATE_DELETED, 'deleted',
 );
 
-sub new {
-	my($class, $opts) = @_;
-	my $self = bless {}, $class;
-	$self->{username} = $opts->{username} or die 'AniDB error: Need a username';
-	$self->{password} = $opts->{password} or die 'AniDB error: Need a password';
-	$self->{time_to_sleep_when_busy} = $opts->{time_to_sleep_when_busy};
-	$self->{max_attempts} = $opts->{max_attempts} || -1;
-	$self->{timeout} = $opts->{timeout} || 15.0;
-	$self->{starttime} = time - 1;
-	$self->{queries} = 0;
-	$self->{last_command} = 0;
-	$self->{port} = $opts->{port} || 9000;
-	$self->{handle} = IO::Socket::INET->new(Proto => 'udp', LocalPort => $self->{port}) or die($!);
-	my $host = gethostbyname('api.anidb.info') or die($!);
-	$self->{sockaddr} = sockaddr_in(9000, $host);
-	$self;
-}
+has 'max_attempts',              isa => Int,       predicate => 1;
+has 'port',     default => 9000, isa => Int;
+has 'password',                  isa => Str,       required => 1;
+has 'timeout',  default => 15.0, isa => Num;
+has 'time_to_sleep_when_busy',   default => 15*60, isa => Int;
+has 'username', coerce => 1,     isa => UserName,  required => 1;
+
+has '_handle',      builder => 1, lazy => 1;
+has '_last_query_time';
+has '_query_count';
+has '_session_key', clearer => 1;
+has '_sockaddr',    builder => 1, lazy => 1;
+has '_start_time',  is => 'ro',   default => time - 1;
 
 sub file {
 	my($self, %params) = @_;
@@ -108,17 +108,26 @@ sub file_version {
 }
 
 sub has_session {
-	$_[0]->{skey} && (time - $_[0]->{last_command}) < SESSION_TIMEOUT
+	$_[0]->_session_key && (time - $_[0]->_last_query_time) < SESSION_TIMEOUT
 }
 
 sub login {
 	my($self) = @_;
 	return $self if $self->has_session;
 
-	my $res = $self->_sendrecv('AUTH', {user => lc($self->{username}), pass => $self->{password}, protover => 3, client => CLIENT_NAME, clientver => CLIENT_VER, nat => 1, enc => 'UTF8', comp => 1});
+	my $res = $self->_sendrecv('AUTH', {
+		client => CLIENT_NAME,
+		clientver => CLIENT_VER,
+		comp => 1,
+		enc => 'UTF8',
+		nat => 1,
+		pass => $self->password,
+		protover => 3,
+		user => $self->username,
+	});
+
 	if ($res && ($res->{code} == 200 || $res->{code} == 201) && $res->{header} =~ /^(\w+) ([0-9\.\:]+)/) {
-		$self->{skey} = $1;
-		$self->{myaddr} = $2;
+		$self->_session_key($1);
 		return $self;
 	}
 
@@ -128,7 +137,7 @@ sub login {
 sub logout {
 	my($self) = @_;
 	$self->_sendrecv('LOGOUT') if $self->has_session;
-	delete $self->{skey};
+	$self->_clear_session_key;
 	$self;
 }
 
@@ -282,13 +291,23 @@ sub mylist_state_name_for {
 	$MYLIST_STATE_NAMES{$state_id};
 }
 
+sub _build__handle {
+	IO::Socket::INET->new(Proto => 'udp', LocalPort => $_[0]->port) or die $!;
+}
+
+sub _build__sockaddr {
+	my $host = gethostbyname(API_HOST) or die $!;
+	sockaddr_in(API_PORT, $host);
+}
+
 sub _delay {
 	my ($self, $attempts) = @_;
-	my $base_delay =
-		$self->{queries} > QUERIES_FOR_LONGTERM_FLOODCONTROL ? LONGTERM_FLOODCONTROL_DELAY :
-		$self->{queries} > QUERIES_FOR_SHORTTERM_FLOODCONTROL ? SHORTTERM_FLOODCONTROL_DELAY :
-		0;
-	$self->{last_command} - Time::HiRes::time + min $base_delay * 1.5 ** $attempts, MAX_DELAY;
+	my $count = $self->_query_count;
+	my $base_delay
+		= $count > LONGTERM_RATELIMIT_THRESHOLD  ? LONGTERM_RATELIMIT_DELAY
+		: $count > SHORTTERM_RATELIMIT_THRESHOLD ? SHORTTERM_RATELIMIT_DELAY
+		: 0;
+	$self->_last_query_time - Time::HiRes::time + min $base_delay * 1.5 ** $attempts, MAX_DELAY;
 }
 
 sub _next_tag {
@@ -332,7 +351,7 @@ sub _sendrecv {
 	}
 
 	# Prepare request
-	$params->{s} = $self->{skey} if $self->{skey};
+	if (my $s = $self->_session_key) { $params->{s} = $s }
 	$params->{tag} = $self->_next_tag;
 
 	my $req_str
@@ -340,31 +359,31 @@ sub _sendrecv {
 		. join('&', map { $_ . '=' . $params->{$_} } keys %$params) . "\n";
 	$req_str = encode_utf8 $req_str;
 
+	my $handle = $self->_handle;
 	while (1) {
 		die 'Timeout while waiting for reply'
-			if $self->{max_attempts} > 0 && $attempts == $self->{max_attempts};
+			if $self->has_max_attempts && $attempts == $self->max_attempts;
 
 		# Floodcontrol
 		my $delay = $self->_delay($attempts++);
 		Time::HiRes::sleep($delay) if $delay > 0;
 
 		# Accounting
-		$self->{last_command} = Time::HiRes::time;
-		$self->{queries}++;
+		$self->_last_query_time(Time::HiRes::time);
+		$self->_query_count($self->_query_count + 1);
 
 		# Send
-		send($self->{handle}, $req_str, 0, $self->{sockaddr})
+		$handle->send($req_str, 0, $self->_sockaddr)
 			or die 'Send error: ' . $!;
 
 		# Receive
 		my $buf;
 		my $rin = '';
 		my $rout;
-		my $timeout = max $self->{timeout}, $self->_delay($attempts);
-		vec($rin, fileno($self->{handle}), 1) = 1;
+		my $timeout = max $self->timeout, $self->_delay($attempts);
+		vec($rin, fileno($handle), 1) = 1;
 		if (select($rout = $rin, undef, undef, $timeout)) {
-			recv($self->{handle}, $buf, 1500, 0)
-				or die 'Recv error: ' . $!;
+			$handle->recv($buf, 1500, 0) or die 'Recv error: ' . $!;
 		}
 
 		next unless $buf;
@@ -377,7 +396,7 @@ sub _sendrecv {
 
 		# Server busy
 		if ($res->{code} == 602) {
-			Time::HiRes::sleep($self->{time_to_sleep_when_busy});
+			Time::HiRes::sleep $self->time_to_sleep_when_busy;
 			$attempts = 0;
 			next;
 		}
@@ -394,7 +413,7 @@ sub _sendrecv {
 
 		# Login first / Invalid session
 		if ($res->{code} == 501 || $res->{code} == 506) {
-			delete $self->{skey};
+			$self->_clear_session_key;
 			return if $command eq 'LOGOUT';
 			return $self->_sendrecv($command, $params);
 		}
@@ -403,7 +422,7 @@ sub _sendrecv {
 	}
 }
 
-sub DESTROY {
+sub DEMOLISH {
 	shift->logout;
 }
 
