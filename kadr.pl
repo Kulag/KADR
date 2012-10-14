@@ -42,6 +42,7 @@ use App::KADR::Util qw(:pathname_filter shortest);
 
 use constant TERM_SPEED       => $ENV{KADR_TERM_SPEED}       // 0.05;
 use constant MTIME_DIFF_LIMIT => $ENV{KADR_MTIME_DIFF_LIMIT} // 10;
+use constant EMPTY_ED2K       => "31d6cfe0d16ae931b73c59d7e0c089c0";
 
 scope_guard \&cleanup;
 $SIG{INT} = \&cleanup;
@@ -372,6 +373,8 @@ sub avdump {
 
 sub ed2k_hash {
 	my($file, $size, $mtime) = @_;
+
+	return EMPTY_ED2K unless $size;
 
 	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'],
 		{filename => $file->basename, size => $size, mtime => $mtime}, 1)) {
