@@ -34,6 +34,7 @@ use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
 use App::KADR::AniDB::UDP::Client;
+use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::Config;
 use App::KADR::Path -all;
 use App::KADR::Term::StatusLine::Fractional;
@@ -608,11 +609,31 @@ sub mylist_anime_query {
 
 	# Update
 	my $ml_sl = $sl->child('Freeform')->update('Updating mylist anime information');
-	$r = $a->mylist_anime(%params);
-	return unless $r;
+	my ($type, $mylist) = $a->mylist(%params);
+	return unless $mylist;
+
+	if ($type eq 'multiple') {
+		die 'Got response for multiple anime' if @$mylist > 1;
+		$r = $mylist->[0];
+	}
+	else {
+		my $file = file_query(fid => $mylist->{fid});
+		my $epno = EpisodeNumber($file->{episode_number});
+
+		$r = {
+			aid => $mylist->{aid},
+			anime_title => $file->{anime_romaji_name},
+			episodes => $file->{anime_total_episodes},
+			eps_with_state_unknown => ($r->{state} == 0 ? $epno : ''),
+			eps_with_state_on_hdd => ($r->{state} == 1 ? $epno : ''),
+			eps_with_state_on_cd => ($r->{state} == 2 ? $epno : ''),
+			eps_with_state_deleted => ($r->{state} == 3 ? $epno : ''),
+			watched_eps => ($r->{viewdate} > 0 ? $epno : ''),
+		}
+	}
 
 	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-	$r->{$_} =~ tr/`/'/ for keys %$r;
+	$r->{anime_title} =~ tr/`/'/;
 
 	# Cache
 	$r->{updated} = time;
