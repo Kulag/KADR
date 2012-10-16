@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use v5.10;
 use common::sense;
-use Test::More tests => 28;
+use Test::More tests => 31;
 use Test::Exception;
 
 use App::KADR::AniDB::EpisodeNumber;
@@ -41,3 +41,7 @@ lives_ok { EpisodeNumber('54')->in('1-13') } 'Doesn\'t mysteriously rethrow exce
 ok EpisodeNumber('1-13,C1-C6,S1-S2')->contains('5-6,S1,C4'), 'contains works';
 ok !EpisodeNumber('1')->contains('5-6,S1,C4'), 'not contains works';
 ok !EpisodeNumber('5-6,S1,C4')->contains(EpisodeNumber('1')), 'reverse ok';
+
+ok EpisodeNumber('1-2')->in_ignore_max('1'), 'in_ignore_max works';
+ok EpisodeNumber('S3-S4')->in_ignore_max('S3,S5'), 'in_ignore_max works on tags';
+ok !EpisodeNumber('4-5')->in_ignore_max('1,3,5,7'), 'negative in_ignore_max works';

@@ -29,6 +29,15 @@ sub in {
 		//= $_[0]->intersection($_[1]) eq $_[0];
 }
 
+sub in_ignore_max {
+	my $intersection = $_[0]->intersection($_[1]);
+	my ($first_range) = $_[0]->ranges;
+
+	$_[0]{_in_ignore_max}{ $_[1] } //= $_[1]{_contains_ignore_max}{ $_[0] }
+		//= $intersection eq $_[0]
+		|| $intersection  eq $first_range->tag . $first_range->{min};
+}
+
 sub intersection {
 	my ($self, $other) = @_;
 
@@ -140,6 +149,22 @@ Check if this episode number contains another. Equivalent to C<in> with its argu
 	EpisodeNumber('10-11')->in('1-10');
 
 Check if another episode number contains this one. Equivalent to C<contains>, with its arguments swapped, but slightly faster. This method is memoized.
+
+=head2 C<in_ignore_max>
+
+	# True
+	EpisodeNumber('5')->in('1-10');
+	EpisodeNumber('9-10')->in('1-10');
+	EpisodeNumber('9-10')->in('1,3,5,7,9');
+	EpisodeNumber('10-11')->in('1-10');
+
+	# False
+	EpisodeNumber('S1')->in('1-10');
+
+Check if another episode number which is broken contains this one.
+Use this to work around MULTIPLE MYLIST ENTRIES incorrectly returning only the
+first applicable episode numbers from the files it represents.
+This method is memoized.
 
 =head2 C<intersection>
 
