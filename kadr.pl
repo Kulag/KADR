@@ -560,11 +560,7 @@ sub mylist_anime_query {
 
 	# Cached
 	if (my $mylist = $db->fetch('anidb_mylist_anime', ['*'], \%params, 1)) {
-		for (qw(eps_with_state_unknown eps_with_state_on_hdd
-			eps_with_state_on_cd eps_with_state_deleted watched_eps)) {
-			$mylist->{$_} = EpisodeNumber($mylist->{$_});
-		}
-
+		$a->mylist_multi_parse_episodes($mylist);
 		return $mylist;
 	}
 

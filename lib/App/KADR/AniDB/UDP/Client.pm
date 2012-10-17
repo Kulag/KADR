@@ -51,6 +51,11 @@ use constant MYLIST_SINGLE_FIELDS => qw/lid fid eid aid gid date state viewdate 
 
 use constant MYLIST_MULTI_FIELDS => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
 
+use constant MYLIST_MULTI_EPISODE_FIELDS => qw(
+	eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd
+	eps_with_state_deleted watched_eps
+);
+
 use enum qw(:MYLIST_STATE_=0 UNKNOWN HDD CD DELETED);
 
 my %MYLIST_STATE_NAMES = (
@@ -88,7 +93,7 @@ sub file {
 	# Parse
 	my @keys = FILE_FIELDS;
 	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
-	my $file = +{ mesh @keys, @fields };
+	my $file = { mesh @keys, @fields };
 
 	$file->{episode_number} = EpisodeNumber($file->{episode_number});
 
@@ -187,17 +192,19 @@ sub mylist {
 		$info = [ map {
 			my @values = (split /\|/, $_)[0 .. @keys - 1];
 			my $info = +{ %base_info, mesh @keys, @values };
-
-			for (qw(eps_with_state_unknown eps_with_state_on_hdd
-				eps_with_state_on_cd eps_with_state_deleted watched_eps)) {
-				$info->{$_} = EpisodeNumber($info->{$_});
-			}
+			$self->mylist_multi_parse_episodes($info);
 
 			$info;
 		} @{$res->{contents}} ];
 	}
 
 	wantarray ? ($type, $info) : $info;
+}
+
+sub mylist_multi_parse_episodes {
+	my ($self, $info) = @_;
+	$info->{$_} = EpisodeNumber($info->{$_}) for MYLIST_MULTI_EPISODE_FIELDS;
+	return;
 }
 
 sub mylist_add {
