@@ -51,9 +51,6 @@ STDOUT->autoflush(1);
 
 my $conf = App::KADR::Config->new_with_options;
 
-# A cache to speed up in_list calls.
-my $in_list_cache = {};
-
 my $db = DBI::SpeedySimple->new($conf->database);
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS known_files (`filename` TEXT, `size` INT, `ed2k` TEXT PRIMARY KEY, `mtime` INT, `avdumped` INT);}) and
 $db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_file (`lid` INT, `fid` INTEGER PRIMARY KEY, `eid` INT, `aid` INT, `gid` INT,
@@ -254,17 +251,15 @@ sub process_file {
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
 	# Check if this is the only episode going into the folder.
-	$fileinfo->{only_episode_in_folder} =
-		defined $mylistanimeinfo
-		# This is the only episode from this anime on HDD.
-		&& $mylistanimeinfo->{eps_with_state_on_hdd} =~ /^[a-z]*\d+$/i
-		# And this is it.
-		&& $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
-		&& (
-			# This episode is the only watched episode from this anime.
-			($fileinfo->{episode_watched} && $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps})
-			# Or this episode is the only unwatched episode from this anime.
-			|| (!$fileinfo->{episode_watched} && count_list($mylistanimeinfo->{eps_with_state_on_hdd}) - count_list($mylistanimeinfo->{watched_eps}) == 1)
+	$fileinfo->{only_episode_in_folder}
+		# Sole episode on HDD.
+		= $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
+		|| (
+			$fileinfo->{episode_watched}
+			# Sole watched episode.
+			? $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}
+			# Sole unwatched episode.
+			: $fileinfo->{episode_number}->count == $mylistanimeinfo->{eps_with_state_on_hdd}->count - $mylistanimeinfo->{watched_eps}->count
 		);
 
 	$fileinfo->{is_primary_episode} =
@@ -412,35 +407,6 @@ sub ed2k_hash {
 	}
 
 	return $ed2k;
-}
-
-sub count_list {
-	my ($list) = @_;
-	cache_list($list);
-	return scalar(keys(%{$in_list_cache->{$list}}));
-}
-
-sub cache_list {
-	my($list) = @_;
-	if(!defined $in_list_cache->{$list}) {
-		for(split /,/, $list) {
-			if($_ =~ /^(\w+)-(\w+)$/) {
-				for my $a (range($1, $2)) {
-					$in_list_cache->{$list}->{$a} = 1;
-				}
-			} else {
-				$in_list_cache->{$list}->{(int($_) || $_)} = 1;
-			}
-		}
-	}
-}
-
-sub range {
-	my($start, $end) = @_;
-	$start =~ s/^([a-xA-Z]*)(\d+)$/$2/;
-	my $tag = $1;
-	$end =~ s/^([a-xA-Z]*)(\d+)$/$2/;
-	map { "$tag$_" } $start .. $end;
 }
 
 sub cleanup {
