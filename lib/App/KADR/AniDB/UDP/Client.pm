@@ -88,7 +88,11 @@ sub file {
 	# Parse
 	my @keys = FILE_FIELDS;
 	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
-	+{ mesh @keys, @fields }
+	my $file = +{ mesh @keys, @fields };
+
+	$file->{episode_number} = EpisodeNumber($file->{episode_number});
+
+	$file;
 }
 
 sub file_version {
@@ -182,7 +186,14 @@ sub mylist {
 		$type = 'multiple';
 		$info = [ map {
 			my @values = (split /\|/, $_)[0 .. @keys - 1];
-			+{ %base_info, mesh @keys, @values }
+			my $info = +{ %base_info, mesh @keys, @values };
+
+			for (qw(eps_with_state_unknown eps_with_state_on_hdd
+				eps_with_state_on_cd eps_with_state_deleted watched_eps)) {
+				$info->{$_} = EpisodeNumber($info->{$_});
+			}
+
+			$info;
 		} @{$res->{contents}} ];
 	}
 
@@ -248,19 +259,18 @@ sub mylist_anime {
 
 	# File info is needed to emulate the expected output.
 	my $file = $self->file(fid => $mylist->{fid});
-
-	# Mylist episode numbers are not zero padded as they are in file info.
 	my $epno = EpisodeNumber($file->{episode_number});
+	my $none = EpisodeNumber();
 
 	{
 		aid => $params{aid},
 		anime_title => $file->{anime_romaji_name},
 		episodes => $file->{anime_total_episodes},
-		eps_with_state_unknown => ($mylist->{state} == MYLIST_STATE_UNKNOWN ? $epno : ''),
-		eps_with_state_on_hdd => ($mylist->{state} == MYLIST_STATE_HDD ? $epno : ''),
-		eps_with_state_on_cd => ($mylist->{state} == MYLIST_STATE_CD ? $epno : ''),
-		eps_with_state_deleted => ($mylist->{state} == MYLIST_STATE_DELETED ? $epno : ''),
-		watched_eps => ($mylist->{viewdate} > 0 ? $epno : ''),
+		eps_with_state_unknown => ($mylist->{state} == MYLIST_STATE_UNKNOWN ? $epno : $none),
+		eps_with_state_on_hdd => ($mylist->{state} == MYLIST_STATE_HDD ? $epno : $none),
+		eps_with_state_on_cd => ($mylist->{state} == MYLIST_STATE_CD ? $epno : $none),
+		eps_with_state_deleted => ($mylist->{state} == MYLIST_STATE_DELETED ? $epno : $none),
+		watched_eps => ($mylist->{viewdate} > 0 ? $epno : $none),
 	}
 }
 
