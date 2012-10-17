@@ -3,6 +3,7 @@ use v5.10;
 use App::KADR::AniDB::EpisodeNumber::Range;
 use common::sense;
 use Carp qw(croak);
+use List::Util qw(sum);
 use overload
 	fallback => 1,
 	'""'     => 'stringify',
@@ -23,6 +24,16 @@ sub contains {
 
 	$_[0]{_contains}{$other} //= $other->{_in}{ $_[0] }
 		//= $_[0]->intersection($other) eq $other;
+}
+
+sub count {
+	my ($self, $type) = @_;
+	my @ranges
+		= defined $type
+		? grep { $_->tag eq $type } $self->ranges
+		: $self->ranges;
+
+	@ranges ? sum map { $_->count } @ranges : 0;
 }
 
 sub in {
@@ -133,6 +144,14 @@ Provides methods for calculation on episode number ranges.
 A shortcut for App::KADR::AniDB::EpisodeNumber->L<from_string>.
 
 =head1 METHODS
+
+=head2 C<count>
+
+	my $all_count = $epno->count;
+	my $type_count = $epno->count($episode_type_tag);
+
+Count of episodes represented by this episode number,
+optionally filtered by type.
 
 =head2 C<contains>
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use v5.10;
 use common::sense;
-use Test::More tests => 36;
+use Test::More tests => 43;
 use Test::Exception;
 
 use App::KADR::AniDB::EpisodeNumber;
@@ -21,6 +21,14 @@ is EpisodeNumber('1-10,S1,C1,C3-C4'), '1-10,C1,C3-C4,S1', 'tagged and not';
 
 is EpisodeNumber('01'), '1', 'leading zeros stripped';
 is EpisodeNumber('S005'), 'S5', 'zeros stripped on tagged too';
+
+is EpisodeNumber()->count, 0, 'null count';
+is EpisodeNumber('2')->count, 1, 'single count';
+is EpisodeNumber('2-5,8')->count, 5, 'range count';
+is EpisodeNumber('2,S2')->count, 2, 'tagged count';
+is EpisodeNumber('2')->count('S'), 0, 'null typed count of specials';
+is EpisodeNumber('2,S2')->count(''), 1, 'typed count of normals';
+is EpisodeNumber('2,S2')->count('S'), 1, 'typed count of specials';
 
 is EpisodeNumber('1-10') & 1, '1', '1-10 contains 1';
 is EpisodeNumber('1-10') & 10, '10', '1-10 contains 10';

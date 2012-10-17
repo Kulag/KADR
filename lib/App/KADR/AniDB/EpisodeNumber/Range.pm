@@ -11,6 +11,8 @@ use App::KADR::AniDB::EpisodeNumber;
 my %cache;
 my $tag_range_re = qr/^ ([a-xA-Z]*) (\d+) (?: - \g{1} (\d+) )? $/x;
 
+sub count { $_[0]{max} - $_[0]{min} + 1 }
+
 sub intersection {
 	my ($self, $other) = @_;
 
