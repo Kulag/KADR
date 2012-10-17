@@ -2,6 +2,7 @@ package App::KADR::AniDB::EpisodeNumber;
 use v5.10;
 use App::KADR::AniDB::EpisodeNumber::Range;
 use common::sense;
+use Carp qw(croak);
 use overload
 	fallback => 1,
 	'""'     => 'stringify',
@@ -68,6 +69,16 @@ sub new {
 	} grep {defined} @_;
 
 	bless { ranges => \@ranges }, $class;
+}
+
+sub padded {
+	my ($self, $padding) = @_;
+	my $range_padded
+		= ref $padding eq 'HASH' ? sub { $_->padded($padding->{ $_->tag }) }
+		: $padding =~ /^\d+$/    ? sub { $_->padded($padding) }
+		:                          croak 'Invalid padding configuration';
+
+	join ',', map &$range_padded, $_[0]->ranges;
 }
 
 sub parse {
@@ -178,6 +189,13 @@ Calculate the intersection of this episode number and another.
 	my $epno = App::KADR::AniDB::EpisodeNumber->new(App::KADR::AniDB::EpisodeNumber::Range->new('epno', 1, 1, ''), ...);
 
 Create episode number.
+
+=head2 C<padded>
+
+	my $string = EpisodeNumber('1,S1')->padded(2); # 01,S01
+	my $string = EpisodeNumber('1,S1')->padded({'' => 2, S => 1}); # 01,S1
+
+Turn episode number into a zero-padded string.
 
 head2 C<parse>
 

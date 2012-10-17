@@ -41,6 +41,17 @@ sub new {
 	};
 }
 
+sub padded {
+	my ($self, $padding) = @_;
+	my $format = '%0' . ($padding || 1) . 'd';
+
+	$self->{tag} . (
+		$self->{max} > $self->{min}
+		? sprintf($format . '-' . $format, $self->{min}, $self->{max})
+		: sprintf($format, $self->{min})
+	);
+}
+
 sub parse {
 	my ($class, $string) = @_;
 	$class = ref $class if ref $class;

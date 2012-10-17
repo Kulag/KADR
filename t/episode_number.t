@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use v5.10;
 use common::sense;
-use Test::More tests => 31;
+use Test::More tests => 36;
 use Test::Exception;
 
 use App::KADR::AniDB::EpisodeNumber;
@@ -45,3 +45,9 @@ ok !EpisodeNumber('5-6,S1,C4')->contains(EpisodeNumber('1')), 'reverse ok';
 ok EpisodeNumber('1-2')->in_ignore_max('1'), 'in_ignore_max works';
 ok EpisodeNumber('S3-S4')->in_ignore_max('S3,S5'), 'in_ignore_max works on tags';
 ok !EpisodeNumber('4-5')->in_ignore_max('1,3,5,7'), 'negative in_ignore_max works';
+
+is EpisodeNumber(1)->padded(2), '01', 'padding ok';
+is EpisodeNumber('2-3,S1')->padded(3), '002-003,S001', 'tagged padding ok';
+is EpisodeNumber('1,S1')->padded({'' => 2}), '01,S1', 'unconfigured tags work ok';
+is EpisodeNumber('2-3,S1,C1')->padded({'' => 3, S => 2, C => 1}), '002-003,C1,S01', 'per-tag padding';
+throws_ok { EpisodeNumber(1)->padded([]) } qr{Invalid padding configuration};
