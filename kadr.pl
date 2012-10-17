@@ -222,13 +222,17 @@ sub process_file {
 	}
 
 	my $mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
-	if(!in_list($fileinfo->{episode_number}, $mylistanimeinfo->{eps_with_state_on_hdd})) {
+
+	# Note: Mylist anime data is broken server-side, only the min is provided.
+	if (!$fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{eps_with_state_on_hdd}))
+	{
 		# Our mylistanime record is old. Can happen if the file was not added by kadr.
 		$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}});
 		$mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
 	}
 
-	$fileinfo->{episode_watched} = in_list($fileinfo->{episode_number}, $mylistanimeinfo->{watched_eps});
+	# Note: Mylist anime data is broken server-side, only the min is provided.
+	$fileinfo->{episode_watched} = $fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{watched_eps});
 
 	# Watched / Unwatched directories.
 	my $dir = first { $_->subsumes($file) } @{$conf->dirs_to_scan};
@@ -242,6 +246,9 @@ sub process_file {
 			$dir = $conf->dir_to_put_unwatched_eps;
 		}
 	}
+
+	my $episode_count = $fileinfo->{anime_total_episodes} || $fileinfo->{anime_highest_episode_number};
+	$fileinfo->{episode_number_padded} = $fileinfo->{episode_number}->padded({'' => length $episode_count});
 
 	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
@@ -262,7 +269,7 @@ sub process_file {
 
 	$fileinfo->{is_primary_episode} =
 		# This is the only episode.
-		int($fileinfo->{anime_total_episodes}) == 1 && int($fileinfo->{episode_number}) == 1
+		int($fileinfo->{anime_total_episodes}) == 1 && $fileinfo->{episode_number} eq 1
 		# And this file contains the entire episode.
 		&& !$fileinfo->{other_episodes}
 		# And it has a generic episode name.
@@ -405,26 +412,6 @@ sub ed2k_hash {
 	}
 
 	return $ed2k;
-}
-
-# Determines if the specified number is in a AniDB style list of episode numbers.
-# Example: in_list(2, "1-3") == true
-sub in_list {
-	my($needle, $haystack) = @_;
-	cache_list($haystack);
-	if($needle =~ /^(.+),(.+)$/) {
-		return in_list($1, $haystack);
-	}
-	if($needle =~ /^(\w+)-(\w+)$/) {
-		return in_list($1, $haystack);
-		# This is commented out to work around a bug in the AniDB UDP API.
-		# For multi-episode files, the API only includes the first number in the lists that come in MYLIST commands.
-		#for ($first..$last) {
-		#	return 0 if !in_list($_, $haystack);
-		#}
-		#return 1;
-	}
-	return defined $in_list_cache->{$haystack}->{(int($needle) || $needle)};
 }
 
 sub count_list {

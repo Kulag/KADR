@@ -109,7 +109,7 @@ has 'file_naming_scheme',
 :   if $file_version > 1 { print ' v' ~ $file_version }
 : }
 : else {
- - <: $episode_number :>
+ - <: $episode_number_padded :>
 :   if $file_version > 1 { print 'v' ~ $file_version }
  - <: $episode_english_name :>
 : }
