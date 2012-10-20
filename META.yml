@@ -24,6 +24,9 @@ provides:
   App::KADR::AniDB::UDP::Client:
     file: lib/App/KADR/AniDB/UDP/Client.pm
     version: 0
+  App::KADR::AniDB::UDP::Transaction:
+    file: lib/App/KADR/AniDB/UDP/Transaction.pm
+    version: 0
   App::KADR::Config:
     file: lib/App/KADR/Config.pm
     version: 0
@@ -72,10 +75,12 @@ requires:
   Guard: 0
   Hook::AfterRuntime: 0
   List::AllUtils: 0
+  Mojo::EventEmitter: 0
   Moose: 0
   Moose::Exporter: 0
   MooseX::Attribute::Chained: 0
   MooseX::Getopt: 0
+  MooseX::NonMoose: 0
   MooseX::SimpleConfig: 0
   MooseX::StrictConstructor: 0
   MooseX::Types::Stringlike: 0
