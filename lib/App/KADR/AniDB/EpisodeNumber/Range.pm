@@ -22,14 +22,14 @@ sub intersection {
 
 	return if $self->{tag} ne $other->{tag};
 
-	my ($min) = sort {$b<=>$a} $self->{min}, $other->{min};
+	my $min = $self->{min} > $other->{min} ? $self->{min} : $other->{min};
 	return unless defined $min;
 
-	my ($max) = sort {$a<=>$b} $self->{max}, $other->{max};
+	my $max = $self->{max} < $other->{max} ? $self->{max} : $other->{max};
 
 	return if !defined $max || $max < $min || $min > $max;
 
-	$self->new($min, $max, $self->{tag})
+	$self->new($min, $max, $self->{tag});
 }
 
 sub new {
