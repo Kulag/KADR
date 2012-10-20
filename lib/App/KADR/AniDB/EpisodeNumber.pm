@@ -42,12 +42,13 @@ sub in {
 }
 
 sub in_ignore_max {
-	my $intersection = $_[0]->intersection($_[1]);
-	my ($first_range) = $_[0]->ranges;
+	$_[0]{in_ignore_max}{ $_[1] } //= do {
+		my $intersection = $_[0]->intersection($_[1]);
+		my ($first_range) = $_[0]->ranges;
 
-	$_[0]{_in_ignore_max}{ $_[1] } //= $_[1]{_contains_ignore_max}{ $_[0] }
-		//= $intersection eq $_[0]
-		|| $intersection  eq $first_range->tag . $first_range->{min};
+		$intersection eq $_[0]
+			|| $intersection eq $first_range->tag . $first_range->{min};
+	};
 }
 
 sub intersection {
@@ -108,7 +109,7 @@ sub parse {
 
 sub ranges { @{ $_[0]{ranges} } }
 
-sub stringify { join ',', $_[0]->ranges }
+sub stringify { $_[0]{stringify} //= join ',', $_[0]->ranges }
 
 0x6B63;
 
