@@ -164,7 +164,11 @@ sub find_files {
 	my @dirs = @_;
 	my @files;
 
-	my $sl = App::KADR::Term::StatusLine::Fractional->new(label => 'Scanning Directory', max => \@dirs);
+	my $sl = App::KADR::Term::StatusLine::Fractional->new(
+		label => 'Scanning Directory',
+		max   => \@dirs,
+	);
+
 	for my $dir (@dirs) {
 		$sl->incr;
 		if ($sl->last_update + TERM_SPEED < Time::HiRes::time) {
@@ -172,14 +176,16 @@ sub find_files {
 		}
 
 		for ($dir->children) {
-			if ($_->is_dir) { push @dirs, $_ }
-			else {
-				push @files, $_ if valid_file
-			}
+			if   ($_->is_dir) { push @dirs,  $_ }
+			else              { push @files, $_ if valid_file }
 		}
 	}
 
-	$sl->log(sprintf 'Found %d files in %d directories.', scalar @files, scalar @dirs);
+	$sl->log(
+		sprintf 'Found %d files in %d directories.',
+		scalar @files,
+		scalar @dirs
+	);
 
 	@files;
 }
