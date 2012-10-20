@@ -70,6 +70,10 @@
          "file" : "lib/App/KADR/AniDB/UDP/Client.pm",
          "version" : 0
       },
+      "App::KADR::AniDB::UDP::Client::Caching" : {
+         "file" : "lib/App/KADR/AniDB/UDP/Client/Caching.pm",
+         "version" : 0
+      },
       "App::KADR::AniDB::UDP::Transaction" : {
          "file" : "lib/App/KADR/AniDB/UDP/Transaction.pm",
          "version" : 0

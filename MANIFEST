@@ -3,6 +3,7 @@ kadr.pl
 lib/App/KADR/AniDB/EpisodeNumber.pm
 lib/App/KADR/AniDB/EpisodeNumber/Range.pm
 lib/App/KADR/AniDB/UDP/Client.pm
+lib/App/KADR/AniDB/UDP/Client/Caching.pm
 lib/App/KADR/AniDB/UDP/Transaction.pm
 lib/App/KADR/Config.pm
 lib/App/KADR/Moose.pm
