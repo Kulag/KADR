@@ -6,6 +6,7 @@ use List::MoreUtils qw(firstidx);
 use Moose ();
 use Moose::Exporter ();
 use MooseX::Attribute::Chained ();
+use MooseX::StrictConstructor 0.19 ();
 use namespace::autoclean;
 use true;
 
@@ -20,7 +21,7 @@ my %prefix = (
 
 my ($moose_import) = Moose::Exporter->setup_import_methods(
 	with_meta => [qw(has)],
-	also => [qw(Moose)],
+	also => [qw(Moose MooseX::StrictConstructor)],
 	install => [qw(unimport init_meta)],
 );
 

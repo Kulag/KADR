@@ -31,6 +31,7 @@ my $build = Module::Build->new(
 		'MooseX::Attribute::Chained' => 0,
 		"MooseX::Getopt" => "0",
 		"MooseX::SimpleConfig" => "0",
+		'MooseX::StrictConstructor' => 0,
 		"MooseX::Types::Stringlike" => "0",
 		'namespace::autoclean' => 0,
 		"Text::Xslate" => "0",
