@@ -118,6 +118,11 @@ has 'file_naming_scheme',
 EOF
 	isa => 'Str';
 
+has 'hash_only',
+	default => 0,
+	documentation => q{Enable to skip processing of files and jush hash them.},
+	isa => 'Bool';
+
 has 'load_local_cache_into_memory',
 	default => 1,
 	documentation => q{Disable to reduce memory usage when doing a longer run. About 15 times faster when kadr doesn't have to talk to anidb.},

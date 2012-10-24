@@ -141,11 +141,14 @@ for my $file (@files) {
 		next;
 	}
 	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size, $mtime);
-	process_file($file, $ed2k, $file_size);
+
+	unless ($conf->hash_only) {
+		process_file($file, $ed2k, $file_size);
+	}
 }
 $sl->finalize;
 
-if ($conf->update_anidb_records_for_deleted_files) {
+if ($conf->update_anidb_records_for_deleted_files && !$conf->hash_only) {
 	update_mylist_state_for_missing_files(\@ed2k_of_processed_files, $a->MYLIST_STATE_DELETED);
 }
 
@@ -403,7 +406,7 @@ sub ed2k_hash {
 		return $r->{ed2k};
 	}
 
-	if($conf->has_avdump) {
+	if ($conf->has_avdump && !$conf->hash_only) {
 		return avdump($file, $size, $mtime);
 	}
 
