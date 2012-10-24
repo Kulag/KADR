@@ -8,8 +8,12 @@ use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
 use List::MoreUtils qw(mesh);
 use List::Util qw(min max);
+use MooseX::Types::LoadableClass qw(LoadableClass);
 use MooseX::Types::Moose qw(Int Num Str);
+use MooseX::NonMoose;
 use Time::HiRes;
+
+extends 'Mojo::EventEmitter';
 
 use constant API_HOST => 'api.anidb.net';
 use constant API_PORT => 9000;
@@ -77,22 +81,33 @@ has 'port',     default => 9000, isa => Int;
 has 'password',                  isa => Str,       required => 1;
 has 'timeout',  default => 15.0, isa => Num;
 has 'time_to_sleep_when_busy',   default => 15*60, isa => Int;
+
+has 'tx_class',
+	coerce  => 1,
+	default => 'App::KADR::AniDB::UDP::Transaction',
+	isa     => LoadableClass;
+
 has 'username', coerce => 1,     isa => UserName,  required => 1;
 
 has '_handle',      builder => 1, lazy => 1;
-has '_last_query_time';
-has '_query_count';
+has '_last_query_time', default => 0;
+has '_query_count', default => 0;
 has '_session_key', clearer => 1;
 has '_sockaddr',    builder => 1, lazy => 1;
 has '_start_time',  is => 'ro',   default => time - 1;
 
+sub build_tx {
+	my ($self, $command, $params) = @_;
+	$self->tx_class->new(req => { name => $command, params => $params });
+}
+
 sub file {
-	my($self, %params) = @_;
+	my ($self, %params) = @_;
 
-	$params{fmask} = FILE_FMASK;
-	$params{amask} = FILE_AMASK;
+	my $tx = $self->build_tx('file',
+		{ fmask => FILE_FMASK, amask => FILE_AMASK, %params });
 
-	my $res = $self->_sendrecv('FILE', \%params);
+	my $res = $self->start($tx)->success;
 	return if !$res || $res->{code} == 320;
 
 	die 'Unexpected return code for file query: ' . $res->{code} unless $res->{code} == 220;
@@ -127,10 +142,10 @@ sub has_session {
 }
 
 sub login {
-	my($self) = @_;
+	my $self = shift;
 	return $self if $self->has_session;
 
-	my $res = $self->_sendrecv('AUTH', {
+	my $tx = $self->build_tx('AUTH', {
 		client => CLIENT_NAME,
 		clientver => CLIENT_VER,
 		comp => 1,
@@ -140,6 +155,8 @@ sub login {
 		protover => 3,
 		user => $self->username,
 	});
+
+	my $res = $self->start($tx)->success;
 
 	if ($res && ($res->{code} == 200 || $res->{code} == 201) && $res->{header} =~ /^(\w+) ([0-9\.\:]+)/) {
 		$self->_session_key($1);
@@ -177,7 +194,8 @@ sub mylist_add_query {
 sub mylist {
 	my ($self, %params) = @_;
 
-	my $res = $self->_sendrecv('MYLIST', \%params);
+	my $tx = $self->build_tx('mylist', \%params);
+	my $res = $self->start($tx)->success;
 
 	# No such entry
 	return if !$res || $res->{code} == 321;
@@ -213,7 +231,8 @@ sub mylist_add {
 	my ($self, %params) = @_;
 	$params{edit} //= 0;
 
-	my $res = $self->_sendrecv('MYLISTADD', \%params);
+	my $tx = $self->build_tx('mylistadd', \%params);
+	my $res = $self->start($tx)->success;
 
 	# No such entry(s)
 	return if !$res || $res->{code} == 320 || $res->{code} == 330 || $res->{code} == 350 || $res->{code} == 411;
@@ -307,6 +326,20 @@ sub mylist_state_name_for {
 	$MYLIST_STATE_NAMES{$state_id};
 }
 
+sub start {
+	my ($self, $tx) = @_;
+
+	eval {
+		$self->emit(start => $tx);
+		$tx->{res} = $self->_sendrecv(@{ $tx->{req} }{qw(name params)});
+		$tx->emit('finish');
+	} or do {
+		$tx->error($@);
+	};
+
+	$tx;
+}
+
 sub _build__handle {
 	IO::Socket::INET->new(Proto => 'udp', LocalPort => $_[0]->port) or die $!;
 }
@@ -376,8 +409,7 @@ sub _sendrecv {
 	if (my $s = $self->_session_key) { $params->{s} = $s }
 	$params->{tag} = $self->_next_tag;
 
-	my $req_str
-		= $command . ' '
+	my $req_str = uc($command) . ' '
 		. join('&', map { $_ . '=' . $params->{$_} } keys %$params) . "\n";
 	$req_str = encode_utf8 $req_str;
 

@@ -33,8 +33,7 @@ use Text::Xslate;
 use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
-use App::KADR::AniDB::UDP::Client;
-use App::KADR::AniDB::EpisodeNumber;
+use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
 use App::KADR::Path -all;
 use App::KADR::Term::StatusLine::Fractional;
@@ -44,6 +43,15 @@ use App::KADR::Util qw(:pathname_filter shortest);
 use constant TERM_SPEED       => $ENV{KADR_TERM_SPEED}       // 0.05;
 use constant MTIME_DIFF_LIMIT => $ENV{KADR_MTIME_DIFF_LIMIT} // 10;
 
+use constant SCHEMA_KNOWN_FILES => q{
+CREATE TABLE IF NOT EXISTS known_files (
+	`filename` TEXT,
+	`size` INT,
+	`ed2k` TEXT PRIMARY KEY,
+	`mtime` INT,
+	`avdumped` INT)
+};
+
 scope_guard \&cleanup;
 $SIG{INT} = \&cleanup;
 
@@ -52,21 +60,16 @@ STDOUT->autoflush(1);
 my $conf = App::KADR::Config->new_with_options;
 
 my $db = DBI::SpeedySimple->new($conf->database);
-$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS known_files (`filename` TEXT, `size` INT, `ed2k` TEXT PRIMARY KEY, `mtime` INT, `avdumped` INT);}) and
-$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_file (`lid` INT, `fid` INTEGER PRIMARY KEY, `eid` INT, `aid` INT, `gid` INT,
-				 `date` INT, `state` INT, `viewdate` INT, `storage` TEXT, `source` TEXT, `other` TEXT, `filestate` TEXT, `updated` INT);}) and
-$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS anidb_mylist_anime (`aid` INTEGER PRIMARY KEY, `anime_title` TEXT, `episodes` INT,
-				 `eps_with_state_unknown` TEXT, `eps_with_state_on_hdd` TEXT, `eps_with_state_on_cd` TEXT, `eps_with_state_deleted` TEXT,
-				 `watched_eps` TEXT, `updated` INT);}) and
-$db->{dbh}->do(q{CREATE TABLE IF NOT EXISTS adbcache_file (`fid` INTEGER PRIMARY KEY, `aid` INT, `eid` INT, `gid` INT, `lid` INT,
-				 `other_episodes` TEXT, `is_deprecated` INT, `status` INT, `size` INT, `ed2k` TEXT, `md5` TEXT, `sha1` TEXT, `crc32` TEXT,
-				 `quality` TEXT, `source` TEXT, `audio_codec` TEXT, `audio_bitrate` INT, `video_codec` TEXT, `video_bitrate` INT, `video_resolution` TEXT,
-				 `file_type` TEXT, `dub_language` TEXT, `sub_language` TEXT, `length` INT, `description` TEXT, `air_date` INT,
-				 `anime_total_episodes` INT, `anime_highest_episode_number` INT, `anime_year` INT, `anime_type` INT, `anime_related_aids` TEXT,
-				 `anime_related_aid_types` TEXT, `anime_categories` TEXT, `anime_romaji_name` TEXT, `anime_kanji_name` TEXT, `anime_english_name` TEXT,
-				 `anime_other_name` TEXT, `anime_short_names` TEXT, `anime_synonyms` TEXT, `episode_number` TEXT, `episode_english_name` TEXT,
-				 `episode_romaji_name` TEXT, `episode_kanji_name` TEXT, `episode_rating` TEXT, `episode_vote_count` TEXT, `group_name` TEXT,
-				 `group_short_name` TEXT, `updated` INT)}) or die "Could not initialize the database";
+$db->{dbh}->do(SCHEMA_KNOWN_FILES) or die 'Error initializing known_files';
+
+my $a = App::KADR::AniDB::UDP::Client::Caching->new(
+	db                      => $db,
+	password                => $conf->anidb_password,
+	timeout                 => $conf->query_timeout,
+	time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
+	username                => $conf->anidb_username,
+	($conf->query_attempts > -1 ? (max_attempts => $conf->query_attempts) : ()),
+);
 
 if ($conf->expire_cache) {
 	$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
@@ -82,14 +85,6 @@ if($conf->load_local_cache_into_memory) {
 		{table => 'anidb_mylist_anime', indices => ['aid']},
 	]);
 }
-
-my $a = App::KADR::AniDB::UDP::Client->new({
-	username => $conf->anidb_username,
-	password => $conf->anidb_password,
-	time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,
-	($conf->query_attempts > -1 ? (max_attempts => $conf->query_attempts) : ()),
-	timeout => $conf->query_timeout,
-});
 
 # Path template.
 my $pathname_filter
@@ -113,6 +108,23 @@ my $sl = App::KADR::Term::StatusLine::Fractional->new(
 	max => scalar @files,
 	update_label => sub { shortest $current_file->relative, $current_file },
 );
+
+$a->on(start => sub {
+	my ($anidb, $tx) = @_;
+	my $name = $tx->req->{name};
+
+	my $type
+		= $name eq 'file'   ? 'file'
+		: $name eq 'mylist'
+			? $tx->req->{params}{aid} ? 'mylist anime'
+			:                           'mylist'
+		:                      undef;
+
+	return unless $type;
+
+	my $sl = $sl->child('Freeform')->update('Updating ' . $type . ' info');
+	$tx->on(finish => sub { $sl });
+});
 
 for my $file (@files) {
 	$sl->incr;
@@ -192,7 +204,7 @@ sub find_files {
 
 sub process_file {
 	my ($file, $ed2k, $file_size) = @_;
-	my $fileinfo = file_query(ed2k => $ed2k, size => $file_size);
+	my $fileinfo = $a->file(ed2k => $ed2k, size => $file_size);
 
 	# File not in AniDB.
 	unless ($fileinfo) {
@@ -201,7 +213,7 @@ sub process_file {
 	}
 
 	# Auto-add to mylist.
-	my $mylistinfo = mylist_file_query($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
+	my $mylistinfo = $a->mylist_file($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
 	if(!defined $mylistinfo && !$conf->test) {
 		my $proc_sl = $sl->child('Freeform')->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylist_add(fid => $fileinfo->{fid}, state => $a->MYLIST_STATE_HDD)) {
@@ -224,14 +236,14 @@ sub process_file {
 		}
 	}
 
-	my $mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
+	my $mylistanimeinfo = $a->mylist_anime(aid => $fileinfo->{aid});
 
 	# Note: Mylist anime data is broken server-side, only the min is provided.
 	if (!$fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{eps_with_state_on_hdd}))
 	{
 		# Our mylistanime record is old. Can happen if the file was not added by kadr.
 		$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}});
-		$mylistanimeinfo = mylist_anime_query(aid => $fileinfo->{aid});
+		$mylistanimeinfo = $a->mylist_anime(aid => $fileinfo->{aid});
 	}
 
 	# Note: Mylist anime data is broken server-side, only the min is provided.
@@ -456,16 +468,16 @@ sub update_mylist_state_for_missing_files {
 		$sl->incr->update($name);
 
 		# File mylist information.
-		my $lid = get_cached_lid(ed2k => $ed2k, size => $size);
+		my $lid = $a->get_cached_lid(ed2k => $ed2k, size => $size);
 		my $mylist_file;
 		if ($lid) {
 			# Update mylist record so we don't overwrite a user-set state.
 			$db->remove('anidb_mylist_file', {lid => $lid});
-			$mylist_file = mylist_file_query(lid => $lid);
+			$mylist_file = $a->mylist_file(lid => $lid);
 		}
 		else {
 			# Not in cache.
-			$mylist_file = mylist_file_query(ed2k => $ed2k, size => $size);
+			$mylist_file = $a->mylist_file(ed2k => $ed2k, size => $size);
 			$lid = $mylist_file->{lid} if $mylist_file;
 		}
 
@@ -494,116 +506,3 @@ sub update_mylist_state_for_missing_files {
 	}
 }
 
-sub file_query {
-	my %params = @_;
-
-	# Cached
-	if (my $file = $db->fetch("adbcache_file", ["*"], \%params, 1)) {
-		$file->{episode_number} = EpisodeNumber($file->{episode_number});
-		return $file;
-	}
-
-	# Update
-	my $file_sl = $sl->child('Freeform')->update('Updating file information');
-	my $r = eval { $a->file(%params) };
-
-	# Due to unconfigurable fieldlists, the response is occasionally too long,
-	# and gets truncated by the server after compression.
-	if ($@) {
-		die unless $@ =~ /^Error inflating response/;
-		$file_sl->finalize($@);
-	}
-
-	return unless $r;
-
-	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-	$r->{$_} =~ tr/`/'/ for grep { $_ ne 'episode_number' } keys %$r;
-
-	# Cache
-	$r->{updated} = time;
-	$db->set('adbcache_file', $r, {fid => $r->{fid}});
-
-	$r;
-}
-
-sub get_cached_lid {
-	my %params = @_;
-	return unless exists $params{fid} || exists $params{ed2k};
-
-	my $file = $db->fetch('adbcache_file', ['lid'], {size => $params{size}, ed2k => $params{ed2k}}, 1);
-	$file->{lid};
-}
-
-sub mylist_file_query {
-	my %params = @_;
-	my $r;
-
-	# Try to get a cached lid if passed fid / ed2k & size
-	if (my $lid = get_cached_lid(%params)) {
-		delete @params{qw(fid ed2k size)};
-		$params{lid} = $lid;
-	}
-
-	# Cached
-	if ($params{lid}) {
-		return $r if $r = $db->fetch('anidb_mylist_file', ['*'], {lid => $params{lid}}, 1);
-	}
-
-	# Update
-	my $ml_sl = $sl->child('Freeform')->update('Updating mylist information');
-	$r = $a->mylist_file(%params);
-	return unless $r;
-
-	# Cache
-	$r->{updated} = time;
-	$db->set('anidb_mylist_file', $r, {lid => $r->{lid}});
-
-	$r
-}
-
-sub mylist_anime_query {
-	my %params = @_;
-
-	# Cached
-	if (my $mylist = $db->fetch('anidb_mylist_anime', ['*'], \%params, 1)) {
-		$a->mylist_multi_parse_episodes($mylist);
-		return $mylist;
-	}
-
-	# Update
-	my $sl = $sl->child('Freeform')->update('Updating mylist anime information');
-	my ($type, $mylist) = $a->mylist(%params);
-	return unless $mylist;
-
-	if ($type eq 'multiple') {
-		die 'Got response for multiple anime' if @$mylist > 1;
-		$mylist = $mylist->[0];
-
-		# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-		$mylist->{anime_title} =~ tr/`/'/;
-	}
-	else {
-		# Mylist data for this anime consists of one episode.
-		# File info is needed to emulate the expected output.
-		my $file = file_query(fid => $mylist->{fid});
-		my $epno = $file->{episode_number};
-		my $none = EpisodeNumber();
-
-		$mylist = {
-			aid => $mylist->{aid},
-			anime_title => $file->{anime_romaji_name},
-			episodes => $file->{anime_total_episodes},
-			eps_with_state_unknown => ($mylist->{state} == $a->MYLIST_STATE_UNKNOWN ? $epno : $none),
-			eps_with_state_on_hdd => ($mylist->{state} == $a->MYLIST_STATE_HDD ? $epno : $none),
-			eps_with_state_on_cd => ($mylist->{state} == $a->MYLIST_STATE_CD ? $epno : $none),
-			eps_with_state_deleted => ($mylist->{state} == $a->MYLIST_STATE_DELETED ? $epno : $none),
-			watched_eps => ($mylist->{viewdate} > 0 ? $epno : $none),
-		}
-	}
-
-	# Cache
-	$mylist->{updated} = time;
-	$db->set('anidb_mylist_anime', $mylist, {aid => $mylist->{aid}});
-
-	$mylist
-}
