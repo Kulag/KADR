@@ -24,6 +24,7 @@
       "runtime" : {
          "requires" : {
             "Class::Load" : "0",
+            "Const::Fast" : "0",
             "DBD::SQLite" : "0",
             "DBI" : "0",
             "Digest::ED2K" : "0",

@@ -2,6 +2,7 @@ package App::KADR::AniDB::UDP::Client;
 use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::AniDB::Types qw(UserName);
 use App::KADR::Moose -noclean => 1;
+use Const::Fast;
 use Encode;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
@@ -36,29 +37,35 @@ use constant FILE_STATUS_CEN    => 0x80;
 use constant FILE_FMASK => "7ff8fff8";
 use constant FILE_AMASK => "fefcfcc0";
 
-use constant FILE_FIELDS => 
-qw/fid
-   aid eid gid lid other_episodes is_deprecated status
-   size ed2k md5 sha1 crc32
-   quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
-   dub_language sub_language length description air_date
-   anime_total_episodes anime_highest_episode_number anime_year anime_type anime_related_aids anime_related_aid_types anime_categories
-   anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
-   episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
-   group_name group_short_name/;
+const my @FILE_FIELDS => qw(
+	fid
+	aid eid gid lid other_episodes is_deprecated status
+	size ed2k md5 sha1 crc32
+	quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
+	dub_language sub_language length description air_date
+	anime_total_episodes anime_highest_episode_number anime_year anime_type anime_related_aids anime_related_aid_types anime_categories
+	anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
+	episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
+	group_name group_short_name
+);
 
-use constant MYLIST_SINGLE_FIELDS => qw/lid fid eid aid gid date state viewdate storage source other filestate/;
+const my @MYLIST_MULTI_FIELDS => qw(
+	anime_title episodes eps_with_state_unknown eps_with_state_on_hdd
+	eps_with_state_on_cd eps_with_state_deleted watched_eps
+);
 
-use constant MYLIST_MULTI_FIELDS => qw/anime_title episodes eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd eps_with_state_deleted watched_eps/;
+const my @MYLIST_FILE_FIELDS => qw(
+	lid fid eid aid gid date state viewdate storage source other filestate
+);
 
-use constant MYLIST_MULTI_EPISODE_FIELDS => qw(
+const my @MYLIST_MULTI_EPISODE_FIELDS => qw(
 	eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd
 	eps_with_state_deleted watched_eps
 );
 
 use enum qw(:MYLIST_STATE_=0 UNKNOWN HDD CD DELETED);
 
-my %MYLIST_STATE_NAMES = (
+const my %MYLIST_STATE_NAMES => (
 	MYLIST_STATE_UNKNOWN, 'unknown',
 	MYLIST_STATE_HDD, 'on HDD',
 	MYLIST_STATE_CD, 'on removable media',
@@ -91,9 +98,8 @@ sub file {
 	die 'Unexpected return code for file query: ' . $res->{code} unless $res->{code} == 220;
 
 	# Parse
-	my @keys = FILE_FIELDS;
-	my @fields = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
-	my $file = { mesh @keys, @fields };
+	my @fields = (split /\|/, $res->{contents}[0])[ 0 .. @FILE_FIELDS - 1 ];
+	my $file = { mesh @FILE_FIELDS, @fields };
 
 	$file->{episode_number} = EpisodeNumber($file->{episode_number});
 
@@ -178,20 +184,16 @@ sub mylist {
 
 	my ($type, $info);
 	if ($res->{code} == 221) {
-		my @keys = MYLIST_SINGLE_FIELDS;
-		my @values = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
-		
 		$type = 'single';
-		$info = { mesh @keys, @values };
+		$info = $self->_mylist_file_contents_parse($res->{contents});
 	}
 	elsif ($res->{code} == 312) {
-		my @keys = MYLIST_MULTI_FIELDS;
 		my %base_info = ($params{aid} ? (aid => $params{aid}) : ());
-		
+
 		$type = 'multiple';
 		$info = [ map {
-			my @values = (split /\|/, $_)[0 .. @keys - 1];
-			my $info = +{ %base_info, mesh @keys, @values };
+			my @values = (split /\|/, $_)[ 0 .. @MYLIST_MULTI_FIELDS - 1 ];
+			my $info = { %base_info, mesh @MYLIST_MULTI_FIELDS, @values };
 			$self->mylist_multi_parse_episodes($info);
 
 			$info;
@@ -203,7 +205,7 @@ sub mylist {
 
 sub mylist_multi_parse_episodes {
 	my ($self, $info) = @_;
-	$info->{$_} = EpisodeNumber($info->{$_}) for MYLIST_MULTI_EPISODE_FIELDS;
+	$info->{$_} = EpisodeNumber($info->{$_}) for @MYLIST_MULTI_EPISODE_FIELDS;
 	return;
 }
 
@@ -232,11 +234,8 @@ sub mylist_add {
 		}
 		# Entry already exists
 		elsif ($res->{code} == 310) {
-			my @keys = MYLIST_SINGLE_FIELDS;
-			my @values = (split /\|/, $res->{contents}[0])[0 .. @keys - 1];
-			
 			$type = 'existing_entry';
-			$value = { mesh @keys, @values };
+			$value = $self->_mylist_file_contents_parse($res->{contents});
 		}
 		# Multiple entries
 		elsif ($res->{code} == 322) {
@@ -356,6 +355,12 @@ sub _response_parse_skeleton {
 	# Parse header.
 	$header =~ s/^(?:(T[0-9a-f]+) )?(\d+) //;
 	{tag => $1, code => int $2, header => $header, contents => \@contents}
+}
+
+sub _mylist_file_contents_parse {
+	my ($self, $contents) = @_;
+	my @values = (split /\|/, $contents->[0])[ 0 .. @MYLIST_FILE_FIELDS - 1 ];
+	+{ mesh @MYLIST_FILE_FIELDS, @values }
 }
 
 sub _sendrecv {
