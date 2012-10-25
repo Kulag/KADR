@@ -3,8 +3,8 @@ use v5.14;
 use Hook::AfterRuntime;
 use List::Util qw(first);
 use List::MoreUtils qw(firstidx);
-use Moose ();
-use Moose::Exporter ();
+use Moose                      ();
+use Moose::Exporter            ();
 use MooseX::Attribute::Chained ();
 use MooseX::StrictConstructor 0.19 ();
 use namespace::autoclean;
@@ -12,17 +12,14 @@ use true;
 
 use common::sense;
 
-sub FEATURE_VERSION() { ':5.14' }
+sub FEATURE_VERSION() {':5.14'}
 
-my %prefix = (
-	clearer => 'clear',
-	predicate => 'has',
-);
+my %prefix = (clearer => 'clear', predicate => 'has');
 
 my ($moose_import) = Moose::Exporter->setup_import_methods(
+	also      => [qw(Moose MooseX::StrictConstructor)],
+	install   => [qw(unimport init_meta)],
 	with_meta => [qw(has)],
-	also => [qw(Moose MooseX::StrictConstructor)],
-	install => [qw(unimport init_meta)],
 );
 
 sub build_importer {
@@ -44,7 +41,7 @@ sub build_importer {
 		$class->import_base($into);
 
 		namespace::autoclean->import(-cleanee => $into) if $clean;
-	}
+	};
 }
 
 sub has($;@) {
@@ -69,7 +66,7 @@ sub has($;@) {
 	$default_for->($_) for qw(clearer predicate);
 
 	$options{traits} //= [];
-	push @{$options{traits}}, 'Chained' unless $options{traits} ~~ 'Chained';
+	push @{ $options{traits} }, 'Chained' unless $options{traits} ~~ 'Chained';
 
 	$meta->add_attribute($_, %options) for @$attrs;
 }
