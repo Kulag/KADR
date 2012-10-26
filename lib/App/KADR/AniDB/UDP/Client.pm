@@ -329,13 +329,9 @@ sub mylist_state_name_for {
 sub start {
 	my ($self, $tx) = @_;
 
-	eval {
-		$self->emit(start => $tx);
-		$tx->{res} = $self->_sendrecv(@{ $tx->{req} }{qw(name params)});
-		$tx->emit('finish');
-	} or do {
-		$tx->error($@);
-	};
+	$self->emit(start => $tx);
+	$tx->{res} = $self->_sendrecv(@{ $tx->{req} }{qw(name params)});
+	$tx->emit('finish');
 
 	$tx;
 }
