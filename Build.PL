@@ -17,7 +17,6 @@ my $build = Module::Build->new(
 		"DBD::SQLite" => "0",
 		"DBI" => "0",
 		"Digest::ED2K" => "0",
-		"Digest::MD4" => "0",
 		"enum" => "0",
 		"Expect" => "0",
 		"File::Copy" => "0",
