@@ -4,6 +4,34 @@ use App::KADR::AniDB::EpisodeNumber;
 
 extends 'App::KADR::AniDB::UDP::Client';
 
+use constant SCHEMA_ANIME => q{
+CREATE TABLE IF NOT EXISTS anidb_anime (
+	`aid` INTEGER PRIMARY KEY,
+	`dateflags` INT,
+	`year` VARCHAR(10),
+	`type` VARCHAR(20),
+	`romaji_name` TEXT,
+	`kanji_name` TEXT,
+	`english_name` TEXT,
+	`episode_count` INT,
+	`highest_episode_number` INT,
+	`air_date` INT,
+	`end_date` INT,
+	`rating` VARCHAR(4),
+	`vote_count` INT,
+	`temp_rating` VARCHAR(4),
+	`temp_vote_count` INT,
+	`review_rating` VARCHAR(4),
+	`review_count` INT,
+	`is_r18` INT,
+	`special_episode_count` INT,
+	`credits_episode_count` INT,
+	`other_episode_count` INT,
+	`trailer_episode_count` INT,
+	`parody_episode_count` INT,
+	`updated` INT)
+};
+
 use constant SCHEMA_FILE => q{
 CREATE TABLE IF NOT EXISTS adbcache_file (
 	`fid` INTEGER PRIMARY KEY,
@@ -32,19 +60,6 @@ CREATE TABLE IF NOT EXISTS adbcache_file (
 	`length` INT,
 	`description` TEXT,
 	`air_date` INT,
-	`anime_total_episodes` INT,
-	`anime_highest_episode_number` INT,
-	`anime_year` INT,
-	`anime_type` INT,
-	`anime_related_aids` TEXT,
-	`anime_related_aid_types` TEXT,
-	`anime_categories` TEXT,
-	`anime_romaji_name` TEXT,
-	`anime_kanji_name` TEXT,
-	`anime_english_name` TEXT,
-	`anime_other_name` TEXT,
-	`anime_short_names` TEXT,
-	`anime_synonyms` TEXT,
 	`episode_number` TEXT,
 	`episode_english_name` TEXT,
 	`episode_romaji_name` TEXT,
@@ -88,10 +103,33 @@ CREATE TABLE IF NOT EXISTS anidb_mylist_anime (
 
 has 'db', is => 'ro', isa => 'DBI::SpeedySimple', required => 1;
 
+sub anime {
+	my ($self, %params) = @_;
+	my $db = $self->db;
+
+	# Cached
+	if (my $anime = $db->fetch('anidb_anime', ['*'], \%params, 1)) {
+		return $anime;
+	}
+
+	# Update
+	return unless my $anime = $self->SUPER::anime(%params);
+
+	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
+	$anime->{$_} =~ tr/`/'/ for keys %$anime;
+
+	# Cache
+	$anime->{updated} = time;
+	$db->set('anidb_anime', $anime, { aid => $anime->{aid} });
+
+	$anime;
+}
+
 sub BUILD {
 	my $self = shift;
 	my $dbh  = $self->db->{dbh};
 
+	$dbh->do(SCHEMA_ANIME)        or die 'Error initializing anime table';
 	$dbh->do(SCHEMA_FILE)         or die 'Error initializing file';
 	$dbh->do(SCHEMA_MYLIST)       or die 'Error initializing mylist_file';
 	$dbh->do(SCHEMA_MYLIST_ANIME) or die 'Error initializing mylist_anime';

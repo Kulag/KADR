@@ -77,6 +77,7 @@ has 'avdump_timeout',
 
 has [qw(anidb_username anidb_password)], isa => 'Str', required => 1;
 
+has 'cache_timeout_anime',            default => 12*24*60*60, isa => 'Int';
 has 'cache_timeout_file',             default => 12*24*60*60, isa => 'Int';
 has 'cache_timeout_mylist_unwatched', default =>     2*60*60, isa => 'Int';
 has 'cache_timeout_mylist_watched',   default => 12*24*60*60, isa => 'Int';
@@ -102,9 +103,9 @@ has 'expire_cache',
 has 'file_naming_scheme',
 	default => <<'EOF',
 : if not $only_episode_in_folder {
-<: $anime_romaji_name :>/
+<: $anime.romaji_name :>/
 : }
-<: $anime_romaji_name :>
+<: $anime.romaji_name :>
 : if $is_primary_episode {
 :   if $file_version > 1 { print ' v' ~ $file_version }
 : }
