@@ -39,7 +39,17 @@ use constant FILE_STATUS_UNC    => 0x40;
 use constant FILE_STATUS_CEN    => 0x80;
 
 use constant FILE_FMASK => "7ff8fff8";
-use constant FILE_AMASK => "fefcfcc0";
+use constant FILE_AMASK => "0000fcc0";
+
+use constant ANIME_MASK => "f0e0d8fd0000f8";
+
+const my @ANIME_FIELDS => qw(
+	aid dateflags year type
+	romaji_name kanji_name english_name
+	episode_count highest_episode_number air_date end_date
+	rating vote_count temp_rating temp_vote_count review_rating review_count is_r18
+	special_episode_count credits_episode_count other_episode_count trailer_episode_count parody_episode_count
+);
 
 const my @FILE_FIELDS => qw(
 	fid
@@ -47,8 +57,6 @@ const my @FILE_FIELDS => qw(
 	size ed2k md5 sha1 crc32
 	quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
 	dub_language sub_language length description air_date
-	anime_total_episodes anime_highest_episode_number anime_year anime_type anime_related_aids anime_related_aid_types anime_categories
-	anime_romaji_name anime_kanji_name anime_english_name anime_other_name anime_short_names anime_synonyms
 	episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
 	group_name group_short_name
 );
@@ -95,6 +103,27 @@ has '_query_count', default => 0;
 has '_session_key', clearer => 1;
 has '_sockaddr',    builder => 1, lazy => 1;
 has '_start_time',  is => 'ro',   default => time - 1;
+
+sub anime {
+	my ($self, %params) = @_;
+
+	my $tx  = $self->build_tx('anime', {amask => ANIME_MASK, %params});
+	my $res = $self->start($tx)->success;
+
+	return if !$res || $res->{code} == 330;
+
+	die 'Unexpected return code for anime query: ' . $res->{code}
+		unless $res->{code} == 230;
+
+	my @values = (split /\|/, $res->{contents}[0])[0 .. @ANIME_FIELDS - 1];
+	my $anime = { mesh @ANIME_FIELDS, @values };
+
+	for my $field (qw{rating temp_rating review_rating}) {
+		$anime->{$field} = $anime->{$field} / 100.0 if $anime->{$field};
+	}
+
+	$anime;
+}
 
 sub build_tx {
 	my ($self, $command, $params) = @_;
@@ -282,15 +311,15 @@ sub mylist_anime {
 
 	# Mylist data for this anime consists of one episode.
 
-	# File info is needed to emulate the expected output.
-	my $file = $self->file(fid => $mylist->{fid});
-	my $epno = EpisodeNumber($file->{episode_number});
-	my $none = EpisodeNumber();
+	# File and anime info is needed to emulate the expected output.
+	my $anime = $self->anime(aid => $mylist->{aid});
+	my $epno  = $self->file(fid => $mylist->{fid})->{episode_number};
+	my $none  = EpisodeNumber();
 
 	{
-		aid => $params{aid},
-		anime_title => $file->{anime_romaji_name},
-		episodes => $file->{anime_total_episodes},
+		aid => $mylist->{aid},
+		anime_title => $anime->{romaji_name},
+		episodes => $anime->{episode_count},
 		eps_with_state_unknown => ($mylist->{state} == MYLIST_STATE_UNKNOWN ? $epno : $none),
 		eps_with_state_on_hdd => ($mylist->{state} == MYLIST_STATE_HDD ? $epno : $none),
 		eps_with_state_on_cd => ($mylist->{state} == MYLIST_STATE_CD ? $epno : $none),

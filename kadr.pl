@@ -73,6 +73,7 @@ my $a = App::KADR::AniDB::UDP::Client::Caching->new(
 );
 
 if ($conf->expire_cache) {
+	$db->{dbh}->do('DELETE FROM anidb_anime WHERE updated < ' . (time - $conf->cache_timeout_anime));
 	$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
 	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_unwatched) . ' AND watched_eps != eps_with_state_on_hdd');
 	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_watched) . ' AND watched_eps = eps_with_state_on_hdd');
@@ -81,6 +82,7 @@ if ($conf->expire_cache) {
 if($conf->load_local_cache_into_memory) {
 	$db->cache([
 		{table => 'known_files', indices => ['filename', 'size', 'mtime']},
+		{table => 'anidb_anime', indices => ['aid']},
 		{table => 'adbcache_file', indices => ['ed2k', 'size']},
 		{table => 'anidb_mylist_file', indices => ['lid']},
 		{table => 'anidb_mylist_anime', indices => ['aid']},
@@ -116,6 +118,7 @@ $a->on(start => sub {
 
 	my $type
 		= $name eq 'file'   ? 'file'
+		: $name eq 'anime'  ? 'anime'
 		: $name eq 'mylist'
 			? $tx->req->{params}{aid} ? 'mylist anime'
 			:                           'mylist'
@@ -216,6 +219,8 @@ sub process_file {
 		return;
 	}
 
+	my $anime = $fileinfo->{anime} = $a->anime(aid => $fileinfo->{aid});
+
 	# Auto-add to mylist.
 	my $mylistinfo = $a->mylist_file($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
 	if(!defined $mylistinfo && !$conf->test) {
@@ -266,7 +271,7 @@ sub process_file {
 		}
 	}
 
-	my $episode_count = $fileinfo->{anime_total_episodes} || $fileinfo->{anime_highest_episode_number};
+	my $episode_count = $anime->{episode_count} || $anime->{highest_episode_number};
 	$fileinfo->{episode_number_padded} = $fileinfo->{episode_number}->padded({'' => length $episode_count});
 
 	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
@@ -286,12 +291,12 @@ sub process_file {
 
 	$fileinfo->{is_primary_episode} =
 		# This is the only episode.
-		int($fileinfo->{anime_total_episodes}) == 1 && $fileinfo->{episode_number} eq 1
+		$anime->{episode_count} == 1 && $fileinfo->{episode_number} eq 1
 		# And this file contains the entire episode.
 		&& !$fileinfo->{other_episodes}
 		# And it has a generic episode name.
 		# Usually equal to the anime_type except for movies where multiple episodes may exist for split releases.
-		&& ($fileinfo->{episode_english_name} eq $fileinfo->{anime_type} || $fileinfo->{episode_english_name} eq 'Complete Movie');
+		&& ($fileinfo->{episode_english_name} eq $anime->{type} || $fileinfo->{episode_english_name} eq 'Complete Movie');
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
