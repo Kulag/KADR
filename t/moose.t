@@ -5,7 +5,7 @@ use Test::Exception ();
 
 {
 	package TestRole;
-	use App::KADR::Moose::Role;
+	use App::KADR::Moose::Role {into => 'TestRole'};
 
 	has 'role_attr';
 
@@ -42,7 +42,7 @@ use Test::Exception ();
 
 {
 	package TestMutable;
-	use App::KADR::Moose -mutable;
+	use App::KADR::Moose -mutable => 1;
 }
 
 use common::sense;

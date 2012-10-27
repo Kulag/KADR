@@ -1,22 +1,19 @@
 package App::KADR::Moose::Role;
-use v5.14;
-use Moose ();
-use Moose::Exporter ();
-use namespace::autoclean;
-use true;
-
-use App::KADR::Moose ();
 use common::sense;
+use App::KADR::Moose::Policy ();
 
-*has = *App::KADR::Moose::has;
-
-my ($moose_import) = Moose::Exporter->setup_import_methods(
-	with_meta => [qw(has)],
-	also => [qw(Moose::Role)],
+my ($import, $unimport, $init_meta) = Moose::Exporter->setup_import_methods(
+	also    => [qw(Moose::Role App::KADR::Moose::Policy)],
 	install => [qw(unimport init_meta)],
 );
 
-*import = App::KADR::Moose->build_importer($moose_import);
+sub import {
+	App::KADR::Moose::Policy->strip_import_params(\@_);
+
+	goto &$import;
+}
+
+1;
 
 =head1 NAME
 
@@ -30,4 +27,10 @@ App::KADR::Moose::Role - Moose::Role policy
 =head1 DESCRIPTION
 
 App::KADR::Moose::Role makes your class a Moose role with some with some
-default imports and attribute options. See L<App::KADR::Moose> for details.
+default imports and attribute options.
+
+=head1 SEE ALSO
+
+L<App::KADR::Moose>, L<App::KADR::Moose::Policy>
+
+=cut

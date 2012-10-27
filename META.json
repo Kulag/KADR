@@ -43,7 +43,9 @@
             "Moose::Role" : "0",
             "Moose::Util::TypeConstraints" : "0",
             "MooseX::Attribute::Chained" : "0",
+            "MooseX::AttributeShortcuts" : "0",
             "MooseX::Getopt" : "0",
+            "MooseX::HasDefaults::Meta::IsRW" : "0",
             "MooseX::NonMoose" : "0",
             "MooseX::SimpleConfig" : "0",
             "MooseX::StrictConstructor" : "0.19",
@@ -88,6 +90,10 @@
       },
       "App::KADR::Moose" : {
          "file" : "lib/App/KADR/Moose.pm",
+         "version" : 0
+      },
+      "App::KADR::Moose::Policy" : {
+         "file" : "lib/App/KADR/Moose/Policy.pm",
          "version" : 0
       },
       "App::KADR::Moose::Role" : {
