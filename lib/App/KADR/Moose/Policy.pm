@@ -4,7 +4,7 @@ use common::sense;
 use Const::Fast;
 use Hook::AfterRuntime;
 use List::AllUtils qw(firstidx);
-use Moose                      ();
+use Moose 1.9900               ();
 use Moose::Exporter            ();
 use MooseX::Attribute::Chained ();
 use MooseX::AttributeShortcuts ();
