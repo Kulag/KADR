@@ -1,9 +1,9 @@
 package App::KADR::Moose::Policy;
 use v5.14;
+use App::KADR::Util ();
 use common::sense;
 use Const::Fast;
 use Hook::AfterRuntime;
-use List::AllUtils qw(firstidx);
 use Moose 1.9900               ();
 use Moose::Exporter            ();
 use MooseX::Attribute::Chained ();
@@ -31,7 +31,7 @@ my ($import, $unimport, $init_meta) = Moose::Exporter->build_import_methods(
 my $import_params;
 
 sub import {
-	$_[0]->strip_import_params(\@_);
+	__PACKAGE__->strip_import_params(\@_);
 
 	goto &$import;
 }
@@ -70,25 +70,7 @@ sub init_meta {
 }
 
 sub strip_import_params {
-	my ($class, $args) = @_;
-
-	$import_params
-		= { map { $_ => _strip_param($args, '-' . $_) } @PARAM_NAMES };
-
-	return;
-}
-
-sub _strip_param {
-	my ($args, $name) = @_;
-	my $i = firstidx { $_ eq $name } @$args;
-
-	return undef unless $i >= 0;
-
-	my $param = $args->[ $i + 1 ];
-
-	splice @$args, $i, 2;
-
-	$param;
+	$import_params = App::KADR::Util::strip_import_params($_[1], @PARAM_NAMES);
 }
 
 =head1 NAME
@@ -141,8 +123,7 @@ Set -noclean => true to disable namespace::autoclean.
 		...
 	}
 
-Strip parameters for L<App::KADR::Moose::Policy> from your import when
-chaining Moose::Exporter imports.
+Strip parameters from your import when chaining L<Moose::Exporter> imports.
 
 =head1 SEE ALSO
 

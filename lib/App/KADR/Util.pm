@@ -1,8 +1,9 @@
 package App::KADR::Util;
 use common::sense;
-use List::Util qw(reduce);
+use List::AllUtils qw(firstidx reduce);
 use Sub::Exporter -setup => {
-	exports => [qw(pathname_filter pathname_filter_windows shortest)],
+	exports => [qw(pathname_filter pathname_filter_windows shortest
+		strip_import_params)],
 	groups => {
 		pathname_filter => [qw(pathname_filter pathname_filter_windows)],
 	}
@@ -26,6 +27,25 @@ sub pathname_filter_windows {
 
 sub shortest(@) {
 	reduce { length $b < length $a ? $b : $a } @_
+}
+
+sub strip_import_params {
+	my $args = shift;
+	my %param_names = map { $_ => 1 } @_;
+
+	my $i;
+	my $params;
+	while (++$i < @$args) {
+		local $_ = $args->[$i];
+		next if ref $_;
+		my $name = s/^-//r;
+		next unless delete $param_names{$name};
+
+		$params->{$name} = $args->[ $i + 1 ];
+		splice @$args, $i, 2;
+	}
+	
+	$params;
 }
 
 1;
