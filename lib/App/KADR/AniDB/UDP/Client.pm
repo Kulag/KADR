@@ -2,6 +2,7 @@ package App::KADR::AniDB::UDP::Client;
 use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::AniDB::Types qw(UserName);
 use App::KADR::Moose -noclean => 1;
+use Carp qw(croak);
 use Const::Fast;
 use Encode;
 use IO::Socket;
@@ -352,7 +353,7 @@ sub mylist_file_query {
 
 sub mylist_state_name_for {
 	my ($self, $state_id) = @_;
-	$MYLIST_STATE_NAMES{$state_id};
+	$MYLIST_STATE_NAMES{$state_id} or croak 'No such mylist state: ' . $state_id;
 }
 
 sub start {
