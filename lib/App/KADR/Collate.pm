@@ -1,6 +1,7 @@
 package App::KADR::Collate;
 # ABSTRACT:: Collation factory
 
+use Class::Load qw(load_optional_class);
 use Module::Find qw(findsubmod);
 use MooseX::Types -declare => ['Collate'];
 use MooseX::Types::Moose qw(Object Str);
@@ -19,6 +20,7 @@ sub new {
 }
 
 sub resolve_auto {
+	return 'unicodeicu' if load_optional_class('Unicode::ICU::Collator');
 	return 'unicode';
 }
 
@@ -43,14 +45,15 @@ L<App::KADR::Collate> implements the following methods.
 
 	my $collate = App::KADR::Collate->new($type, %params);
 
-Create collator of a type. If type is "auto",
-the best available type will be used.
+Create collator of a type. If type is "auto", the result of
+resolve_auto will be used.
 
 =head2 C<resolve_auto>
 
 	my $type = App::KADR::Collate->resolve_auto;
 
 Determine best available collator type.
+'unicodeicu' if L<Unicode::ICU::Collator> is available, otherwise 'unicode'.
 
 =head1 SEE ALSO
 

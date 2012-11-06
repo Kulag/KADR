@@ -7,7 +7,7 @@ use Test::More;
 use lib "$FindBin::RealBin/../lib";
 use App::KADR::Collate;
 
-my @types = qw(none ascii unicode);
+my @types = qw(none ascii unicode unicodeicu);
 plan tests => @types * 4;
 
 for my $type (@types) {
