@@ -40,7 +40,7 @@
             "List::AllUtils" : "0",
             "Module::Find" : "0",
             "Mojo::EventEmitter" : "0",
-            "Moose" : "0",
+            "Moose" : "1.9900",
             "Moose::Exporter" : "0",
             "Moose::Role" : "0",
             "Moose::Util::TypeConstraints" : "0",
