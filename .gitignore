@@ -5,4 +5,8 @@ MANIFEST*.bak
 MYMETA.*
 _build/
 blib/
+cover_db/
+nytprof/
+nytprof.out*
+*.tdy
 *.tmp
