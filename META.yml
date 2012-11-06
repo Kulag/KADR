@@ -67,6 +67,7 @@ provides:
     file: lib/App/KADR/Util.pm
     version: 0
 requires:
+  Class::Factory: 0
   Class::Load: 0
   Const::Fast: 0
   DBD::SQLite: 0
@@ -81,6 +82,7 @@ requires:
   Guard: 0
   Hook::AfterRuntime: 0
   List::AllUtils: 0
+  Module::Find: 0
   Mojo::EventEmitter: 0
   Moose: 0
   Moose::Exporter: 0
@@ -93,6 +95,7 @@ requires:
   MooseX::NonMoose: 0
   MooseX::SimpleConfig: 0
   MooseX::StrictConstructor: 0.19
+  MooseX::Types: 0
   MooseX::Types::LoadableClass: 0
   MooseX::Types::Moose: 0
   MooseX::Types::Stringlike: 0

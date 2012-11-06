@@ -102,7 +102,7 @@ my $tx = Text::Xslate->new(
 my @files = find_files(@{$conf->dirs_to_scan});
 
 print 'Sorting... ';
-@files = $conf->collator->(@files);
+@files = $conf->collator->sort(@files);
 say 'done.';
 
 my @ed2k_of_processed_files;
@@ -455,7 +455,7 @@ sub update_mylist_state_for_missing_files {
 	my %have_files;
 	@have_files{ @$have_files } = ();
 	my @missing_files
-		= $conf->collator->(sub { $_[0][2] },
+		= $conf->collator->sort(sub { $_->[2] },
 			grep { !exists $have_files{$_->[0]} } @$all_files
 		);
 

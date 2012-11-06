@@ -1,53 +1,14 @@
 package App::KADR::Config;
+use App::KADR::Collate ':all';
 use App::KADR::Moose;
 use App::KADR::Path 'dir';
-use Class::Load qw(load_optional_class);
 use File::HomeDir;
 use List::MoreUtils qw(all);
 use Moose::Util::TypeConstraints;
 
 with qw(MooseX::Getopt MooseX::SimpleConfig);
 
-subtype 'Collator', as 'CodeRef';
-coerce 'Collator', from 'Str', via {
-	if ($_ eq 'auto') {
-		$_ = load_optional_class('Unicode::Collate') ? 'unicode' : 'ascii';
-	}
-
-	return sub { ref $_[0] eq 'CODE' ? @_[1..$#_] : @_ }
-		if $_ eq 'none';
-
-	if ($_ eq 'ascii') {
-		return sub {
-			return sort { lc($a) cmp lc($b) } @_
-				unless ref $_[0] eq 'CODE';
-
-			my $keygen = shift;
-			map { $_->[1] }
-				sort { $a->[0] cmp $b->[0] }
-				map { [lc $keygen->($_), $_] }
-				@_;
-		};
-	}
-
-	if ($_ eq 'unicode') {
-		require Unicode::Collate;
-		my $collator = Unicode::Collate->new(level => 1, normalize => undef);
-		return sub {
-			return $collator->sort(@_)
-				unless ref $_[0] eq 'CODE';
-
-			my $keygen = shift;
-			map { $_->[1] }
-				sort { $a->[0] cmp $b->[0] }
-				map { [$collator->getSortKey($keygen->($_)), $_] }
-				@_;
-		};
-	}
-};
-MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
-	'Collator' => '=s'
-);
+MooseX::Getopt::OptionTypeMap->add_option_type_to_map(Collate, '=s');
 
 subtype 'ExistingDir' => as class_type('App::KADR::Path::Dir') => where { -d $_ };
 coerce 'ExistingDir' => from 'Str' => via { dir($_)->absolute };
@@ -81,7 +42,7 @@ has 'cache_timeout_anime',            default => 12*24*60*60, isa => 'Int';
 has 'cache_timeout_file',             default => 12*24*60*60, isa => 'Int';
 has 'cache_timeout_mylist_unwatched', default =>     2*60*60, isa => 'Int';
 has 'cache_timeout_mylist_watched',   default => 12*24*60*60, isa => 'Int';
-has 'collator',          coerce => 1, default => 'auto',      isa => 'Collator';
+has 'collator',          coerce => 1, default => 'auto',      isa => Collate;
 has 'database',                       default => $database,   isa => 'Str';
 has 'delete_empty_dirs_in_scanned',   default => 1,           isa => 'Str';
 
