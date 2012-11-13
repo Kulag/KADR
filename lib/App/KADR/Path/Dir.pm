@@ -1,7 +1,9 @@
 package App::KADR::Path::Dir;
-use Moose;
-
+use App::KADR::Moose;
 use App::KADR::Path::File;
+use App::KADR::Util qw(_STRINGLIKE0);
+use Carp qw(croak);
+use Params::Util qw(_INSTANCE);
 
 extends 'Path::Class::Dir', 'App::KADR::Path::Entity';
 
@@ -96,8 +98,17 @@ sub stringify { $_[0]{string} }
 sub subsumes {
 	my ($self, $other) = @_;
 
+	return $self->{_subsumes}{$other} if exists $self->{_subsumes}{$other};
+
 	# Path::Class::Dir::subsumes does not detect the File class correctly
-	$other = $other->dir if blessed $other && !$other->is_dir;
+	if (ref $other) {
+		if (_INSTANCE($other, 'Path::Class::Entity')) {
+			$other = $other->dir if !$other->is_dir;
+		}
+		elsif (!_STRINGLIKE0($other)) {
+			croak 'parameter to subsumes must be a dir, file, or stringlike';
+		}
+	}
 
 	# Memoize
 	$self->{_subsumes}{$other} //= $self->SUPER::subsumes($other);

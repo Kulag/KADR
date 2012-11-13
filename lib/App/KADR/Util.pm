@@ -1,9 +1,10 @@
 package App::KADR::Util;
 use common::sense;
 use List::AllUtils qw(firstidx reduce);
+use Params::Util qw(_STRING);
 use Sub::Exporter -setup => {
 	exports => [qw(pathname_filter pathname_filter_windows shortest
-		strip_import_params)],
+		strip_import_params _STRINGLIKE0)],
 	groups => {
 		pathname_filter => [qw(pathname_filter pathname_filter_windows)],
 	}
@@ -46,6 +47,13 @@ sub strip_import_params {
 	}
 	
 	$params;
+}
+
+# XXX: From Moose::Util, replace with Params::Util version once it gets moved.
+sub _STRINGLIKE0 ($) {
+	_STRING($_[0])
+	|| (blessed $_[0] && overload::Method($_[0], q{""}))
+	|| (defined $_[0] && $_[0] eq '');
 }
 
 1;
