@@ -100,9 +100,8 @@ sub parse {
 
 		$class->new(
 			map {
-				$range_class->parse($_)
-					or die 'Error parsing episode number'
-			} map { split /,/ } @_
+				map { $range_class->parse($_) } split /,/
+			} @_
 		);
 	};
 }

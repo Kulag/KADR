@@ -1,6 +1,7 @@
 package App::KADR::AniDB::EpisodeNumber::Range;
 use v5.10;
 use common::sense;
+use Carp qw(croak);
 use overload
 	fallback => 1,
 	'""' => 'stringify';
@@ -58,9 +59,10 @@ sub parse {
 	my ($class, $string) = @_;
 	$class = ref $class if ref $class;
 
-	return $class->new($2, $3, $1)
-		if $string =~ $tag_range_re;
-	return;
+	croak 'Error parsing episode number range'
+		unless $string =~ $tag_range_re;
+
+	$class->new($2, $3, $1);
 }
 
 sub stringify {
