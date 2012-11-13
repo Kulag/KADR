@@ -1,6 +1,5 @@
 package App::KADR::Term::StatusLine::Fractional;
-use v5.10;
-use Moose;
+use App::KADR::Moose;
 use MooseX::Types -declare => [ qw(Format) ];
 use MooseX::Types::Moose qw(ArrayRef CodeRef Int ScalarRef Str);
 use MooseX::Types::Stringlike qw(Stringable);
@@ -13,9 +12,7 @@ my %formats = (
 	'x/x' => \&format_as_fraction,
 );
 
-subtype Format,
-	as CodeRef;
-
+subtype Format, as CodeRef;
 coerce Format,
 	from Str,
 	via {
@@ -30,7 +27,6 @@ has 'current',
 	isa => Int|ArrayRef|ScalarRef|CodeRef;
 
 has 'format',
-	coerce => 1,
 	default => 'fraction',
 	is => 'rw',
 	isa => Format;

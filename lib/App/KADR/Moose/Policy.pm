@@ -6,6 +6,7 @@ use Const::Fast;
 use Hook::AfterRuntime;
 use Moose 1.9900               ();
 use Moose::Exporter            ();
+use MooseX::AlwaysCoerce       ();
 use MooseX::Attribute::Chained ();
 use MooseX::AttributeShortcuts ();
 use MooseX::HasDefaults::RW    ();
@@ -22,7 +23,7 @@ const my $FEATURE_VERSION => ':5.14';
 const my @PARAM_NAMES     => qw(noclean mutable);
 
 my ($import, $unimport, $init_meta) = Moose::Exporter->build_import_methods(
-	also            => [qw(MooseX::StrictConstructor)],
+	also            => [qw(MooseX::AlwaysCoerce MooseX::StrictConstructor)],
 	class_metaroles => { attribute => [@ATTRIBUTE_TRAITS] },
 	install         => ['unimport'],
 	role_metaroles  => { applied_attribute => [@ATTRIBUTE_TRAITS] },
@@ -99,6 +100,8 @@ Moose classes are made immutable by default.
 
 L<MooseX::AttributeShortcuts>, L<MooseX::HasDefaults::RW>,
 and L<MooseX::Attribute::Chained> are applied to your attributes.
+
+L<MooseX::AlwaysCoerce> is enabled.
 
 L<MooseX::StrictConstructor> is enabled.
 

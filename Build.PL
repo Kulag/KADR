@@ -33,6 +33,7 @@ my $build = Module::Build->new(
 		'Moose::Exporter'                 => 0,
 		'Moose::Role'                     => 0,
 		'Moose::Util::TypeConstraints'    => 0,
+		'MooseX::AlwaysCoerce'            => 0,
 		'MooseX::Attribute::Chained'      => 0,
 		'MooseX::AttributeShortcuts'      => 0,
 		'MooseX::Getopt'                  => 0,

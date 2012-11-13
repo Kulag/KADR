@@ -92,11 +92,10 @@ has 'timeout',  default => 15.0, isa => Num;
 has 'time_to_sleep_when_busy',   default => 15*60, isa => Int;
 
 has 'tx_class',
-	coerce  => 1,
 	default => 'App::KADR::AniDB::UDP::Transaction',
 	isa     => LoadableClass;
 
-has 'username', coerce => 1,     isa => UserName,  required => 1;
+has 'username', isa => UserName, required => 1;
 
 has '_handle',      builder => 1, lazy => 1;
 has '_last_query_time', default => 0;
