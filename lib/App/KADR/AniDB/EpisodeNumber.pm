@@ -94,15 +94,11 @@ sub padded {
 }
 
 sub parse {
-	$cache{ join ',', @_[ 1 .. $#_ ] } //= do {
-		my $class = ref $_[0] ? ref shift : shift;
+	$cache{ $_[1] } //= do {
+		my $class = ref $_[0] || $_[0];
 		my $range_class = $class->range_class;
 
-		$class->new(
-			map {
-				map { $range_class->parse($_) } split /,/
-			} @_
-		);
+		$class->new(map { $range_class->parse($_) } split /,/, $_[1]);
 	};
 }
 
