@@ -15,22 +15,18 @@ sub children {
 	my $dh = $self->open or die 'Can\'t open directory ' . $self . ': ' . $!;
 	my $spec = $self->_spec;
 
-	my $not_all = !$opts{all};
-	my ($updir, $curdir);
-	if ($not_all) {
-		$updir = $spec->updir;
-		$curdir = $spec->curdir;
-	}
-
+	my $not_all   = !$opts{all};
 	my $no_hidden = $opts{no_hidden};
 
+	my ($updir, $curdir) = ($spec->updir, $spec->curdir) if $not_all;
 	my $is_dir_exists = $self->can('is_dir_exists');
 
 	my @out;
 	while (defined(my $entry_name = $self->_decode_path(scalar $dh->read))) {
 		next if $not_all && ($entry_name eq $updir || $entry_name eq $curdir);
 
-		my $entry = $is_dir_exists->($spec->catfile($self, $entry_name))
+		my $entry
+			= $is_dir_exists->($spec->catfile($self, $entry_name))
 			? $self->subdir($entry_name)
 			: $self->file($entry_name);
 
