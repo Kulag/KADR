@@ -46,6 +46,7 @@ my $build = Module::Build->new(
 		'MooseX::Types::Moose'            => 0,
 		'MooseX::Types::Stringlike'       => 0,
 		'namespace::autoclean'            => 0,
+		'Params::Util'                    => 0,
 		'Text::Xslate'                    => 0,
 		'Sub::Exporter'                   => 0,
 		'true::VERSION'                   => 0,
