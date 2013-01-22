@@ -66,9 +66,9 @@ sub new {
 
 	# Compile args into single string
 	my $path
-		= !@_         ? $spec->curdir
-		: $_[0] eq '' ? $spec->rootdir
-		:               $spec->catdir(@_);
+		= !@_                    ? $spec->curdir
+		: @_ == 1 && $_[0] eq '' ? $spec->rootdir
+		:                          $spec->catdir(@_);
 
 	# Try to return an cached class for the path.
 	$cache{$path} //= do {
