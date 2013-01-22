@@ -270,6 +270,8 @@ sub process_file {
 	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
 
 	# Check if this is the only episode going into the folder.
+	# TODO: Since unwatched/watched dirs are no longer the only possible
+	# states, this may be wrong depending on configuration.
 	$fileinfo->{only_episode_in_folder}
 		# Sole episode on HDD.
 		= $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}

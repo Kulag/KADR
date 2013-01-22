@@ -64,7 +64,7 @@ sub new {
 
 	my $spec = $class->_spec;
 
-	# Compile args into single string
+	# Compile args into a single string.
 	my $path
 		= !@_                    ? $spec->curdir
 		: @_ == 1 && $_[0] eq '' ? $spec->rootdir

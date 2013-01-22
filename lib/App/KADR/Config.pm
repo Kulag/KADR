@@ -76,7 +76,7 @@ EOF
 
 has 'hash_only',
 	default => 0,
-	documentation => q{Enable to skip processing of files and jush hash them.},
+	documentation => q{Enable to skip processing of files and just hash them.},
 	isa => 'Bool';
 
 has 'load_local_cache_into_memory',
