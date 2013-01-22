@@ -221,8 +221,12 @@ sub process_file {
 
 	my $anime = $fileinfo->{anime} = $a->anime(aid => $fileinfo->{aid});
 
+	my $mylistinfo = $fileinfo->{mylist}
+		= $a->mylist_file($fileinfo->{lid}
+		? (lid => $fileinfo->{lid})
+		: (fid => $fileinfo->{fid}));
+
 	# Auto-add to mylist.
-	my $mylistinfo = $a->mylist_file($fileinfo->{lid} ? (lid => $fileinfo->{lid}) : (fid => $fileinfo->{fid}));
 	if(!defined $mylistinfo && !$conf->test) {
 		my $proc_sl = $sl->child('Freeform')->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylist_add(fid => $fileinfo->{fid}, state => $a->MYLIST_STATE_HDD)) {
@@ -245,7 +249,8 @@ sub process_file {
 		}
 	}
 
-	my $mylistanimeinfo = $a->mylist_anime(aid => $fileinfo->{aid});
+	my $mylistanimeinfo = $fileinfo->{anime}->{mylist}
+		= $a->mylist_anime(aid => $fileinfo->{aid});
 
 	# Note: Mylist anime data is broken server-side, only the min is provided.
 	if (!$fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{eps_with_state_on_hdd}))
@@ -257,19 +262,6 @@ sub process_file {
 
 	# Note: Mylist anime data is broken server-side, only the min is provided.
 	$fileinfo->{episode_watched} = $fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{watched_eps});
-
-	# Watched / Unwatched directories.
-	my $dir = first { $_->subsumes($file) } @{$conf->dirs_to_scan};
-	if ($fileinfo->{episode_watched}) {
-		if (none { $_->subsumes($dir) } @{$conf->valid_dirs_for_watched_eps}) {
-			$dir = $conf->dir_to_put_watched_eps;
-		}
-	}
-	else {
-		if (none { $_->subsumes($dir) } @{$conf->valid_dirs_for_unwatched_eps}) {
-			$dir = $conf->dir_to_put_unwatched_eps;
-		}
-	}
 
 	my $episode_count = $anime->{episode_count} || $anime->{highest_episode_number};
 	$fileinfo->{episode_number_padded} = $fileinfo->{episode_number}->padded({'' => length $episode_count});
@@ -311,7 +303,7 @@ sub process_file {
 		);
 	}
 
-	move_file($file, $ed2k, $dir->file($newname));
+	move_file($file, $ed2k, $newname);
 }
 
 sub move_file {

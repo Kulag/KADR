@@ -46,11 +46,7 @@ has 'collator',                       default => 'auto',      isa => Collate;
 has 'database',                       default => $database,   isa => 'Str';
 has 'delete_empty_dirs_in_scanned',   default => 1,           isa => 'Str';
 
-has [qw(dir_to_put_unwatched_eps dir_to_put_watched_eps)],
-	isa => 'ExistingDir',
-	required => 1;
-
-has [qw(dirs_to_scan valid_dirs_for_unwatched_eps valid_dirs_for_watched_eps)],
+has 'dirs_to_scan',
 	isa => 'ExistingDirs',
 	required => 1;
 
