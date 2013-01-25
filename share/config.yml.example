@@ -7,6 +7,9 @@
 anidb_username: 
 anidb_password: 
 
+# Timeout for cached anime information in seconds.
+# cache_timeout_anime: 1036800 # 12 days
+
 # Timeout for cached file information in seconds.
 # cache_timeout_file: 1036800 # 12 days
 
@@ -21,7 +24,6 @@ anidb_password:
 #
 # Options:
 #   none:      No sorting
-#   ascii:     Case-sensitive alphabetical
 #   ascii-i:   Case-insensitive alphabetical
 #   auto:      unicode-i if Unicode::Collate is installed, otherwise ascii-i
 #   unicode-i: Case-insensitive multi-lingual aware
@@ -35,8 +37,9 @@ anidb_password:
 dirs_to_scan:
   - /home/me/anime
 
-# Empty directories are left behind when moving things.
-# By default, all empty directories in dirs_to_scan are removed.
+# During the rename/move phase, empty directories may be left behind as a
+# result of files being moved elsewhere. By default, any empty directories
+# which have been indexed are removed.
 # delete_empty_dirs_in_scanned: 1
 
 # The entire state database is loaded into memory on startup by default.
