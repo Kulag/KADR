@@ -56,7 +56,10 @@ has 'expire_cache',
 	isa => 'Bool';
 
 has 'file_naming_scheme',
-	default => <<'EOF',
+	default => sub {
+		shift->dirs_to_scan->[0] . <<'EOF'
+/
+<: $episode_watched ? 'watched' : $anime.mylist.watched_eps ? 'watching' : 'unwatched' :>/
 : if not $only_episode_in_folder {
 <: $anime.romaji_name :>/
 : }
@@ -72,7 +75,9 @@ has 'file_naming_scheme',
 : if $group_short_name != 'raw' { print ' [' ~ $group_short_name ~ ']' }
 .<: $file_type :>
 EOF
-	isa => 'Str';
+	},
+	isa => 'Str',
+	lazy => 1;
 
 has 'hash_only',
 	default => 0,
