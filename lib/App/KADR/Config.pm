@@ -45,10 +45,7 @@ has 'cache_timeout_mylist_watched',   default => 12*24*60*60, isa => 'Int';
 has 'collator',                       default => 'auto',      isa => Collate;
 has 'database',                       default => $database,   isa => 'Str';
 has 'delete_empty_dirs_in_scanned',   default => 1,           isa => 'Str';
-
-has 'dirs_to_scan',
-	isa => 'ExistingDirs',
-	required => 1;
+has 'dirs_to_scan',                   isa => 'ExistingDirs',  required => 1;
 
 has 'expire_cache',
 	default => 1,

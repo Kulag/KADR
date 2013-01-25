@@ -95,11 +95,11 @@ my $pathname_filter
 	? \&pathname_filter_windows
 	: \&pathname_filter;
 my $tx = Text::Xslate->new(
-	function => {html_escape => $pathname_filter},
-	path => {'path.tx' => $conf->file_naming_scheme},
+	function => { html_escape => $pathname_filter },
+	path     => { 'path.tx' => $conf->file_naming_scheme },
 );
 
-my @files = find_files(@{$conf->dirs_to_scan});
+my @files = find_files(@{ $conf->dirs_to_scan });
 
 print 'Sorting... ';
 @files = $conf->collator->sort(@files);
@@ -108,7 +108,7 @@ say 'done.';
 my @ed2k_of_processed_files;
 my $current_file;
 my $sl = App::KADR::Term::StatusLine::Fractional->new(
-	max => scalar @files,
+	max          => scalar @files,
 	update_label => sub { shortest $current_file->relative, $current_file },
 );
 
@@ -158,9 +158,9 @@ if ($conf->update_anidb_records_for_deleted_files && !$conf->hash_only) {
 if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
 	print "Deleting empty folders in those scanned... ";
 
-	my @scan_dirs = @{$conf->dirs_to_scan};
+	my @scan_dirs = @{ $conf->dirs_to_scan };
 	my %keep;
-	@keep{ @scan_dirs } = ();
+	@keep{@scan_dirs} = ();
 
 	finddepth({
 		follow => 1,
@@ -458,7 +458,7 @@ sub update_mylist_state_for_missing_files {
 
 	$sl = App::KADR::Term::StatusLine::Fractional->new(
 		label => 'Missing File',
-		max => scalar @missing_files,
+		max   => scalar @missing_files,
 	);
 
 	for my $file (@missing_files) {
