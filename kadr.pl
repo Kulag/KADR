@@ -33,6 +33,7 @@ use Text::Xslate;
 use Time::HiRes;
 
 use lib "$FindBin::RealBin/lib";
+use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
 use App::KADR::Path -all;
@@ -75,8 +76,8 @@ my $a = App::KADR::AniDB::UDP::Client::Caching->new(
 if ($conf->expire_cache) {
 	$db->{dbh}->do('DELETE FROM anidb_anime WHERE updated < ' . (time - $conf->cache_timeout_anime));
 	$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
-	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_unwatched) . ' AND watched_eps != eps_with_state_on_hdd');
-	$db->{dbh}->do('DELETE FROM anidb_mylist_anime WHERE updated < ' . (time - $conf->cache_timeout_mylist_watched) . ' AND watched_eps = eps_with_state_on_hdd');
+
+	cache_expire_mylist_anime();
 }
 
 if($conf->load_local_cache_into_memory) {
@@ -177,6 +178,64 @@ sub valid_file {
 	return if $_->basename eq 'Thumbs.db';
 	return if $_->basename eq 'desktop.ini';
 	1;
+}
+
+sub cache_expire_mylist_anime {
+
+	# Clean stale unwatched records.
+	$db->{dbh}->do(
+		'DELETE FROM anidb_mylist_anime WHERE updated < ? AND watched_eps = ""',
+		{},
+		time - $conf->cache_timeout_mylist_unwatched,
+	);
+
+	# Can't do watched/watching in the database because watched_eps will not
+	# equal eps_with_state_on_hdd if all eps on hdd are watched but there are
+	# watched eps not on hdd.
+
+	my @stale;
+	my $watched_max_age  = time - $conf->cache_timeout_mylist_watched;
+	my $watching_max_age = time - $conf->cache_timeout_mylist_watching;
+
+	my $sth = $db->{dbh}->prepare(<<'SQL_END');
+SELECT aid, watched_eps, eps_with_state_on_hdd, updated
+FROM anidb_mylist_anime
+SQL_END
+	$sth->execute;
+
+	while (my ($aid, $watched, $on_hdd, $updated) = $sth->fetchrow_array) {
+
+		# Unwatched anime handled above.
+		next unless $watched;
+
+		# Quick watched check
+		if ($watched eq $on_hdd) {
+			push @stale, $aid if $updated < $watched_max_age;
+
+			next;
+		}
+
+		# Parse epnos.
+		$watched = EpisodeNumber($watched);
+		$on_hdd  = EpisodeNumber($on_hdd);
+
+		# Watched check
+		if ($on_hdd->in($watched)) {
+			push @stale, $aid if $updated < $watched_max_age;
+
+			next;
+		}
+
+		# Watching
+		push @stale, $aid if $updated < $watching_max_age;
+	}
+
+	if (@stale) {
+		$db->{dbh}->do(
+			'DELETE FROM anidb_mylist_anime
+			WHERE aid IN (' . join(',', @stale) . ')'
+		);
+	}
 }
 
 sub find_files {

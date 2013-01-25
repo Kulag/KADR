@@ -13,10 +13,16 @@ anidb_password:
 # Timeout for cached file information in seconds.
 # cache_timeout_file: 1036800 # 12 days
 
-# Timeouts for cached mylist information in seconds.
-# A separate timeout can be set for anime which have unwatched episodes.
-# cache_timeout_mylist_unwatched: 7200 # 2 hours
-# cache_timeout_mylist_watched: 1036800 # 12 days
+# Timeout for cached mylist information for unwatched anime in seconds.
+# cache_timeout_mylist_unwatched: 43200 # 12 hours
+
+# Timeout for cached mylist information for anime with all tracked episodes
+# watched in seconds.
+# cache_timeout_mylist_watched: 7862400 # 91 days
+
+# Timeout for cached mylist information for anime with some tracked episodes
+# watched in seconds.
+# cache_timeout_mylist_watching: 7200 # 2 hours
 
 # Collation to use for filenames.
 # A purely aesthetic option that only affects processing order.
