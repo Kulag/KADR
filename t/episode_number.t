@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 use v5.10;
 use common::sense;
+use Test::Fatal;
 use Test::More tests => 43;
-use Test::Exception;
 
 use App::KADR::AniDB::EpisodeNumber;
 
@@ -10,9 +10,9 @@ is EpisodeNumber('2'), '2', 'parses single digit';
 is EpisodeNumber('2-4'), '2-4', 'parses range';
 is EpisodeNumber('S1'), 'S1', 'single tagged';
 is EpisodeNumber('O1-O2'), 'O1-O2', 'tagged range';
-dies_ok { EpisodeNumber('O1-2') } 'missing tag on second';
-dies_ok { EpisodeNumber('C1-S2') } 'wrong tag on second';
-dies_ok { EpisodeNumber('1 - 2') } 'whitespace';
+like exception { EpisodeNumber('O1-2') }, qr{Error parsing}, 'missing tag on second';
+like exception { EpisodeNumber('C1-S2') }, qr{Error parsing}, 'wrong tag on second';
+like exception { EpisodeNumber('1 - 2') }, qr{Error parsing}, 'whitespace';
 
 is EpisodeNumber('2,4'), '2,4', 'multiple singles';
 is EpisodeNumber('1-2,5-6'), '1-2,5-6', 'multiple ranges';
@@ -44,7 +44,7 @@ is EpisodeNumber('1-2,C5-C6,S1-S5') & EpisodeNumber('C1-C3,C5,S8,S1,2-3'), '2,C5
 
 ok EpisodeNumber('5-6,S1,C4')->in('1-13,C1-C6,S1-S2'), 'in works';
 ok !EpisodeNumber('5-6,S1,C4')->in('1'), 'in caches correctly';
-lives_ok { EpisodeNumber('54')->in('1-13') } 'Doesn\'t mysteriously rethrow exceptions';
+is exception { EpisodeNumber('54')->in('1-13') }, undef, 'Doesn\'t mysteriously rethrow exceptions';
 
 ok EpisodeNumber('1-13,C1-C6,S1-S2')->contains('5-6,S1,C4'), 'contains works';
 ok !EpisodeNumber('1')->contains('5-6,S1,C4'), 'not contains works';
@@ -58,4 +58,4 @@ is EpisodeNumber(1)->padded(2), '01', 'padding ok';
 is EpisodeNumber('2-3,S1')->padded(3), '002-003,S001', 'tagged padding ok';
 is EpisodeNumber('1,S1')->padded({'' => 2}), '01,S1', 'unconfigured tags work ok';
 is EpisodeNumber('2-3,S1,C1')->padded({'' => 3, S => 2, C => 1}), '002-003,C1,S01', 'per-tag padding';
-throws_ok { EpisodeNumber(1)->padded([]) } qr{Invalid padding configuration};
+like exception { EpisodeNumber(1)->padded([]) }, qr{Invalid padding configuration};

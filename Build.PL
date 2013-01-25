@@ -53,8 +53,8 @@ my $build = Module::Build->new(
 		'YAML::XS'                        => 0,
 	},
 	configure_requires => {
-		'Test::More'      => 0,
-		'Test::Exception' => 0,
+		'Test::Fatal' => 0,
+		'Test::More'  => 0,
 	},
 	meta_merge => {
 		resources => {

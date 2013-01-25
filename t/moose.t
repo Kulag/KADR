@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 use Test::More tests => 19;
-use Test::Exception ();
+use Test::Fatal ();
 
 {
 	package TestRole;
@@ -10,10 +10,10 @@ use Test::Exception ();
 	has 'role_attr';
 
 	# strict refs off
-	Test::Exception::lives_ok {
+	Test::More::is Test::Fatal::exception {
 		my $a;
 		$a = @{ $a->[0] };
-	} 'common::sense loaded by ::Moose::Role';
+	}, undef, 'common::sense loaded by ::Moose::Role';
 }
 
 {
@@ -28,10 +28,10 @@ use Test::Exception ();
 	has '_private', clearer => 1, predicate => 1;
 
 	# strict refs off
-	Test::Exception::lives_ok {
+	Test::More::is Test::Fatal::exception {
 		my $a;
 		$a = @{ $a->[0] };
-	} 'common::sense loaded by ::Moose';
+	}, undef, 'common::sense loaded by ::Moose';
 }
 
 {
