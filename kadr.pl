@@ -405,67 +405,14 @@ sub move_file {
 	}
 }
 
-sub avdump {
-	my($file, $size, $mtime, $ed2k) = @_;
-	my($aved2k, $timedout);
-	my $avsl = $sl->child('Fractional', label => 'AvHashing', format => 'percent', max => 100);
-	(my $esc_file = $file) =~ s/(["`])/\\\$1/g;
-	my $exp = Expect->new($conf->avdump . " -vas -tout:20:6555 \"$esc_file\" 2>&1");
-	$exp->log_stdout(0);
-	$exp->expect($conf->avdump_timeout,
-		[qr/H\s+(\d+).(\d{2})/, sub {
-			my @m = @{shift->matchlist};
-			$avsl->update(int(int($m[0]) + int($m[1]) / 100));
-			exp_continue;
-		}],
-		[qr/P\s+(\d+).(\d{2})/, sub {
-			my @m = @{shift->matchlist};
-			if($avsl->label eq 'AvHashing') {
-				$avsl->label('AvParsing');
-			}
-			$avsl->update(int(int($m[0]) + int($m[1]) / 100));
-			exp_continue;
-		}],
-		[qr/ed2k: ([0-9a-f]{32})/, sub {
-			my @m = @{shift->matchlist};
-			$aved2k = $m[0];
-			exp_continue;
-		}],
-		timeout => sub { $timedout = 1; }
-	);
-	if($timedout) {
-		$avsl->finalize;
-		return avdump($file, $size, $ed2k);
-	}
-	if(!$aved2k) {
-		$avsl->log('Error avdumping.');
-		exit 2;
-	}
-	$avsl->finalize_and_log('Avdumped');
-	if($ed2k) {
-		 $db->update('known_files', {avdumped => 1}, {ed2k => $ed2k, size => $size});
-	}
-	else {
-		my $file_sn = substr($file, rindex($file, '/') + 1, length($file));
-		$db->set('known_files', {avdumped => 1, ed2k => $aved2k, filename => $file_sn, size => $size, mtime => $mtime},
-			{filename => $file_sn, size => $size});
-		return $aved2k;
-	}
-}
-
 sub ed2k_hash {
 	my($file, $size, $mtime) = @_;
 
 	return EMPTY_ED2K unless $size;
 
-	if(my $r = $db->fetch('known_files', ['ed2k', 'avdumped'],
+	if (my $r = $db->fetch('known_files', ['ed2k'],
 		{filename => $file->basename, size => $size, mtime => $mtime}, 1)) {
-		avdump($file, $size, $mtime, $r->{ed2k}) if $conf->has_avdump and !$r->{avdumped};
 		return $r->{ed2k};
-	}
-
-	if ($conf->has_avdump && !$conf->hash_only) {
-		return avdump($file, $size, $mtime);
 	}
 
 	my $ctx = Digest::ED2K->new;

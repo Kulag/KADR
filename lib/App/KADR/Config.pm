@@ -26,16 +26,6 @@ has '+configfile',
 	default => sub{ [@default_config_files] },
 	documentation => 'Default: ~/.kadr/config.yml';
 
-has 'avdump',
-	documentation => 'Commandline to run avdump.',
-	isa => 'Str',
-	predicate => 'has_avdump';
-
-has 'avdump_timeout',
-	default => 30,
-	documentation => 'Seconds to wait for avdump to contact AniDB before retrying.',
-	isa => 'Int';
-
 has [qw(anidb_username anidb_password)], isa => 'Str', required => 1;
 
 has 'cache_timeout_anime',            default => 12*24*60*60, isa => 'Int';
