@@ -1,0 +1,23 @@
+#!/usr/bin/env perl
+
+use v5.14;
+use common::sense;
+use DBI::SpeedySimple;
+use FindBin;
+
+use lib "$FindBin::RealBin/../lib";
+use App::KADR::Config;
+
+my $conf = App::KADR::Config->new_with_options;
+my $db   = DBI::SpeedySimple->new($conf->database);
+
+my $files  = $db->{dbh}->selectall_arrayref(<<'END_SELECT');
+SELECT f.ed2k, f.size, f.filename FROM known_files f
+LEFT JOIN adbcache_file ON f.ed2k = adbcache_file.ed2k
+WHERE adbcache_file.ed2k IS NULL
+END_SELECT
+
+for my $file (@$files) {
+	my ($ed2k, $size, $filename) = @$file;
+	say "ed2k://|file|$filename|$size|$ed2k|/";
+}
