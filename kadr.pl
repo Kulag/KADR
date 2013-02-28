@@ -395,11 +395,14 @@ sub move_file {
 	}
 	else {
 		my $name_max = POSIX::pathconf($new->dir, POSIX::_PC_NAME_MAX);
-		if ($name_max < length $new->basename) {
+
+		# XXX: We really want the length in the native encoding,
+		# but this'll do for now.
+		if ($name_max < length encode_utf8 $new->basename) {
 			$sl->finalize('File name exceeds maximum length for folder (' . $name_max . '): ' . $display_new);
 		}
 		else {
-			$sl->finalize('Error moving to ' . $display_new);
+			$sl->finalize('Error moving to ' . $display_new . ': ' . $!);
 			exit 2;
 		}
 	}
