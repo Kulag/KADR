@@ -1,4 +1,6 @@
 package App::KADR::Config;
+# ABSTRACT: KADR configuration
+
 use App::KADR::Collate ':all';
 use App::KADR::Moose;
 use App::KADR::Path 'dir';

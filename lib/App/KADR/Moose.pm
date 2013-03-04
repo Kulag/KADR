@@ -1,4 +1,6 @@
 package App::KADR::Moose;
+# ABSTRACT: Moose with KADR policy
+
 use common::sense;
 use App::KADR::Moose::Policy ();
 
@@ -17,11 +19,7 @@ sub strip_import_params {
 	App::KADR::Moose::Policy->strip_import_params($_[1]);
 }
 
-1;
-
-=head1 NAME
-
-App::KADR::Moose - Moose policy
+0x6B63;
 
 =head1 SYNPOSIS
 
@@ -63,5 +61,3 @@ Strip parameters from your import when chaining L<Moose::Exporter> imports.
 =head1 SEE ALSO
 
 L<App::KADR::Moose::Policy>, L<App::KADR::Moose::Role>
-
-=cut

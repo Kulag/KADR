@@ -1,4 +1,6 @@
 package App::KADR::Collate::Unicode;
+# ABSTRACT: Unicode collation
+
 use common::sense;
 
 use parent 'Unicode::Collate';
@@ -25,11 +27,7 @@ sub sort {
 		map  { [ $self->getSortKey($keygen->()), $_ ] } @_;
 }
 
-1;
-
-=head1 NAME
-
-App::KADR::Collate::Unicode - Unicode collation
+0x6B63;
 
 =head1 METHODS
 
@@ -54,5 +52,3 @@ Sort list with Unicode::Collate.
 =head1 SEE ALSO
 
 L<App::KADR::Collate>, L<Unicode::Collate>
-
-=cut

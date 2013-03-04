@@ -1,4 +1,6 @@
 package App::KADR::AniDB::EpisodeNumber::Range;
+# ABSTRACT: A range of AniDB episode numbers
+
 use v5.10;
 use common::sense;
 use Carp qw(croak);

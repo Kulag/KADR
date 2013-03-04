@@ -1,4 +1,6 @@
 package App::KADR::AniDB::EpisodeNumber;
+# ABSTRACT: A set of AniDB episode numbers
+
 use v5.10;
 use App::KADR::AniDB::EpisodeNumber::Range;
 use common::sense;
@@ -107,10 +109,6 @@ sub ranges { @{ $_[0]{ranges} } }
 sub stringify { $_[0]{stringify} //= join ',', $_[0]->ranges }
 
 0x6B63;
-
-=head1 NAME
-
-App::KADR::AniDB::EpisodeNumber - AniDB episode number range handling
 
 =head1 SYNOPSIS
 

@@ -1,4 +1,6 @@
 package App::KADR::Path::File;
+# ABSTRACT: Path::Class::Dir for KADR, faster
+
 use Moose;
 
 use App::KADR::Path::Dir;
@@ -53,10 +55,6 @@ sub stringify {
 }
 
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
-
-=head1 NAME
-
-L<App::KADR::Path::File> - like L<Path::Class::File>, but faster
 
 =head1 DESCRIPTION
 

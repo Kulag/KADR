@@ -1,4 +1,6 @@
 package App::KADR::AniDB::UDP::Client;
+# ABSTRACT: Client for AniDB's UDP API
+
 use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::AniDB::Types qw(UserName);
 use App::KADR::Moose -noclean => 1;

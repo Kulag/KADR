@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+# PODNAME: kadr
+# ABSTRACT: Manage your anime collection with AniDB
 
 use v5.14;
 use common::sense;

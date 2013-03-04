@@ -1,4 +1,6 @@
 package App::KADR::Util;
+# ABSTRACT: Utility functions for KADR
+
 use common::sense;
 use List::AllUtils qw(firstidx reduce);
 use Params::Util qw(_STRING);

@@ -1,15 +1,13 @@
 package App::KADR::Collate::None;
+# ABSTRACT: Do-Nothing collation
+
 use common::sense;
 
 sub new { bless \(do { my $a = 1 }), shift }
 
 sub sort { ref $_[1] eq 'CODE' ? @_[ 2 .. $#_ ] : @_[ 1 .. $#_ ] }
 
-1;
-
-=head1 NAME
-
-App::KADR::Collate::None - Do-Nothing collation
+0x6B63;
 
 =head1 DESCRIPTION
 
@@ -38,5 +36,3 @@ Doesn't sort the list.
 =head1 SEE ALSO
 
 L<App::KADR::Collate>
-
-=cut
