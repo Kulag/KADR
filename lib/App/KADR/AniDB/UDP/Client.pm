@@ -10,7 +10,7 @@ use IO::Uncompress::Inflate qw(inflate $InflateError);
 use List::MoreUtils qw(mesh);
 use List::Util qw(min max);
 use MooseX::Types::LoadableClass qw(LoadableClass);
-use MooseX::Types::Moose qw(Int Num Str);
+use MooseX::Types::Moose qw(Bool Int Num Str);
 use MooseX::NonMoose;
 use Time::HiRes;
 
@@ -85,6 +85,7 @@ const my %MYLIST_STATE_NAMES => (
 	MYLIST_STATE_DELETED, 'deleted',
 );
 
+has 'is_banned',                 isa => Bool;
 has 'max_attempts',              isa => Int,       predicate => 1;
 has 'port',     default => 9000, isa => Int;
 has 'password',                  isa => Str,       required => 1;
@@ -167,7 +168,9 @@ sub file_version {
 }
 
 sub has_session {
-	$_[0]->_session_key && (time - $_[0]->_last_query_time) < SESSION_TIMEOUT
+	$_[0]->_session_key
+	&& !$_[0]->is_banned
+	&& (time - $_[0]->_last_query_time) < SESSION_TIMEOUT
 }
 
 sub login {
@@ -358,6 +361,8 @@ sub mylist_state_name_for {
 sub start {
 	my ($self, $tx) = @_;
 
+	die 'Banned' if $self->is_banned;
+
 	$self->emit(start => $tx);
 	$tx->{res} = $self->_sendrecv(@{ $tx->{req} }{qw(name params)});
 	$tx->emit('finish');
@@ -471,7 +476,10 @@ sub _sendrecv {
 		my $res = $self->_response_parse_skeleton($buf);
 
 		# Temporary IP ban
-		die 'Banned' if $res->{code} == 555;
+		if ($res->{code} == 555) {
+			$self->is_banned(1);
+			die 'Banned';
+		}
 
 		# Server busy
 		if ($res->{code} == 602) {
