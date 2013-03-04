@@ -8,7 +8,6 @@ my $build = Module::Build->new(
 	dist_abstract => "Kulag's AniDB Renamer",
 	dist_version => 1,
 	dist_author => 'Kulag <g.kulag@gmail.com>',
-	script_files => "kadr.pl",
 	requires => {
 		'perl'                            => "5.14.0",
 		'Class::Factory'                  => 0,
