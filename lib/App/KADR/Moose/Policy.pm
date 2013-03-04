@@ -14,8 +14,8 @@ use MooseX::StrictConstructor 0.19 ();
 use namespace::autoclean;
 use true;
 
+# XXX: MooseX::HasDefaults::RW doesn't set role_metaroles.
 const my @ATTRIBUTE_TRAITS => qw(
-	MooseX::AttributeShortcuts::Trait::Attribute
 	MooseX::HasDefaults::Meta::IsRW
 	MooseX::Traits::Attribute::Chained
 );
@@ -23,7 +23,11 @@ const my $FEATURE_VERSION => ':5.14';
 const my @PARAM_NAMES     => qw(noclean mutable);
 
 my ($import, $unimport, $init_meta) = Moose::Exporter->build_import_methods(
-	also            => [qw(MooseX::AlwaysCoerce MooseX::StrictConstructor)],
+	also            => [
+		'MooseX::AlwaysCoerce',
+		'MooseX::AttributeShortcuts',
+		'MooseX::StrictConstructor',
+	],
 	class_metaroles => { attribute => [@ATTRIBUTE_TRAITS] },
 	install         => ['unimport'],
 	role_metaroles  => { applied_attribute => [@ATTRIBUTE_TRAITS] },
