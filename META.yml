@@ -9,7 +9,7 @@ configure_requires:
   Test::More: 0
 dynamic_config: 1
 generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.120921'
-license: open_source
+license: mit
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
