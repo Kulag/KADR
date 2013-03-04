@@ -460,7 +460,7 @@ sub _sendrecv {
 		$handle->send($req_str, 0, $self->_sockaddr)
 			or die 'Send error: ' . $!;
 
-		# Receive
+		RECEIVE:
 		my $buf;
 		my $rin = '';
 		my $rout;
@@ -492,7 +492,7 @@ sub _sendrecv {
 		next if $res->{code} == 604;
 
 		# Tag mismatch
-		next unless $res->{tag} && $res->{tag} eq $params->{tag};
+		goto RECEIVE unless $res->{tag} && $res->{tag} eq $params->{tag};
 
 		# Server error
 		die sprintf 'AniDB error: %d %s', $res->{code}, $res->{header}
