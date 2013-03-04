@@ -17,7 +17,7 @@ use POSIX ();
 use Text::Xslate;
 use Time::HiRes;
 
-use lib "$FindBin::RealBin/lib";
+use lib "$FindBin::RealBin/../lib";
 use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
