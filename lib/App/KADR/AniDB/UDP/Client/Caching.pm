@@ -1,4 +1,6 @@
 package App::KADR::AniDB::UDP::Client::Caching;
+# ABSTRACT: Caching layer atop the AniDB UDP Client
+
 use App::KADR::Moose;
 use App::KADR::AniDB::EpisodeNumber;
 

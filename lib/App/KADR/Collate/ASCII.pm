@@ -1,4 +1,6 @@
 package App::KADR::Collate::ASCII;
+# ABSTRACT: Case-insensitive ASCII-betical collation
+
 use common::sense;
 
 sub new { bless \(do { my $a = 1 }), shift }
@@ -14,11 +16,7 @@ sub sort {
 		map  { [ lc $keygen->(), $_ ] } @_;
 }
 
-1;
-
-=head1 NAME
-
-App::KADR::Collate::ASCII - Case-insensitive ASCII-betical collation
+0x6B63;
 
 =head1 METHODS
 
@@ -41,5 +39,3 @@ Sort list ASCII-betically
 =head1 SEE ALSO
 
 L<App::KADR::Collate>
-
-=cut

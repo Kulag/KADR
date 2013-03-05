@@ -1,4 +1,6 @@
 package App::KADR::Path;
+# ABSTRACT: Path::Class for KADR
+
 use common::sense;
 use Class::Load ();
 use File::Spec::Memoized;

@@ -1,4 +1,6 @@
 package App::KADR::Path::Entity;
+# ABSTRACT: Path::Class::Entity for KADR, faster
+
 use Encode;
 use Moose;
 
@@ -15,10 +17,6 @@ sub _decode_path {
 }
 
 0x6B63;
-
-=head1 NAME
-
-App::KADR::Path::Entity - operations common to files and directories
 
 =head1 SYNOPSIS
 

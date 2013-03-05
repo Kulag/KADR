@@ -1,4 +1,6 @@
 package App::KADR::Collate;
+# ABSTRACT:: Collation factory
+
 use Module::Find qw(findsubmod);
 use MooseX::Types -declare => ['Collate'];
 use MooseX::Types::Moose qw(Object Str);
@@ -25,11 +27,7 @@ for my $class (findsubmod __PACKAGE__) {
 	__PACKAGE__->register_factory_type($type, $class);
 }
 
-1;
-
-=head1 NAME
-
-App::KADR::Collate - Collation factory
+0x6B63;
 
 =head1 SYNOPSIS
 
@@ -58,5 +56,3 @@ Determine best available collator type.
 
 L<App::KADR::Collate::None>, L<App::KADR::Collate::Ascii>,
 L<App::KADR::Collate::Unicode>
-
-=cut

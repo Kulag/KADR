@@ -1,4 +1,6 @@
 package App::KADR::AniDB::UDP::Transaction;
+# ABSTRACT: AniDB UDP Transaction
+
 use App::KADR::Moose;
 use MooseX::NonMoose;
 
@@ -28,10 +30,6 @@ sub success {
 sub tag {
 	$_[0]->req->{params}->{tag};
 }
-
-=head1 NAME
-
-App::KADR::AniDB::UDP::Transaction - AniDB UDP Transaction
 
 =head1 DESCRIPTION
 
@@ -91,5 +89,3 @@ also a code.
 =head1 SEE ALSO
 
 L<App::KADR::AniDB::UDP::Client>
-
-=cut

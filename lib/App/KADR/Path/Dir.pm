@@ -1,4 +1,6 @@
 package App::KADR::Path::Dir;
+# ABSTRACT: Path::Class::Dir for KADR, faster
+
 use App::KADR::Moose;
 use App::KADR::Path::File;
 use App::KADR::Util qw(_STRINGLIKE0);
@@ -115,10 +117,6 @@ sub subsumes {
 }
 
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
-
-=head1 NAME
-
-App::KADR::Path::Dir - like L<Path::Class::Dir>, but faster
 
 =head1 DESCRIPTION
 
