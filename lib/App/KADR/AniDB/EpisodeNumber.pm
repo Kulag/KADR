@@ -25,12 +25,16 @@ sub contains {
 
 sub count {
 	my ($self, $type) = @_;
-	my @ranges
-		= defined $type
-		? grep { $_->tag eq $type } $self->ranges
-		: $self->ranges;
 
-	@ranges ? sum map { $_->count } @ranges : 0;
+	defined $type
+		? $self->{count}{$type} //= do {
+			my @ranges = grep { $_->tag eq $type } $self->ranges;
+			@ranges ? sum map { $_->count } @ranges : 0;
+		}
+		: $self->{count_all} //= do {
+			my @ranges = $self->ranges;
+			@ranges ? sum map { $_->count } @ranges : 0;
+		};
 }
 
 sub in {
