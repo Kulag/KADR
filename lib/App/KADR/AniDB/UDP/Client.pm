@@ -319,7 +319,7 @@ sub mylist_anime {
 	# File and anime info is needed to emulate the expected output.
 	my $anime = $self->anime(aid => $mylist->{aid});
 	my $epno  = $self->file(fid => $mylist->{fid})->{episode_number};
-	my $none  = EpisodeNumber->parse; # Get memoized empty epno.
+	my $none  = EpisodeNumber->new;
 
 	{
 		aid => $mylist->{aid},

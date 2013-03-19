@@ -54,7 +54,7 @@ sub intersection {
 	$other = $self->parse($other) unless blessed $other;
 
 	if ($other->isa(__PACKAGE__)) {
-		return $self->new(
+		return (ref $self)->new(
 			map {
 				my $other = $_;
 				map { $_->intersection($other) } $self->ranges
@@ -63,21 +63,26 @@ sub intersection {
 	}
 
 	if ($other->isa(range_class)) {
-		return $self->new(map { $_->intersection($other) } $self->ranges);
+		return (ref $self)->new(map { $_->intersection($other) } $self->ranges);
 	}
 
 	die 'Unable to handle type: ' . ref $other;
 }
 
 sub new {
-	my $class = ref $_[0] ? ref shift : shift;
+	my $class = shift;
 
 	my @ranges = sort {
 		my $t = $a->tag cmp $b->tag;
 		$t == 0 ? $_->{min} <=> $b->{min} : $t;
 	} grep {defined} @_;
 
-	bless { ranges => \@ranges }, $class;
+	my $str = join ',', @ranges;
+
+	$cache{$str} //= bless {
+		ranges    => \@ranges,
+		stringify => $str,
+	}, $class;
 }
 
 sub padded {
@@ -91,6 +96,8 @@ sub padded {
 }
 
 sub parse {
+
+	# We cache here as well because the input may not be ordered.
 	$cache{ $_[1] } //= do {
 		my $class = ref $_[0] || $_[0];
 		my $range_class = $class->range_class;
@@ -99,9 +106,8 @@ sub parse {
 	};
 }
 
-sub ranges { @{ $_[0]{ranges} } }
-
-sub stringify { $_[0]{stringify} //= join ',', $_[0]->ranges }
+sub ranges    { @{ $_[0]{ranges} } }
+sub stringify { $_[0]{stringify} }
 
 0x6B63;
 
@@ -191,7 +197,7 @@ Calculate the intersection of this episode number and another.
 	my $epno = EpisodeNumber->new; # Empty
 	my $epno = EpisodeNumber->new(Range->new('epno', 1, 1, ''), ...);
 
-Create episode number.
+Create episode number. This static method is memoized along with C<parse>.
 
 =head2 C<padded>
 
@@ -205,7 +211,7 @@ head2 C<parse>
 	my $epno = $class->parse('1-10', ...);
 	my $epno = $epno->parse('1-10', ...)
 
-Parse episode number. This static method is memoized.
+Parse episode number. This static method is memoized along with C<new>.
 
 =head2 C<stringify>
 
