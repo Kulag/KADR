@@ -9,7 +9,6 @@ use utf8;
 use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
-use Expect;
 use File::Copy;
 use File::Find;
 use FindBin;
