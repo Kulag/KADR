@@ -12,7 +12,7 @@ use Scalar::Util qw(blessed looks_like_number);
 use App::KADR::AniDB::EpisodeNumber;
 
 my %cache;
-my $tag_range_re = qr/^ ([a-xA-Z]*) (\d+) (?: - \g{1} (\d+) )? $/x;
+my $tag_range_re = qr/^ ([a-zA-Z]*) (\d+) (?: - \g{1} (\d+) )? $/x;
 
 sub count { $_[0]{max} - $_[0]{min} + 1 }
 
