@@ -21,7 +21,7 @@ use Time::HiRes;
 use lib "$FindBin::RealBin/../lib";
 use App::KADR::Pid -onlyone;
 
-use App::KADR::AniDB::EpisodeNumber;
+use aliased 'App::KADR::AniDB::EpisodeNumber';
 use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
 use aliased 'App::KADR::Path::File';
@@ -204,8 +204,8 @@ SQL_END
 		}
 
 		# Parse epnos.
-		$watched = EpisodeNumber($watched);
-		$on_hdd  = EpisodeNumber($on_hdd);
+		$watched = EpisodeNumber->parse($watched);
+		$on_hdd  = EpisodeNumber->parse($on_hdd);
 
 		# Watched check
 		if ($on_hdd->in($watched)) {

@@ -2,7 +2,7 @@ package App::KADR::AniDB::UDP::Client::Caching;
 # ABSTRACT: Caching layer atop the AniDB UDP Client
 
 use App::KADR::Moose;
-use App::KADR::AniDB::EpisodeNumber;
+use aliased 'App::KADR::AniDB::EpisodeNumber';
 
 extends 'App::KADR::AniDB::UDP::Client';
 
@@ -143,7 +143,7 @@ sub file {
 
 	# Cached
 	if (my $file = $db->fetch("adbcache_file", ["*"], \%params, 1)) {
-		$file->{episode_number} = EpisodeNumber($file->{episode_number});
+		$file->{episode_number} = EpisodeNumber->parse($file->{episode_number});
 		return $file;
 	}
 

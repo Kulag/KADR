@@ -1,7 +1,7 @@
 package App::KADR::AniDB::UDP::Client;
 # ABSTRACT: Client for AniDB's UDP API
 
-use App::KADR::AniDB::EpisodeNumber;
+use aliased 'App::KADR::AniDB::EpisodeNumber';
 use App::KADR::AniDB::Types qw(UserName);
 use App::KADR::Moose -noclean => 1;
 use Carp qw(croak);
@@ -148,7 +148,7 @@ sub file {
 	my @fields = (split /\|/, $res->{contents}[0])[ 0 .. @FILE_FIELDS - 1 ];
 	my $file = { mesh @FILE_FIELDS, @fields };
 
-	$file->{episode_number} = EpisodeNumber($file->{episode_number});
+	$file->{episode_number} = EpisodeNumber->parse($file->{episode_number});
 
 	$file;
 }
@@ -257,7 +257,7 @@ sub mylist {
 
 sub mylist_multi_parse_episodes {
 	my ($self, $info) = @_;
-	$info->{$_} = EpisodeNumber($info->{$_}) for @MYLIST_MULTI_EPISODE_FIELDS;
+	$info->{$_} = EpisodeNumber->parse($info->{$_}) for @MYLIST_MULTI_EPISODE_FIELDS;
 	return;
 }
 
@@ -319,7 +319,7 @@ sub mylist_anime {
 	# File and anime info is needed to emulate the expected output.
 	my $anime = $self->anime(aid => $mylist->{aid});
 	my $epno  = $self->file(fid => $mylist->{fid})->{episode_number};
-	my $none  = EpisodeNumber();
+	my $none  = EpisodeNumber->parse; # Get memoized empty epno.
 
 	{
 		aid => $mylist->{aid},

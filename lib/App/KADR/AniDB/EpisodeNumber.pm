@@ -11,11 +11,6 @@ use overload
 	'""'     => 'stringify',
 	'&'      => 'intersection';
 use Scalar::Util qw(blessed);
-use Sub::Exporter::Util 'curry_method';
-use Sub::Exporter -setup => {
-	exports => { EpisodeNumber => curry_method('parse') },
-	groups  => { default       => [qw(EpisodeNumber)] },
-};
 
 sub range_class() {'App::KADR::AniDB::EpisodeNumber::Range'}
 
@@ -112,10 +107,10 @@ sub stringify { $_[0]{stringify} //= join ',', $_[0]->ranges }
 
 =head1 SYNOPSIS
 
-use App::KADR::AniDB::EpisodeNumber;
+use aliased 'App::KADR::AniDB::EpisodeNumber';
 
-my $episode = EpisodeNumber('05');
-my $episodes = EpisodeNumber('1-13,C1-C2,S1');
+my $episode = EpisodeNumber->parse('05');
+my $episodes = EpisodeNumber->parse('1-13,C1-C2,S1');
 
 $episode eq '5';
 $episode->stringify eq '5';
@@ -131,12 +126,6 @@ $episodes->contains('13-14') # false
 
 Provides methods for calculation on episode number ranges.
 
-=head1 EXPORTS
-
-=head2 C<EpisodeNumber>
-
-A shortcut for App::KADR::AniDB::EpisodeNumber->L<from_string>.
-
 =head1 METHODS
 
 =head2 C<count>
@@ -149,12 +138,12 @@ optionally filtered by type.
 
 =head2 C<contains>
 
-	my $epno = EpisodeNumber('1-10');
+	my $epno = EpisodeNumber->parse('1-10');
 
 	# True
 	$epno->contains('5');
 	$epno->contains('9-10');
-	$epno->contains(EpisodeNumber('1'));
+	$epno->contains(EpisodeNumber->parse('1'));
 
 	# False
 	$epno->contains('S1');
@@ -165,25 +154,25 @@ Check if this episode number contains another. Equivalent to C<in> with its argu
 =head2 C<in>
 
 	# True
-	EpisodeNumber('5')->in('1-10');
-	EpisodeNumber('9-10')->in('1-10');
+	EpisodeNumber->parse('5')->in('1-10');
+	EpisodeNumber->parse('9-10')->in('1-10');
 
 	# False
-	EpisodeNumber('S1')->in('1-10');
-	EpisodeNumber('10-11')->in('1-10');
+	EpisodeNumber->parse('S1')->in('1-10');
+	EpisodeNumber->parse('10-11')->in('1-10');
 
 Check if another episode number contains this one. Equivalent to C<contains>, with its arguments swapped, but slightly faster. This method is memoized.
 
 =head2 C<in_ignore_max>
 
 	# True
-	EpisodeNumber('5')->in('1-10');
-	EpisodeNumber('9-10')->in('1-10');
-	EpisodeNumber('9-10')->in('1,3,5,7,9');
-	EpisodeNumber('10-11')->in('1-10');
+	EpisodeNumber->parse('5')->in('1-10');
+	EpisodeNumber->parse('9-10')->in('1-10');
+	EpisodeNumber->parse('9-10')->in('1,3,5,7,9');
+	EpisodeNumber->parse('10-11')->in('1-10');
 
 	# False
-	EpisodeNumber('S1')->in('1-10');
+	EpisodeNumber->parse('S1')->in('1-10');
 
 Check if another episode number which is broken contains this one.
 Use this to work around MULTIPLE MYLIST ENTRIES incorrectly returning only the
@@ -193,20 +182,21 @@ This method is memoized.
 =head2 C<intersection>
 
 	my $epno = $epno->intersection('5-6');
-	my $epno = $epno->intersection(EpisodeNumber('1'));
+	my $epno = $epno->intersection(EpisodeNumber->parse('1'));
 
 Calculate the intersection of this episode number and another.
 
 =head2 C<new>
 
-	my $epno = App::KADR::AniDB::EpisodeNumber->new(App::KADR::AniDB::EpisodeNumber::Range->new('epno', 1, 1, ''), ...);
+	my $epno = EpisodeNumber->new; # Empty
+	my $epno = EpisodeNumber->new(Range->new('epno', 1, 1, ''), ...);
 
 Create episode number.
 
 =head2 C<padded>
 
-	my $string = EpisodeNumber('1,S1')->padded(2); # 01,S01
-	my $string = EpisodeNumber('1,S1')->padded({'' => 2, S => 1}); # 01,S1
+	my $string = EpisodeNumber->parse('1,S1')->padded(2); # 01,S01
+	my $string = EpisodeNumber->parse('1,S1')->padded({'' => 2, S => 1}); # 01,S1
 
 Turn episode number into a zero-padded string.
 

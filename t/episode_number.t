@@ -6,6 +6,8 @@ use Test::More tests => 43;
 
 use App::KADR::AniDB::EpisodeNumber;
 
+sub EpisodeNumber { App::KADR::AniDB::EpisodeNumber->parse(@_) }
+
 is EpisodeNumber('2'), '2', 'parses single digit';
 is EpisodeNumber('2-4'), '2-4', 'parses range';
 is EpisodeNumber('S1'), 'S1', 'single tagged';
