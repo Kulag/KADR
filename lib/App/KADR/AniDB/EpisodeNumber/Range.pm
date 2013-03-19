@@ -19,10 +19,6 @@ sub count { $_[0]{max} - $_[0]{min} + 1 }
 sub intersection {
 	my ($self, $other) = @_;
 
-	# Return something sane if this range gets called with something other than another range.
-	return App::KADR::AniDB::EpisodeNumber->new($self)->intersection($other)
-		unless blessed $other && $other->isa(__PACKAGE__);
-
 	return if $self->{tag} ne $other->{tag};
 
 	my $min = $self->{min} > $other->{min} ? $self->{min} : $other->{min};
@@ -38,7 +34,7 @@ sub intersection {
 sub new {
 	# my ($class, $min, $max, $tag) = @_;
 	return unless my $min = int $_[1];
-	($min, my $max) = sort { $a <=> $b } $min, int($_[2]) || $min;
+	my $max = defined $_[2] ? $_[2] : $min;
 
 	$cache{$_[3]}->{$min}{$max} //= do {
 		my $class = ref $_[0] || $_[0];
