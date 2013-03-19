@@ -24,7 +24,7 @@ use App::KADR::Pid -onlyone;
 use App::KADR::AniDB::EpisodeNumber;
 use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
-use App::KADR::Path -all;
+use aliased 'App::KADR::Path::File';
 use App::KADR::Term::StatusLine::Fractional;
 use App::KADR::Term::StatusLine::Freeform;
 use App::KADR::Util qw(:pathname_filter shortest);
@@ -341,11 +341,11 @@ sub process_file {
 
 	$fileinfo->{file_version} = $a->file_version($fileinfo);
 
-	my $newname = file( $tx->render('path.tx', $fileinfo) =~ s{[\r\n]}{}gr );
+	my $newname = File->new( $tx->render('path.tx', $fileinfo) =~ s{[\r\n]}{}gr );
 
 	# We can't end file/dir names in a dot on windows.
 	if ($conf->windows_compatible_filenames) {
-		$newname = file(
+		$newname = File->new(
 			map { s{\.$}{}r }
 			($newname->has_dir ? $newname->dir->dir_list : ()),
 			$newname->basename

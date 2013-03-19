@@ -5,6 +5,7 @@ use App::KADR::Moose;
 use App::KADR::Path::File;
 use App::KADR::Util qw(_STRINGLIKE0);
 use Carp qw(croak);
+use File::Spec::Memoized;
 use Params::Util qw(_INSTANCE);
 
 extends 'Path::Class::Dir', 'App::KADR::Path::Entity';

@@ -4,6 +4,7 @@ package App::KADR::Path::File;
 use Moose;
 
 use App::KADR::Path::Dir;
+use File::Spec::Memoized;
 
 extends 'Path::Class::File', 'App::KADR::Path::Entity';
 
