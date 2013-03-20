@@ -1,14 +1,21 @@
 package App::KADR::Path::Dir;
 # ABSTRACT: Path::Class::Dir for KADR, faster
 
-use App::KADR::Moose;
 use App::KADR::Path::File;
 use App::KADR::Util qw(_STRINGLIKE0);
 use Carp qw(croak);
+use common::sense;
 use File::Spec::Memoized;
 use Params::Util qw(_INSTANCE);
 
-extends 'Path::Class::Dir', 'App::KADR::Path::Entity';
+# Can't use stringify because overload sends extra params.
+use overload '""' => sub { $_[0]{string} };
+
+use parent 'Path::Class::Dir', 'App::KADR::Path::Entity';
+
+use Class::XSAccessor
+	getters => { stringify => 'string', volume => 'volume' },
+	true    => ['is_dir'];
 
 my %cache;
 
@@ -96,8 +103,6 @@ sub relative {
 		: $self->{_relative}{$self->_spec->curdir} //= $self->SUPER::relative;
 }
 
-sub stringify { $_[0]{string} }
-
 sub subsumes {
 	my ($self, $other) = @_;
 
@@ -117,7 +122,7 @@ sub subsumes {
 	$self->{_subsumes}{$other} //= $self->SUPER::subsumes($other);
 }
 
-__PACKAGE__->meta->make_immutable(inline_constructor => 0);
+0x6B63;
 
 =head1 DESCRIPTION
 

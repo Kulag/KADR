@@ -1,12 +1,16 @@
 package App::KADR::Path::File;
 # ABSTRACT: Path::Class::Dir for KADR, faster
 
-use Moose;
-
 use App::KADR::Path::Dir;
+use Carp 'croak';
+use common::sense;
 use File::Spec::Memoized;
 
-extends 'Path::Class::File', 'App::KADR::Path::Entity';
+use parent 'Path::Class::File', 'App::KADR::Path::Entity';
+
+use Class::XSAccessor
+	getters => { basename => 'file' },
+	false   => ['is_dir'];
 
 my %cache;
 
@@ -55,7 +59,7 @@ sub stringify {
 	$_[0]->{_stringify} //= $_[0]->SUPER::stringify;
 }
 
-__PACKAGE__->meta->make_immutable(inline_constructor => 0);
+0x6B63;
 
 =head1 DESCRIPTION
 
