@@ -9,7 +9,7 @@ use File::Spec::Memoized;
 use Params::Util qw(_INSTANCE);
 
 # Can't use stringify because overload sends extra params.
-use overload '""' => sub { $_[0]{string} };
+use overload '""' => sub { $_[0]{string} }, fallback => 1;
 
 use parent 'Path::Class::Dir', 'App::KADR::Path::Entity';
 
