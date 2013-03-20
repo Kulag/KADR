@@ -45,15 +45,17 @@ sub to_text {
 sub update_term {
 	my $self = shift;
 
+	my @log = $self->_pop_all_log_lines;
+	my $line = $self->to_text;
+
+	return if !@log && $line eq $self->_last_line;
+
 	# First blank the last status line to prevent trailing garbage.
 	my $out = $self->_blank_line;
 
 	# Print any "log" lines since the last status line update.
-	if(my @log_lines = $self->_pop_all_log_lines) {
-		$out .= join("\n", @log_lines) . "\n";
-	}
-
-	my $line = $self->to_text;
+	$out .= join("\n", @log) . "\n" if @log;
+	
 	print $out . $line;
 	$self->_last_line($line);
 	$self->_last_update(Time::HiRes::time);
