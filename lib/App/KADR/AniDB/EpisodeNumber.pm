@@ -58,16 +58,18 @@ sub intersection {
 	$other = $self->parse($other) unless blessed $other;
 
 	if ($other->isa(__PACKAGE__)) {
-		return (ref $self)->new(
-			map {
+		return unless my @ranges
+			= map {
 				my $other = $_;
 				map { $_->intersection($other) } $self->ranges
-			} $other->ranges
-		);
+			} $other->ranges;
+		return (ref $self)->new(@ranges);
 	}
 
 	if ($other->isa(range_class)) {
-		return (ref $self)->new(map { $_->intersection($other) } $self->ranges);
+		return unless my @ranges
+			= map { $_->intersection($other) } $self->ranges;
+		return (ref $self)->new(@ranges);
 	}
 
 	die 'Unable to handle type: ' . ref $other;
@@ -195,6 +197,7 @@ This method is memoized.
 	my $epno = $epno->intersection(EpisodeNumber->parse('1'));
 
 Calculate the intersection of this episode number and another.
+Returns undef if there is no intersection.
 
 =head2 C<new>
 
