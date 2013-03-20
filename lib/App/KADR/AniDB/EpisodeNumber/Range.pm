@@ -2,6 +2,7 @@ package App::KADR::AniDB::EpisodeNumber::Range;
 # ABSTRACT: A range of AniDB episode numbers
 
 use v5.10;
+use App::KADR::AniDB::EpisodeNumber;
 use common::sense;
 use Carp qw(croak);
 use overload
@@ -9,7 +10,7 @@ use overload
 	'""' => 'stringify';
 use Scalar::Util qw(blessed looks_like_number);
 
-use App::KADR::AniDB::EpisodeNumber;
+use Class::XSAccessor getters => [qw(max min tag)];
 
 my %cache;
 my $tag_range_re = qr/^ ([a-zA-Z]*) (\d+) (?: - \g{1} (\d+) )? $/x;
@@ -22,11 +23,9 @@ sub intersection {
 	return if $self->{tag} ne $other->{tag};
 
 	my $min = $self->{min} > $other->{min} ? $self->{min} : $other->{min};
-	return unless defined $min;
-
 	my $max = $self->{max} < $other->{max} ? $self->{max} : $other->{max};
 
-	return if !defined $max || $max < $min || $min > $max;
+	return if $max < $min || $min > $max;
 
 	$self->new($min, $max, $self->{tag});
 }
@@ -69,7 +68,5 @@ sub stringify {
 		. $_[0]{min}
 		. ($_[0]{max} > $_[0]{min} ? '-' . $_[0]{tag} . $_[0]{max} : '');
 }
-
-sub tag { $_[0]{tag} }
 
 0x6B63;
