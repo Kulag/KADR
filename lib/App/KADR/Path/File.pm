@@ -56,7 +56,10 @@ sub relative {
 }
 
 sub stringify {
-	$_[0]->{_stringify} //= $_[0]->SUPER::stringify;
+	$_[0]{stringify}
+		//= defined $_[0]{dir}
+		? $_[0]->_spec->catfile($_[0]{dir}->stringify, $_[0]{file})
+		: $_[0]{file};
 }
 
 0x6B63;
