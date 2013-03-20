@@ -61,29 +61,40 @@ sub is_hidden {
 sub new {
 	my $class = ref $_[0] ? ref shift : shift;
 
-	if (@_ == 1) {
-		# If the only arg is undef, it's probably a mistake. Without this
-		# special case here, we'd return the root directory, which is a
-		# lousy thing to do to someone when they made a mistake. Return
-		# undef instead.
-		return if !defined $_[0];
-
-		# No-op
-		return $_[0] if ref $_[0] eq $class;
-	}
-
-	my $spec = $class->_spec;
-
 	# Compile args into a single string.
-	my $path
-		= !@_                    ? $spec->curdir
-		: @_ == 1 && $_[0] eq '' ? $spec->rootdir
-		:                          $spec->catdir(@_);
+	my $path = do {
+		if (@_ == 1) {
+
+			# dir('dir')
+			return $_[0] if ref $_[0] eq $class;
+
+			# 'dir'
+			if    (length $_[0])  { $_[0] }
+
+			# ''
+			elsif (defined $_[0]) { $class->_spec->rootdir }
+				
+			# If the only arg is undef, it's probably a mistake.
+			# Without this special case here, we'd return the root directory,
+			# which is a lousy thing to do to someone when they made a mistake.
+			# Return nothing instead.
+			else                  { return }
+		}
+
+		# ()
+		elsif (@_ == 0) { $class->_spec->curdir }
+
+		# 'dir', 'dir'
+		else            { $class->_spec->catdir(@_) }
+	};
 
 	# Try to return an cached class for the path.
 	$cache{$path} //= do {
+
 		# This is a new path
 		my $self = $class->Path::Class::Entity::new;
+		my $spec = $class->_spec;
+
 		$self->{string} = $path;
 
 		# Volume

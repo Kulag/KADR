@@ -28,17 +28,29 @@ sub is_hidden {
 
 sub new {
 	my $class = shift;
-	my ($volume, $file_dirs, $base) = $class->_spec->splitpath(pop);
+	my $base;
 
-	# Dir
-	my $dir
-		= $file_dirs                        ? $class->dir_class->new(@_, $file_dirs)
-		: @_ == 1 && ref $_[0] eq dir_class ? $_[0]
-		: @_                                ? $class->dir_class->new(@_)
-		:                                     ();
+	croak 'No path provided to File->new' unless @_;
+
+	# Split dir and basename from args.
+	my $dir = do {
+		(my $volume, my $dirs, $base) = $class->_spec->splitpath(pop);
+
+		# dir('dir'), 'dir/file'
+		if (length $dirs) {
+			# Omit volume when possible to get the fast one-arg new.
+			$class->dir_class->new(@_, (length $volume ? $volume : ()), $dirs);
+		}
+
+		# dir('dir'), 'file'
+		elsif (@_ == 1 && ref $_[0] eq dir_class) { $_[0] }
+
+		# 'dir', 'file'
+		else { $class->dir_class->new(@_) }
+	};
 
 	# Check for cached file
-	$cache{$dir || '.'}->{$base} //= do {
+	$cache{ defined $dir and $dir->stringify }->{$base} //= do {
 		my $self = $class->Path::Class::Entity::new;
 
 		$self->{dir}  = $dir;
