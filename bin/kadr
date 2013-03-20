@@ -124,18 +124,20 @@ for my $file (@files) {
 	$current_file = $file;
 	$sl->update_term if $sl->last_update + TERM_SPEED < Time::HiRes::time;
 
-	next unless $file->is_file_exists;
+	# Stat and ignore deleted files.
+	next unless my $stat = $file->stat_now;
 
-	my $file_size = $file->size;
-	my $mtime     = $file->stat->mtime;
+	my $size  = $stat->size;
+	my $mtime = $stat->mtime;
+
 	if (time() - $mtime < MTIME_DIFF_LIMIT) {
 		$sl->child('Freeform')->finalize('Being Modified');
 		next;
 	}
-	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $file_size, $mtime);
+	push @ed2k_of_processed_files, my $ed2k = ed2k_hash($file, $size, $mtime);
 
 	unless ($conf->hash_only) {
-		process_file($file, $ed2k, $file_size);
+		process_file($file, $ed2k, $size);
 	}
 }
 $sl->finalize;
