@@ -64,7 +64,10 @@ sub parse {
 }
 
 sub stringify {
-	$_[0]{stringify} //= $_[0]{tag} . $_[0]{min} . ($_[0]{max} > $_[0]{min} ? '-' . $_[0]{tag} . $_[0]{max} : '');
+	$_[0]{stringify}
+		//= $_[0]{tag}
+		. $_[0]{min}
+		. ($_[0]{max} > $_[0]{min} ? '-' . $_[0]{tag} . $_[0]{max} : '');
 }
 
 sub tag { $_[0]{tag} }
