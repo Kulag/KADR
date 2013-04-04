@@ -111,7 +111,7 @@ sub relative {
 	my $self = shift;
 	@_
 		? $self->SUPER::relative(@_)
-		: $self->{_relative}{$self->_spec->curdir} //= $self->SUPER::relative;
+		: ($self->{_relative}{$self->_spec->curdir} //= $self->SUPER::relative);
 }
 
 sub subsumes {
