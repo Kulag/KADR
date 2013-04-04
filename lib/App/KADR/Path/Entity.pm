@@ -3,6 +3,27 @@ package App::KADR::Path::Entity;
 
 use common::sense;
 use Encode;
+use Params::Util qw(_INSTANCE);
+use Scalar::Util qw(refaddr);
+
+use overload '<=>' => 'abs_cmp', fallback => 1;
+
+sub abs_cmp {
+	return -1 unless defined $_[1];
+
+	# Same object.
+	# Use refaddr since this method is used as the == overload fallback.
+	return 0 if refaddr $_[0] == refaddr $_[1];
+
+	my $a = shift;
+	my $b = _INSTANCE($_[0], __PACKAGE__) || $a->new($_[0]);
+
+	return -1 if ref($a) ne ref $b;
+
+	return 0 if $a eq $b;
+
+	return $a->absolute cmp $b->absolute;
+}
 
 sub exists         { -e $_[0] }
 sub is_dir_exists  { -d $_[0] }

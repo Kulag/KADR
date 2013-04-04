@@ -228,7 +228,7 @@ sub move_file {
 	my ($self, $file_sl, $old, $ed2k, $new) = @_;
 
 	# Doesn't need to be renamed.
-	return if $old eq $new || $old->absolute eq $new->absolute;
+	return if $old == $new;
 
 	my $display_new = shortest $new->relative, $new;
 
