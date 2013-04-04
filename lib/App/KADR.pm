@@ -365,7 +365,7 @@ sub process_file {
 	# We can't end file/dir names in a dot on windows.
 	if ($conf->windows_compatible_filenames) {
 		$newname = File->new(
-			map { s{\.$}{}r }
+			map { s{\.+$}{}r }
 			($newname->has_dir ? $newname->dir->dir_list : ()),
 			$newname->basename
 		);
