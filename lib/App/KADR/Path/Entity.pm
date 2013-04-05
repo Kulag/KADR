@@ -9,7 +9,7 @@ use Scalar::Util qw(refaddr);
 use overload '<=>' => 'abs_cmp', fallback => 1;
 
 sub abs_cmp {
-	return -1 unless defined $_[1];
+	return 1 unless defined $_[1];
 
 	# Same object.
 	# Use refaddr since this method is used as the == overload fallback.
@@ -18,7 +18,7 @@ sub abs_cmp {
 	my $a = shift;
 	my $b = _INSTANCE($_[0], __PACKAGE__) || $a->new($_[0]);
 
-	return -1 if ref $a ne ref $b;
+	return ref $a cmp ref $b if ref $a ne ref $b;
 
 	return $a->absolute cmp $b->absolute;
 }

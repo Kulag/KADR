@@ -4,13 +4,15 @@ use File::HomeDir;
 use FindBin;
 use Test::More;
 
-my $home   = dir(File::HomeDir->my_home);
-my $bindir = dir($FindBin::Bin);
+my $bindir   = dir($FindBin::Bin);
+my $home     = dir(File::HomeDir->my_home);
+my $homefile = file(File::HomeDir->my_home);
 
 subtest 'abs_cmp' => sub {
 	ok $home != undef;
 	ok $home eq File::HomeDir->my_home;
-	ok $home != file(File::HomeDir->my_home);
+	ok $home != $homefile;
+	is $home <=> $homefile, ($homefile <=> $home) * -1;
 	ok $home eq dir(File::HomeDir->my_home);
 	ok $home == dir(File::HomeDir->my_home);
 	ok $home ne $bindir;
