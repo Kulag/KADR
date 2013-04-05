@@ -8,10 +8,10 @@ use App::KADR::Moose;
 use aliased 'App::KADR::AniDB::EpisodeNumber';
 use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
+use App::KADR::DBI;
 use aliased 'App::KADR::Path::File';
 use aliased 'App::KADR::Term::StatusLine::Fractional';
 use App::KADR::Util qw(:pathname_filter shortest);
-use DBI::SpeedySimple;
 use Digest::ED2K;
 use Encode;
 use File::Copy;
@@ -476,7 +476,7 @@ sub _build_db {
 	my $self = shift;
 	my $conf = $self->conf;
 
-	my $db = DBI::SpeedySimple->new($conf->database);
+	my $db = App::KADR::DBI->new($conf->database);
 	$db->{dbh}->do(SCHEMA_KNOWN_FILES) or die 'Error initializing known_files';
 
 	if ($conf->expire_cache) {

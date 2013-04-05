@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS anidb_mylist_anime (
 	`updated` INT)
 };
 
-has 'db', is => 'ro', isa => 'DBI::SpeedySimple', required => 1;
+has 'db', is => 'ro', isa => 'App::KADR::DBI', required => 1;
 
 sub anime {
 	my ($self, %params) = @_;
