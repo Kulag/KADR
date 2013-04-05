@@ -9,6 +9,7 @@ my $bindir = dir($FindBin::Bin);
 
 subtest 'abs_cmp' => sub {
 	ok $home != undef;
+	ok $home eq File::HomeDir->my_home;
 	ok $home != file(File::HomeDir->my_home);
 	ok $home eq dir(File::HomeDir->my_home);
 	ok $home == dir(File::HomeDir->my_home);

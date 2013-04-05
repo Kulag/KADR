@@ -18,9 +18,7 @@ sub abs_cmp {
 	my $a = shift;
 	my $b = _INSTANCE($_[0], __PACKAGE__) || $a->new($_[0]);
 
-	return -1 if ref($a) ne ref $b;
-
-	return 0 if $a eq $b;
+	return -1 if ref $a ne ref $b;
 
 	return $a->absolute cmp $b->absolute;
 }
