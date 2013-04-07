@@ -45,7 +45,7 @@ has [qw(anidb conf db files pathname_filter path_tx)], is => 'lazy';
 sub cache_expire_mylist_anime {
 	my $self = shift;
 	my $conf = $self->conf;
-	my $db   = $self->db;
+	my $db   = shift;
 
 	# Clean stale unwatched records.
 	$db->{dbh}->do(
@@ -483,7 +483,7 @@ sub _build_db {
 		$db->{dbh}->do('DELETE FROM anidb_anime WHERE updated < ' . (time - $conf->cache_timeout_anime));
 		$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
 
-		$self->cache_expire_mylist_anime;
+		$self->cache_expire_mylist_anime($db);
 	}
 
 	if ($conf->load_local_cache_into_memory) {
