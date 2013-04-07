@@ -4,16 +4,16 @@
 
 use v5.14;
 use common::sense;
-use DBI::SpeedySimple;
+use DBI;
 use FindBin;
 
 use lib "$FindBin::RealBin/../lib";
 use App::KADR::Config;
 
 my $conf = App::KADR::Config->new_with_options;
-my $db   = DBI::SpeedySimple->new($conf->database);
+my $db   = DBI->connect($conf->database) or die $DBI::errstr;
 
-my $files  = $db->{dbh}->selectall_arrayref(<<'END_SELECT');
+my $files  = $db->selectall_arrayref(<<'END_SELECT');
 SELECT f.ed2k, f.size, f.filename FROM known_files f
 LEFT JOIN adbcache_file ON f.ed2k = adbcache_file.ed2k
 WHERE adbcache_file.ed2k IS NULL
