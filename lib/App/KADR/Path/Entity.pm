@@ -18,6 +18,7 @@ sub abs_cmp {
 	my $a = shift;
 	my $b = _INSTANCE($_[0], __PACKAGE__) || $a->new($_[0]);
 
+	# Different entity subclass.
 	return ref $a cmp ref $b if ref $a ne ref $b;
 
 	return $a->absolute cmp $b->absolute;
@@ -52,3 +53,14 @@ sub _decode_path {
 
 A "placeholder" of sorts to allow portable operations on Unicode paths to be
 added later.
+
+=head1 METHODS
+
+=head2 C<abs_cmp>
+
+	my $cmp = $dir->abs_cmp('/home');
+	my $cmp = $dir->abs_cmp(dir());
+	my $cmp = $dir <=> '/home';
+
+Compare two path entities of the same subclass as if both are relative to
+the current working directory.
