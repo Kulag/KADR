@@ -24,7 +24,7 @@ sub error {
 
 sub success {
 	my $self = shift;
-	$self->error ? undef : $self->res;
+	$self->error ? () : $self->res;
 }
 
 sub tag {
