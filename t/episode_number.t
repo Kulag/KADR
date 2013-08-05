@@ -1,8 +1,6 @@
-#!/usr/bin/env perl
-use v5.10;
 use common::sense;
 use Test::Fatal;
-use Test::More tests => 43;
+use Test::More;
 
 use App::KADR::AniDB::EpisodeNumber;
 
@@ -46,7 +44,6 @@ is EpisodeNumber('1-2,C5-C6,S1-S5') & EpisodeNumber('C1-C3,C5,S8,S1,2-3'), '2,C5
 
 ok EpisodeNumber('5-6,S1,C4')->in('1-13,C1-C6,S1-S2'), 'in works';
 ok !EpisodeNumber('5-6,S1,C4')->in('1'), 'in caches correctly';
-is exception { EpisodeNumber('54')->in('1-13') }, undef, 'Doesn\'t mysteriously rethrow exceptions';
 
 ok EpisodeNumber('1-13,C1-C6,S1-S2')->contains('5-6,S1,C4'), 'contains works';
 ok !EpisodeNumber('1')->contains('5-6,S1,C4'), 'not contains works';
@@ -61,3 +58,5 @@ is EpisodeNumber('2-3,S1')->padded(3), '002-003,S001', 'tagged padding ok';
 is EpisodeNumber('1,S1')->padded({'' => 2}), '01,S1', 'unconfigured tags work ok';
 is EpisodeNumber('2-3,S1,C1')->padded({'' => 3, S => 2, C => 1}), '002-003,C1,S01', 'per-tag padding';
 like exception { EpisodeNumber(1)->padded([]) }, qr{Invalid padding configuration};
+
+done_testing;
