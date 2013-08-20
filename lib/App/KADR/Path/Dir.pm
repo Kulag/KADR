@@ -2,6 +2,7 @@ package App::KADR::Path::Dir;
 # ABSTRACT: Path::Class::Dir for KADR, faster
 
 use App::KADR::Path::File;
+use App::KADR::Path::Util qw(expand_user);
 use App::KADR::Util qw(_STRINGLIKE0);
 use Carp qw(croak);
 use common::sense;
@@ -69,23 +70,23 @@ sub new {
 			return $_[0] if ref $_[0] eq $class;
 
 			# 'dir'
-			if    (length $_[0])  { $_[0] }
+			if (length $_[0]) { expand_user $class->_spec, $_[0] }
 
 			# ''
 			elsif (defined $_[0]) { $class->_spec->rootdir }
-				
+
 			# If the only arg is undef, it's probably a mistake.
 			# Without this special case here, we'd return the root directory,
 			# which is a lousy thing to do to someone when they made a mistake.
 			# Return nothing instead.
-			else                  { return }
+			else {return}
 		}
 
 		# ()
 		elsif (@_ == 0) { $class->_spec->curdir }
 
 		# 'dir', 'dir'
-		else            { $class->_spec->catdir(@_) }
+		else { expand_user $class->_spec, $class->_spec->catdir(@_) }
 	};
 
 	# Try to return an cached class for the path.
