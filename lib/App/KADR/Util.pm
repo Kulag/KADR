@@ -5,8 +5,7 @@ use common::sense;
 use List::AllUtils qw(firstidx reduce);
 use Params::Util qw(_STRING);
 use Sub::Exporter -setup => {
-	exports => [qw(pathname_filter pathname_filter_windows shortest
-		strip_import_params _STRINGLIKE0)],
+	exports => [qw(pathname_filter pathname_filter_windows shortest _STRINGLIKE0)],
 	groups => {
 		pathname_filter => [qw(pathname_filter pathname_filter_windows)],
 	}
@@ -30,25 +29,6 @@ sub pathname_filter_windows {
 
 sub shortest(@) {
 	reduce { length $b < length $a ? $b : $a } @_
-}
-
-sub strip_import_params {
-	my $args = shift;
-	my %param_names = map { $_ => 1 } @_;
-
-	my $i;
-	my $params;
-	while (++$i < @$args) {
-		local $_ = $args->[$i];
-		next if ref $_;
-		my $name = s/^-//r;
-		next unless delete $param_names{$name};
-
-		$params->{$name} = $args->[ $i + 1 ];
-		splice @$args, $i, 2;
-	}
-	
-	$params;
 }
 
 # XXX: From Moose::Util, replace with Params::Util version once it gets moved.
