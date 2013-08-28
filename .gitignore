@@ -4,6 +4,7 @@ Build
 MANIFEST*.bak
 MYMETA.*
 _build/
+.build/
 blib/
 cover_db/
 nytprof/
