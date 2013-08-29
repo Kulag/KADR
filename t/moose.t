@@ -37,6 +37,11 @@ package TestMutable {
 	use App::KADR::Moose -mutable => 1;
 }
 
+package TestAttrs {
+	use App::KADR::Moose -attr => { is => 'ro' };
+	has 'ro';
+}
+
 use common::sense;
 
 my $t = TestClass->new;
@@ -62,5 +67,8 @@ ok $t->role_attr('foo'), 'role_attr writable';
 is $t->role_attr, 'foo', 'role_attr readable';
 
 ok !TestMutable->meta->is_immutable, 'mutable flag works';
+
+like exception { TestAttrs->new->ro(1) }, qr/read-only/,
+	'TestAttrs default is ro';
 
 done_testing;

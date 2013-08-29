@@ -2,7 +2,6 @@ package App::KADR::Moose::Policy;
 # ABSTRACT: Moose policy for KADR
 
 use v5.14;
-use common::sense;
 use Const::Fast;
 use Hook::AfterRuntime;
 use Moose 1.9900 ();
@@ -14,24 +13,27 @@ use MooseX::StrictConstructor 0.19 ();
 use namespace::autoclean ();
 use true;
 
-use aliased 'App::KADR::Moose::Exporter', 'MX';
+no strict;
+use common::sense;
 
-# XXX: MooseX::HasDefaults::RW doesn't set role_metaroles.
-const my @ATTRIBUTE_TRAITS => qw(
-	MooseX::HasDefaults::Meta::IsRW
-	MooseX::Traits::Attribute::Chained
-);
+use aliased 'App::KADR::Moose::Exporter', 'MX';
+use aliased 'App::KADR::Moose::AttrDefaults';
+
+const my %ATTR_DEFAULTS   => qw(is rw);
 const my $FEATURE_VERSION => ':5.14';
 const my @PARAM_NAMES     => qw(noclean mutable);
+
+my $default_attr_role = AttrDefaults->meta->generate_role(
+	parameters => { opts => {%ATTR_DEFAULTS} });
 
 MX->setup_import_methods(
 	also => [
 		'MooseX::AlwaysCoerce', 'MooseX::AttributeShortcuts',
 		'MooseX::StrictConstructor',
 	],
-	class_metaroles => { attribute         => [@ATTRIBUTE_TRAITS] },
-	import_params   => [qw(noclean mutable)],
-	role_metaroles  => { applied_attribute => [@ATTRIBUTE_TRAITS] },
+	class_metaroles => { attribute         => ['MooseX::Traits::Attribute::Chained'] },
+	import_params   => [qw(attr mutable noclean)],
+	role_metaroles  => { applied_attribute => ['MooseX::Traits::Attribute::Chained'] },
 );
 
 sub after_import {
@@ -62,6 +64,24 @@ sub after_import {
 	}
 
 	$meta;
+}
+
+sub init_meta {
+	my ($class, %args) = @_;
+	my $params = MX->get_import_params($args{for_class});
+
+	my $role
+		= !%{ $params->{attr} }
+		? $default_attr_role
+		: AttrDefaults->meta->generate_role(
+		parameters => { opts => { %ATTR_DEFAULTS, %{ $params->{attr} } } });
+
+	Moose::Util::MetaRole::apply_metaroles(
+		for                          => $args{for_class},
+		class_metaroles              => { attribute => [$role] },
+		role_metaroles               => { applied_attribute => [$role] },
+		parameterized_role_metaroles => { applied_attribute => [$role] },
+	);
 }
 
 =head1 SYNPOSIS
@@ -108,6 +128,10 @@ L<MooseX::StrictConstructor> is enabled.
 L<App::KADR::Moose::Policy> implements the following class methods.
 
 =head1 IMPORT PARAMETERS
+
+=head2 C<-attr>
+
+Hashref of default attribute options. Defaults to {is => 'rw'}.
 
 =head2 C<-mutable>
 
