@@ -1,20 +1,23 @@
 package App::KADR::AniDB::UDP::Client;
 # ABSTRACT: Client for AniDB's UDP API
 
-use aliased 'App::KADR::AniDB::EpisodeNumber';
 use App::KADR::AniDB::Types qw(UserName);
-use App::KADR::Moose -noclean => 1;
+use App::KADR::Moose;
 use Carp qw(croak);
-use Const::Fast;
 use Encode;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
-use List::MoreUtils qw(mesh);
 use List::Util qw(min max);
 use MooseX::Types::LoadableClass qw(LoadableClass);
 use MooseX::Types::Moose qw(Bool Int Num Str);
 use MooseX::NonMoose;
 use Time::HiRes;
+
+use aliased 'App::KADR::AniDB::Content::Anime';
+use aliased 'App::KADR::AniDB::Content::File';
+use aliased 'App::KADR::AniDB::Content::MylistSet';
+use aliased 'App::KADR::AniDB::Content::MylistEntry';
+use aliased 'App::KADR::AniDB::Role::Content::Referencer';
 
 extends 'Mojo::EventEmitter';
 
@@ -32,60 +35,9 @@ use constant LONGTERM_RATELIMIT_THRESHOLD  => 100;
 use constant SHORTTERM_RATELIMIT_DELAY     => 2;
 use constant SHORTTERM_RATELIMIT_THRESHOLD => 5;
 
-use constant FILE_STATUS_CRCOK  => 0x01;
-use constant FILE_STATUS_CRCERR => 0x02;
-use constant FILE_STATUS_ISV2   => 0x04;
-use constant FILE_STATUS_ISV3   => 0x08;
-use constant FILE_STATUS_ISV4   => 0x10;
-use constant FILE_STATUS_ISV5   => 0x20;
-use constant FILE_STATUS_UNC    => 0x40;
-use constant FILE_STATUS_CEN    => 0x80;
-
 use constant FILE_FMASK => "7ff8fff8";
 use constant FILE_AMASK => "0000fcc0";
-
 use constant ANIME_MASK => "f0e0d8fd0000f8";
-
-const my @ANIME_FIELDS => qw(
-	aid dateflags year type
-	romaji_name kanji_name english_name
-	episode_count highest_episode_number air_date end_date
-	rating vote_count temp_rating temp_vote_count review_rating review_count is_r18
-	special_episode_count credits_episode_count other_episode_count trailer_episode_count parody_episode_count
-);
-
-const my @FILE_FIELDS => qw(
-	fid
-	aid eid gid lid other_episodes is_deprecated status
-	size ed2k md5 sha1 crc32
-	quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
-	dub_language sub_language length description air_date
-	episode_number episode_english_name episode_romaji_name episode_kanji_name episode_rating episode_vote_count
-	group_name group_short_name
-);
-
-const my @MYLIST_MULTI_FIELDS => qw(
-	anime_title episodes eps_with_state_unknown eps_with_state_on_hdd
-	eps_with_state_on_cd eps_with_state_deleted watched_eps
-);
-
-const my @MYLIST_FILE_FIELDS => qw(
-	lid fid eid aid gid date state viewdate storage source other filestate
-);
-
-const my @MYLIST_MULTI_EPISODE_FIELDS => qw(
-	eps_with_state_unknown eps_with_state_on_hdd eps_with_state_on_cd
-	eps_with_state_deleted watched_eps
-);
-
-use enum qw(:MYLIST_STATE_=0 UNKNOWN HDD CD DELETED);
-
-const my %MYLIST_STATE_NAMES => (
-	MYLIST_STATE_UNKNOWN, 'unknown',
-	MYLIST_STATE_HDD, 'on HDD',
-	MYLIST_STATE_CD, 'on removable media',
-	MYLIST_STATE_DELETED, 'deleted',
-);
 
 has 'is_banned',                 isa => Bool;
 has 'max_attempts',              isa => Int,       predicate => 1;
@@ -118,14 +70,7 @@ sub anime {
 	die 'Unexpected return code for anime query: ' . $res->{code}
 		unless $res->{code} == 230;
 
-	my @values = (split /\|/, $res->{contents}[0])[0 .. @ANIME_FIELDS - 1];
-	my $anime = { mesh @ANIME_FIELDS, @values };
-
-	for my $field (qw{rating temp_rating review_rating}) {
-		$anime->{$field} = $anime->{$field} / 100.0 if $anime->{$field};
-	}
-
-	$anime;
+	$self->_parse_content(Anime, $res->{contents}[0]);
 }
 
 sub build_tx {
@@ -144,29 +89,7 @@ sub file {
 
 	die 'Unexpected return code for file query: ' . $res->{code} unless $res->{code} == 220;
 
-	# Parse
-	my @fields = (split /\|/, $res->{contents}[0])[ 0 .. @FILE_FIELDS - 1 ];
-	my $file = { mesh @FILE_FIELDS, @fields };
-
-	$file->{episode_number} = EpisodeNumber->parse($file->{episode_number});
-
-	$file;
-}
-
-sub file_version {
-	my($self, $file) = @_;
-	
-	if($file->{status} & FILE_STATUS_ISV2) {
-		return 2;
-	} elsif($file->{status} & FILE_STATUS_ISV3) {
-		return 3;
-	} elsif($file->{status} & FILE_STATUS_ISV4) {
-		return 4;
-	} elsif($file->{status} & FILE_STATUS_ISV5) {
-		return 5;
-	} else {
-		return 1;
-	}
+	$self->_parse_content(File, $res->{contents}[0]);
 }
 
 sub has_session {
@@ -234,31 +157,16 @@ sub mylist {
 	# No such entry
 	return if !$res || $res->{code} == 321;
 
-	my ($type, $info);
 	if ($res->{code} == 221) {
-		$type = 'single';
-		$info = $self->_mylist_file_contents_parse($res->{contents});
+		$self->_parse_content(MylistEntry, $res->{contents}[0]);
 	}
 	elsif ($res->{code} == 312) {
-		my %base_info = ($params{aid} ? (aid => $params{aid}) : ());
+		my $ml = $self->_parse_content(MylistSet, $res->{contents}[0]);
 
-		$type = 'multiple';
-		$info = [ map {
-			my @values = (split /\|/, $_)[ 0 .. @MYLIST_MULTI_FIELDS - 1 ];
-			my $info = { %base_info, mesh @MYLIST_MULTI_FIELDS, @values };
-			$self->mylist_multi_parse_episodes($info);
-
-			$info;
-		} @{$res->{contents}} ];
+		# XXX: Make work with $params{aname} too.
+		$ml->aid($params{aid}) if $params{aid};
+		$ml;
 	}
-
-	wantarray ? ($type, $info) : $info;
-}
-
-sub mylist_multi_parse_episodes {
-	my ($self, $info) = @_;
-	$info->{$_} = EpisodeNumber->parse($info->{$_}) for @MYLIST_MULTI_EPISODE_FIELDS;
-	return;
 }
 
 sub mylist_add {
@@ -288,7 +196,7 @@ sub mylist_add {
 		# Entry already exists
 		elsif ($res->{code} == 310) {
 			$type = 'existing_entry';
-			$value = $self->_mylist_file_contents_parse($res->{contents});
+			$value = $self->_parse_content(MylistEntry, $res->{contents}[0]);
 		}
 		# Multiple entries
 		elsif ($res->{code} == 322) {
@@ -303,34 +211,29 @@ sub mylist_add {
 sub mylist_anime {
 	my ($self, %params) = @_;
 
-	my ($type, $mylist) = $self->mylist(%params);
+	my $mylist = $self->mylist(%params);
 
 	# Not found
 	return unless $mylist;
-
-	# Response was in expected format
-	if ($type eq 'multiple') {
-		die 'Got response for multiple anime' if @$mylist > 1;
-		return $mylist->[0];
-	}
+	
+	return $mylist if $mylist->isa(MylistSet);
 
 	# Mylist data for this anime consists of one episode.
-
 	# File and anime info is needed to emulate the expected output.
-	my $anime = $self->anime(aid => $mylist->{aid});
-	my $epno  = $self->file(fid => $mylist->{fid})->{episode_number};
-	my $none  = EpisodeNumber->new;
+	my $anime = $self->anime(aid => $mylist->aid);
+	my $epno  = $self->file(fid => $mylist->fid)->episode_number;
+	my $state = $mylist->state;
 
-	{
-		aid => $mylist->{aid},
-		anime_title => $anime->{romaji_name},
-		episodes => $anime->{episode_count},
-		eps_with_state_unknown => ($mylist->{state} == MYLIST_STATE_UNKNOWN ? $epno : $none),
-		eps_with_state_on_hdd => ($mylist->{state} == MYLIST_STATE_HDD ? $epno : $none),
-		eps_with_state_on_cd => ($mylist->{state} == MYLIST_STATE_CD ? $epno : $none),
-		eps_with_state_deleted => ($mylist->{state} == MYLIST_STATE_DELETED ? $epno : $none),
-		watched_eps => ($mylist->{viewdate} > 0 ? $epno : $none),
-	}
+	MylistSet->new(
+		aid => $mylist->aid,
+		anime_title => $anime->romaji_name,
+		episodes => $anime->episode_count,
+		eps_with_state_unknown => ($state == $mylist->STATE_UNKNOWN ? $epno : ''),
+		eps_with_state_on_hdd => ($state == $mylist->STATE_HDD ? $epno : ''),
+		eps_with_state_on_cd => ($state == $mylist->STATE_CD ? $epno : ''),
+		eps_with_state_deleted => ($state == $mylist->STATE_DELETED ? $epno : ''),
+		watched_eps => ($mylist->viewdate > 0 ? $epno : ''),
+	);
 }
 
 sub mylist_anime_query {
@@ -340,12 +243,12 @@ sub mylist_anime_query {
 
 sub mylist_file {
 	my ($self, %params) = @_;
-	my ($type, $info) = $self->mylist(%params);
+	my $info = $self->mylist(%params);
 
 	# Not found
 	return unless $info;
 
-	die 'Got multiple mylist entries response' unless $type eq 'single';
+	die 'Got multiple mylist entries response' unless $info->isa(MylistEntry);
 
 	$info;
 }
@@ -353,11 +256,6 @@ sub mylist_file {
 sub mylist_file_query {
 	my ($self, $query) = @_;
 	$self->mylist_file(%$query);
-}
-
-sub mylist_state_name_for {
-	my ($self, $state_id) = @_;
-	$MYLIST_STATE_NAMES{$state_id} or croak 'No such mylist state: ' . $state_id;
 }
 
 sub start {
@@ -400,6 +298,13 @@ sub _next_tag {
 	)->();
 }
 
+sub _parse_content {
+	my ($self, $class, $str) = @_;
+	my $c = $class->parse($str);
+	$c->client($self) if $c->does(Referencer);
+	$c;
+}
+
 sub _response_parse_skeleton {
 	my ($self, $bytes) = @_;
 
@@ -420,12 +325,6 @@ sub _response_parse_skeleton {
 	# Parse header.
 	$header =~ s/^(?:(T[0-9a-f]+) )?(\d+) //;
 	{tag => $1, code => int $2, header => $header, contents => \@contents}
-}
-
-sub _mylist_file_contents_parse {
-	my ($self, $contents) = @_;
-	my @values = (split /\|/, $contents->[0])[ 0 .. @MYLIST_FILE_FIELDS - 1 ];
-	+{ mesh @MYLIST_FILE_FIELDS, @values }
 }
 
 sub _sendrecv {

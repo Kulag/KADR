@@ -2,6 +2,7 @@ package App::KADR::AniDB::UDP::Client::Caching;
 # ABSTRACT: Caching layer atop the AniDB UDP Client
 
 use App::KADR::Moose;
+use List::AllUtils qw(first);
 use aliased 'App::KADR::AniDB::EpisodeNumber';
 
 extends 'App::KADR::AniDB::UDP::Client';
@@ -111,6 +112,7 @@ sub anime {
 
 	# Cached
 	if (my $anime = $db->fetch('anidb_anime', ['*'], \%params, 1)) {
+		$anime->client($self);
 		return $anime;
 	}
 
@@ -121,8 +123,7 @@ sub anime {
 	$anime->{$_} =~ tr/`/'/ for keys %$anime;
 
 	# Cache
-	$anime->{updated} = time;
-	$db->set('anidb_anime', $anime, { aid => $anime->{aid} });
+	$db->set('anidb_anime', $anime, { aid => $anime->aid });
 
 	$anime;
 }
@@ -143,7 +144,7 @@ sub file {
 
 	# Cached
 	if (my $file = $db->fetch("adbcache_file", ["*"], \%params, 1)) {
-		$file->{episode_number} = EpisodeNumber->parse($file->{episode_number});
+		$file->client($self);
 		return $file;
 	}
 
@@ -151,11 +152,11 @@ sub file {
 	return unless my $file = $self->SUPER::file(%params);
 
 	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-	$file->{$_} =~ tr/`/'/ for grep { $_ ne 'episode_number' } keys %$file;
+	my %obj = (episode_number => 1, client => 1);
+	$file->{$_} =~ tr/`/'/ for grep { !$obj{$_} } keys %$file;
 
 	# Cache
-	$file->{updated} = time;
-	$db->set('adbcache_file', $file, { fid => $file->{fid} });
+	$db->set('adbcache_file', $file, { fid => $file->fid });
 
 	$file;
 }
@@ -164,34 +165,47 @@ sub get_cached_lid {
 	my ($self, %params) = @_;
 	return unless exists $params{fid} || exists $params{ed2k};
 
-	my $file = $self->db->fetch('adbcache_file', ['lid'],
-		{ size => $params{size}, ed2k => $params{ed2k} }, 1);
-	$file->{lid};
+	if (my $file = $self->db->fetch('adbcache_file', ['*'], \%params, 1)) {
+		return $file->lid;
+	}
+	();
+}
+
+sub mylist_add {
+	my ($self, %params) = @_;
+	my ($type, $info) = $self->SUPER::mylist_add(%params);
+
+	if ($type eq 'added') {
+		my $db = $self->db;
+		my %fparams = map { $params{$_} ? ($_, $params{$_}) : () } qw(fid ed2k size);
+		if (my $file = $db->fetch('adbcache_file', ['*'], \%fparams, 1)) {
+			$db->update('adbcache_file', {lid => $info}, \%fparams);
+		}
+	}
+
+	wantarray ? ($type, $info) : $info;
 }
 
 sub mylist_file {
 	my ($self, %params) = @_;
 	my $db = $self->db;
 
-	# Try to get a cached lid if passed fid / ed2k & size
 	if (my $lid = $self->get_cached_lid(%params)) {
-		delete @params{qw(fid ed2k size)};
-		$params{lid} = $lid;
+		%params = (lid => $lid);
 	}
 
 	# Cached
-	if ($params{lid}) {
-		my $mylist = $db->fetch('anidb_mylist_file', ['*'],
-			{ lid => $params{lid} }, 1);
-		return $mylist if $mylist;
+	my $key = $params{lid} ? 'lid' : $params{fid} ? 'fid' : undef;
+	if ($key and my $mylist = $db->fetch('anidb_mylist_file', ['*'], { $key => $params{$key} }, 1)) {
+		$mylist->client($self);
+		return $mylist;
 	}
 
 	# Update
 	return unless my $mylist = $self->SUPER::mylist_file(%params);
 
 	# Cache
-	$mylist->{updated} = time;
-	$db->set('anidb_mylist_file', $mylist, { lid => $mylist->{lid} });
+	$db->set('anidb_mylist_file', $mylist, { lid => $mylist->lid });
 
 	$mylist;
 }
@@ -202,7 +216,6 @@ sub mylist_anime {
 
 	# Cached
 	if (my $mylist = $db->fetch('anidb_mylist_anime', ['*'], \%params, 1)) {
-		$self->mylist_multi_parse_episodes($mylist);
 		return $mylist;
 	}
 
@@ -213,8 +226,7 @@ sub mylist_anime {
 	$mylist->{anime_title} =~ tr/`/'/;
 
 	# Cache
-	$mylist->{updated} = time;
-	$db->set('anidb_mylist_anime', $mylist, { aid => $mylist->{aid} });
+	$db->set('anidb_mylist_anime', $mylist, { aid => $mylist->aid });
 
 	$mylist;
 }

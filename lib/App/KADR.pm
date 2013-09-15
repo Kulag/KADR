@@ -5,13 +5,11 @@ package App::KADR;
 use App::KADR::Pid -onlyone;
 
 use App::KADR::Moose;
-use aliased 'App::KADR::AniDB::EpisodeNumber';
 use App::KADR::AniDB::UDP::Client::Caching;
 use App::KADR::Config;
 use App::KADR::DBI;
-use aliased 'App::KADR::Path::File';
-use aliased 'App::KADR::Term::StatusLine::Fractional';
 use App::KADR::Util qw(:pathname_filter shortest);
+use Scalar::Defer qw(lazy);
 use Digest::ED2K;
 use Encode;
 use File::Copy;
@@ -23,6 +21,14 @@ use POSIX ();
 use Text::Xslate;
 use Time::HiRes;
 
+use aliased 'App::KADR::AniDB::Content::Anime';
+use aliased 'App::KADR::AniDB::Content::File';
+use aliased 'App::KADR::AniDB::Content::MylistSet';
+use aliased 'App::KADR::AniDB::Content::MylistEntry';
+use aliased 'App::KADR::AniDB::EpisodeNumber';
+use aliased 'App::KADR::KnownFile';
+use aliased 'App::KADR::Path::File', 'FilePath';
+use aliased 'App::KADR::Term::StatusLine::Fractional';
 
 sub EMPTY_ED2K() {'31d6cfe0d16ae931b73c59d7e0c089c0'}
 use constant TERM_SPEED       => $ENV{KADR_TERM_SPEED}       // 0.05;
@@ -209,7 +215,7 @@ sub manage {
 
 	if ($conf->update_anidb_records_for_deleted_files && !$conf->hash_only) {
 		$self->update_mylist_state_for_missing_files(
-			\@ed2k_of_processed_files, $a->MYLIST_STATE_DELETED);
+			\@ed2k_of_processed_files, MylistEntry->STATE_DELETED);
 	}
 
 	if (!$conf->test && $conf->delete_empty_dirs_in_scanned) {
@@ -273,42 +279,36 @@ sub move_file {
 }
 
 sub process_file {
-	my ($self, $sl, $file, $ed2k, $file_size) = @_;
-	my $a = $self->anidb;
-	my $fileinfo = $a->file(ed2k => $ed2k, size => $file_size);
+	my ($self, $sl, $path, $ed2k, $file_size) = @_;
+	my $a    = $self->anidb;
+	my $file = $a->file(ed2k => $ed2k, size => $file_size);
 
 	# File not in AniDB.
-	unless ($fileinfo) {
+	unless ($file) {
 		$sl->child('Freeform')->finalize('Ignored');
 		return;
 	}
 
-	my $anime = $fileinfo->{anime} = $a->anime(aid => $fileinfo->{aid});
-
-	my $mylistinfo = $fileinfo->{mylist}
-		= $a->mylist_file($fileinfo->{lid}
-		? (lid => $fileinfo->{lid})
-		: (fid => $fileinfo->{fid}));
-
-	my $conf = $self->conf;
-	my $db   = $self->db;
+	my $conf   = $self->conf;
+	my $db     = $self->db;
+	my $mylist = $file->mylist;
 
 	# Auto-add to mylist.
-	if(!defined $mylistinfo && !$conf->test) {
+	if (!defined $mylist && !$conf->test) {
 		my $proc_sl = $sl->child('Freeform')->update('Adding to AniDB Mylist');
-		if(my $lid = $a->mylist_add(fid => $fileinfo->{fid}, state => $a->MYLIST_STATE_HDD)) {
-			$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}}); # Force an update of this record, it's out of date.
-			$db->update('adbcache_file', {lid => $lid}, {fid => $fileinfo->{fid}});
+		if(my $lid = $a->mylist_add(fid => $file->fid, state => MylistEntry->STATE_HDD)) {
+			$db->remove('anidb_mylist_anime', { aid => $file->aid }); # Force an update of this record, it's out of date.
+			$db->update('adbcache_file', {lid => $lid}, { fid => $file->fid });
 			$proc_sl->finalize_and_log('Added to AniDB Mylist');
 		}
 		else {
 			$proc_sl->finalize_and_log('Error adding to AniDB Mylist');
 		}
 	}
-	elsif($mylistinfo->{state} != $a->MYLIST_STATE_HDD && !$conf->test) {
+	elsif (!$conf->test && $mylist->state != MylistEntry->STATE_HDD) {
 		my $proc_sl = $sl->child('Freeform')->update('Setting AniDB Mylist state to "On HDD"');
-		if($a->mylistedit({lid => $fileinfo->{lid}, state => $a->MYLIST_STATE_HDD})) {
-			$db->update('anidb_mylist_file', {state => $a->MYLIST_STATE_HDD}, {fid => $mylistinfo->{fid}});
+		if($a->mylistedit({lid => $file->lid, state => MylistEntry->STATE_HDD})) {
+			$db->update('anidb_mylist_file', {state => MylistEntry->STATE_HDD}, {fid => $mylist->fid});
 			$proc_sl->finalize_and_log('Set AniDB Mylist state to "On HDD"');
 		}
 		else {
@@ -316,67 +316,41 @@ sub process_file {
 		}
 	}
 
-	my $mylistanimeinfo = $fileinfo->{anime}->{mylist}
-		= $a->mylist_anime(aid => $fileinfo->{aid});
-
-	# Note: Mylist anime data is broken server-side, only the min is provided.
-	if ($mylistinfo->{state} == $a->MYLIST_STATE_HDD
-	&& !$fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{eps_with_state_on_hdd}))
+	# Mylist / mylist anime cache consistency check
+	# TODO: Move to the client somehow.
+	if ($mylist
+		&& $mylist->state == MylistEntry->STATE_HDD
+		&& !$file->episode_is_internal)
 	{
-		# Our mylistanime record is old. Can happen if the file was not added by kadr.
-		$db->remove('anidb_mylist_anime', {aid => $fileinfo->{aid}});
-		$mylistanimeinfo = $a->mylist_anime(aid => $fileinfo->{aid});
+		# Our mylistanime record is old.
+		# Can happen if the file was not added by kadr.
+		$db->remove('anidb_mylist_anime', { aid => $file->aid });
+
+		# XXX: Replace with unset hooks on content later.
+		delete $file->{anime_mylist};
 	}
 
-	# Note: Mylist anime data is broken server-side, only the min is provided.
-	$fileinfo->{episode_watched} = $fileinfo->{episode_number}->in_ignore_max($mylistanimeinfo->{watched_eps});
+	# File Move
+	my $vars = {
+		file         => $file,
+		anime        => lazy { $file->anime },
+		anime_mylist => lazy { $file->anime_mylist },
+		mylist       => lazy { $file->mylist },
+	};
 
-	my $episode_count = $anime->{episode_count} || $anime->{highest_episode_number};
-	$fileinfo->{episode_number_padded} = $fileinfo->{episode_number}->padded({'' => length $episode_count});
-
-	$fileinfo->{video_codec} =~ s/H264\/AVC/H.264/g;
-	$fileinfo->{audio_codec} =~ s/Vorbis \(Ogg Vorbis\)/Vorbis/g;
-
-	# Check if this is the only episode going into the folder.
-	# TODO: Since unwatched/watched dirs are no longer the only possible
-	# states, this may be wrong depending on configuration.
-	$fileinfo->{only_episode_in_folder}
-		# Sole episode on HDD.
-		= $fileinfo->{episode_number} eq $mylistanimeinfo->{eps_with_state_on_hdd}
-		|| (
-			$fileinfo->{episode_watched}
-			# Sole watched episode.
-			? $fileinfo->{episode_number} eq $mylistanimeinfo->{watched_eps}
-			# Sole unwatched episode.
-			# FIXME: Calls count on undefined mylist info in --test mode with no eps in anime in mylist.
-			: $fileinfo->{episode_number}->count == $mylistanimeinfo->{eps_with_state_on_hdd}->count - $mylistanimeinfo->{watched_eps}->count
-		);
-
-	$fileinfo->{is_primary_episode} =
-		# This is the only episode.
-		$anime->{episode_count} == 1 && $fileinfo->{episode_number} eq 1
-		# And this file contains the entire episode.
-		&& !$fileinfo->{other_episodes}
-		# And it has a generic episode name.
-		# Usually equal to the anime_type except for movies where multiple episodes may exist for split releases.
-		&& ($fileinfo->{episode_english_name} eq $anime->{type} || $fileinfo->{episode_english_name} eq 'Complete Movie');
-
-	$fileinfo->{file_version} = $a->file_version($fileinfo);
-
-	my $newname = File->new(
-		$self->path_tx->render('path.tx', $fileinfo) =~ s{[\r\n]}{}gr
-	);
+	my $newname = FilePath->new(
+		$self->path_tx->render('path.tx', $vars) =~ s{[\r\n]}{}gr);
 
 	# We can't end file/dir names in a dot on windows.
 	if ($conf->windows_compatible_filenames) {
-		$newname = File->new(
+		$newname = FilePath->new(
 			map { s{\.+$}{}r }
 			($newname->has_dir ? $newname->dir->dir_list : ()),
 			$newname->basename
 		);
 	}
 
-	$self->move_file($sl, $file, $ed2k, $newname);
+	$self->move_file($sl, $path, $ed2k, $newname);
 }
 
 sub run {
@@ -391,11 +365,12 @@ sub update_mylist_state_for_missing_files {
 	my $conf = $self->conf;
 	my $db   = $self->db;
 
-	$set_state //= $a->MYLIST_STATE_DELETED;
-	my $set_state_name = $a->mylist_state_name_for($set_state);
+	$set_state //= MylistEntry->STATE_DELETED;
+	my $set_state_name = MylistEntry->state_name_for($set_state);
 
 	# Missing files.
-	# Would need to bind/interpolate too many values to "NOT IN ()", this is faster.
+	# Note: Loading all files is as fast as a long query with thousands of
+	# hashes in a NOT IN clause.
 	my $all_files = $db->{dbh}->selectall_arrayref('SELECT ed2k, size, filename FROM known_files');
 	my %have_files;
 	@have_files{ @$have_files } = ();
@@ -439,9 +414,10 @@ sub update_mylist_state_for_missing_files {
 		next unless $mylist_file;
 
 		# Don't overwrite user-set status.
-		unless ($mylist_file->{state} == $a->MYLIST_STATE_HDD) {
-			$sl->child('Freeform')
-				->finalize('AniDB Mylist status already set.');
+		unless ($mylist_file->state == MylistEntry->STATE_HDD) {
+			if ($mylist_file->state != $set_state) {
+				$sl->child('Freeform')->finalize('Mylist status already set.');
+			}
 			next;
 		}
 
@@ -482,7 +458,13 @@ sub _build_db {
 	my $self = shift;
 	my $conf = $self->conf;
 
-	my $db = App::KADR::DBI->new($conf->database);
+	my $db = App::KADR::DBI->new($conf->database, {
+		anidb_anime        => Anime,
+		adbcache_file      => File,
+		anidb_mylist_file  => MylistEntry,
+		anidb_mylist_anime => MylistSet,
+		known_files        => KnownFile,
+	});
 	$db->{dbh}->do(SCHEMA_KNOWN_FILES) or die 'Error initializing known_files';
 
 	if ($conf->expire_cache) {
@@ -538,7 +520,7 @@ sub _find_files {
 	my @dirs = @_;
 	my @files;
 
-	my $sl = Fractional->new(label => 'Scanning Directory',	max => \@dirs);
+	my $sl = Fractional->new(label => 'Scanning Directory', max => \@dirs);
 
 	for my $dir (@dirs) {
 		$sl->incr;

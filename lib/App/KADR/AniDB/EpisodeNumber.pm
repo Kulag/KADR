@@ -3,14 +3,20 @@ package App::KADR::AniDB::EpisodeNumber;
 
 use v5.10;
 use App::KADR::AniDB::EpisodeNumber::Range;
-use common::sense;
 use Carp qw(croak);
 use List::Util qw(sum);
+use Moose::Util::TypeConstraints;
 use overload
 	fallback => 1,
 	'""'     => 'stringify',
 	'&'      => 'intersection';
 use Scalar::Util qw(blessed);
+
+no warnings;
+use common::sense;
+
+class_type __PACKAGE__;
+coerce __PACKAGE__, from 'Str', via { __PACKAGE__->parse($_) };
 
 sub range_class() {'App::KADR::AniDB::EpisodeNumber::Range'}
 

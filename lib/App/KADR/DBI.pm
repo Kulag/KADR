@@ -5,10 +5,14 @@ use 5.010001;
 use common::sense;
 use DBI;
 use Encode;
+use Scalar::Util qw(blessed);
+
+use aliased 'App::KADR::Meta::Attribute::DoNotSerialize';
 
 sub new {
 	my $self = bless {}, shift;
 	my $dsn = shift;
+	$self->{class_map} = shift;
 
 	$self->{dbh} = DBI->connect($dsn) or die "Cannot connect: $DBI::errstr";
 
@@ -27,7 +31,9 @@ sub cache {
 		my @indexes = sort @{$to_cache->{indices}};
 		my $ckey = join '-', $to_cache->{table}, @indexes;
 		my $cache = $self->{cache}->{$ckey} = {};
-		my $sth = $self->{dbh}->prepare('SELECT * FROM ' . $to_cache->{table});
+		my $class = $self->{class_map}{ $to_cache->{table} };
+		my $keys = join ',', $self->_keys_for($class);
+		my $sth = $self->{dbh}->prepare("SELECT $keys FROM " . $to_cache->{table});
 		$sth->execute;
 
 		while (my $row = $sth->fetchrow_hashref) {
@@ -36,7 +42,7 @@ sub cache {
 			}
 
 			my $ckey2 = join '-', map { $row->{$_} } @indexes;
-			$cache->{$ckey2} = $row;
+			$cache->{$ckey2} = $class->new($row);
 		}
 	}
 }
@@ -48,6 +54,11 @@ sub fetch {
 	my @cache_keys = sort keys %$whereinfo;
 	if (my $a = $self->{cache}->{ join '-', $table, @cache_keys }->{ join '-', @$whereinfo{@cache_keys} }) {
 		return $a;
+	}
+
+	my $class = $what->[0] eq '*' && $self->{class_map}{$table};
+	if ($class) {
+		$what = [$self->_keys_for($class)];
 	}
 
 	my $sth = $self->{dbh}->prepare_cached("SELECT " . join(",", @$what) . " FROM `$table`" . $self->_whereinfo($whereinfo) . ($limit ? "LIMIT $limit" : "")) or die $DBI::errstr;
@@ -62,6 +73,7 @@ sub fetch {
 			if (!$self->{unicode}) {
 				Encode::_utf8_on $r->{$_} for keys %$r;
 			}
+			$r = $class->new($r) if $class;
 		}
 	}
 
@@ -81,6 +93,11 @@ sub exists {
 
 sub insert {
 	my($self, $table, $info) = @_;
+
+	if (blessed $info and my $class = $self->{class_map}{$table}) {
+		$info = { map { ($_, $info->$_) } $self->_keys_for($class) };
+	}
+
 	my $sth = $self->{dbh}->prepare_cached("INSERT INTO $table (" . join(",", map { "`$_`" } keys(%{$info})) . ") VALUES(" . join(",", map {"?"} keys(%{$info})) . ")");
 	my @vals = values(%{$info});
 	$sth->execute(@vals);
@@ -89,6 +106,11 @@ sub insert {
 
 sub update {
 	my($self, $table, $info, $whereinfo) = @_;
+
+	if (blessed $info and my $class = $self->{class_map}{$table}) {
+		$info = { map { ($_, $info->$_) } $self->_keys_for($class) };
+	}
+
 	my $sth = $self->{dbh}->prepare_cached("UPDATE $table SET `" . join("`=?,`", keys(%{$info})) . "`=?" . $self->_whereinfo($whereinfo));
 	my @vals = (values(%$info), values(%$whereinfo));
 	$sth->execute(@vals);
@@ -123,6 +145,12 @@ sub remove {
 sub _whereinfo {
 	my($self, $whereinfo) = @_;
 	return scalar(keys %{$whereinfo}) ? " WHERE " . join(" and ",  map { "$_=?" } keys(%{$whereinfo})) : "";
+}
+
+sub _keys_for {
+	my ($self, $class) = @_;
+	map { $_->does(DoNotSerialize) ? () : $_->name }
+		$class->meta->get_all_attributes;
 }
 
 1;

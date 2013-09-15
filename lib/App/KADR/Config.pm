@@ -49,21 +49,21 @@ has 'file_naming_scheme',
 	default => sub {
 		shift->dirs_to_scan->[0] . <<'EOF'
 /
-<: $episode_watched ? 'watched' : $anime.mylist.watched_eps ? 'watching' : 'unwatched' :>/
-: if not $only_episode_in_folder {
+<: $file.episode_watched ? 'watched' : $anime_mylist.watched_eps ? 'watching' : 'unwatched' :>/
+: if not $file.is_primary_episode {
 <: $anime.romaji_name :>/
 : }
 <: $anime.romaji_name :>
-: if $is_primary_episode {
-:   if $file_version > 1 { print ' v' ~ $file_version }
+: if $file.is_primary_episode {
+:   if $file.version > 1 { print ' v' ~ $file.version }
 : }
 : else {
- - <: $episode_number_padded :>
-:   if $file_version > 1 { print 'v' ~ $file_version }
- - <: $episode_english_name :>
+ - <: $file.episode_number_padded :>
+:   if $file.version > 1 { print 'v' ~ $file.version }
+ - <: $file.episode_english_name :>
 : }
-: if $group_short_name != 'raw' { print ' [' ~ $group_short_name ~ ']' }
-.<: $file_type :>
+: if $file.group_short_name != 'raw' { print ' [' ~ $file.group_short_name ~ ']' }
+.<: $file.file_type :>
 EOF
 	},
 	isa => 'Str',
