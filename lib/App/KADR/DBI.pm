@@ -57,8 +57,12 @@ sub fetch {
 	my $r = int($limit) == 1 ? $sth->fetchrow_hashref() : $sth->fetchall_hashref();
 	$sth->finish();
 
-	if (defined $r && !$self->{unicode}) {
-		Encode::_utf8_on($r->{$_}) for keys %$r;
+	if (defined $r) {
+		for my $r (ref $r eq 'ARRAY' ? @$r : $r) {
+			if (!$self->{unicode}) {
+				Encode::_utf8_on $r->{$_} for keys %$r;
+			}
+		}
 	}
 
 	return $r;
