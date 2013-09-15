@@ -22,10 +22,6 @@ use POSIX ();
 use Text::Xslate;
 use Time::HiRes;
 
-# Work around broken common::sense loading.
-no strict;
-no warnings;
-use common::sense;
 
 sub EMPTY_ED2K() {'31d6cfe0d16ae931b73c59d7e0c089c0'}
 use constant TERM_SPEED       => $ENV{KADR_TERM_SPEED}       // 0.05;
