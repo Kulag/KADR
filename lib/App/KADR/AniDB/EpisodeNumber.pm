@@ -80,7 +80,7 @@ sub new {
 
 	my @ranges = sort {
 		my $t = $a->tag cmp $b->tag;
-		$t == 0 ? $_->{min} <=> $b->{min} : $t;
+		$t == 0 ? $a->{min} <=> $b->{min} : $t;
 	} grep {defined} @_;
 
 	my $str = join ',', @ranges;
