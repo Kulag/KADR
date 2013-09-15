@@ -18,6 +18,7 @@ use File::Copy;
 use File::Find;
 use Guard;
 use List::AllUtils qw(first none);
+use Method::Signatures::Simple;
 use POSIX ();
 use Text::Xslate;
 use Time::HiRes;
@@ -141,6 +142,30 @@ sub ed2k_hash {
 	return $ed2k;
 }
 
+method hook_anidb_query_status_into($sl) {
+	my $cb = func($anidb, $tx) {
+		my $name = $tx->req->{name};
+
+		my $type
+			= $name eq 'file'   ? 'file'
+			: $name eq 'anime'  ? 'anime'
+			: $name eq 'mylist'
+				? $tx->req->{params}{aid} ? 'anime mylist'
+				:                           'mylist'
+			:                      undef;
+
+		return unless $type;
+
+		my $sl = $sl->child('Freeform')->update('Updating ' . $type . ' info');
+		$tx->on(finish => sub { $sl });
+	};
+
+	$self->anidb->on(start => $cb);
+
+	return unless defined wantarray;
+	guard { $self->anidb->unsubscribe(start => $cb) };
+}
+
 sub manage {
 	my $self  = shift;
 	my $a     = $self->anidb;
@@ -153,24 +178,7 @@ sub manage {
 		max          => scalar @files,
 		update_label => sub { shortest $current_file->relative, $current_file },
 	);
-
-	$a->on(start => sub {
-		my ($anidb, $tx) = @_;
-		my $name = $tx->req->{name};
-
-		my $type
-			= $name eq 'file'   ? 'file'
-			: $name eq 'anime'  ? 'anime'
-			: $name eq 'mylist'
-				? $tx->req->{params}{aid} ? 'mylist anime'
-				:                           'mylist'
-			:                      undef;
-
-		return unless $type;
-
-		my $sl = $sl->child('Freeform')->update('Updating ' . $type . ' info');
-		$tx->on(finish => sub { $sl });
-	});
+	my $sl_anidb = $self->hook_anidb_query_status_into($sl);
 
 	for my $file (@files) {
 		$sl->incr;
@@ -197,6 +205,7 @@ sub manage {
 	}
 
 	$sl->finalize;
+	undef $sl_anidb;
 
 	if ($conf->update_anidb_records_for_deleted_files && !$conf->hash_only) {
 		$self->update_mylist_state_for_missing_files(
@@ -399,6 +408,7 @@ sub update_mylist_state_for_missing_files {
 	return unless @missing_files;
 
 	my $sl = Fractional->new(label => 'Missing File', max => scalar @missing_files);
+	my $sl_anidb = $self->hook_anidb_query_status_into($sl);
 
 	for my $file (@missing_files) {
 		my ($ed2k, $size, $name) = @$file;
