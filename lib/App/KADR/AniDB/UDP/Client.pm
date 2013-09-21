@@ -136,18 +136,6 @@ sub mylistedit {
 	return $self->mylist_add(%$params);
 }
 
-sub mylist_add_query {
-	my ($self, $params) = @_;
-	my ($type, $value) = $self->mylist_add(%$params);
-
-	if ($type eq 'existing_entry' && !$params->{edit}) {
-		$params->{edit} = 1;
-		return $self->mylist_add_query($params);
-	}
-
-	$value;
-}
-
 sub mylist {
 	my ($self, %params) = @_;
 
@@ -236,11 +224,6 @@ sub mylist_anime {
 	);
 }
 
-sub mylist_anime_query {
-	my($self, $query) = @_;
-	$self->mylist_anime(%$query);
-}
-
 sub mylist_file {
 	my ($self, %params) = @_;
 	my $info = $self->mylist(%params);
@@ -251,11 +234,6 @@ sub mylist_file {
 	die 'Got multiple mylist entries response' unless $info->isa(MylistEntry);
 
 	$info;
-}
-
-sub mylist_file_query {
-	my ($self, $query) = @_;
-	$self->mylist_file(%$query);
 }
 
 sub start {
