@@ -61,6 +61,8 @@ sub in_ignore_max {
 sub intersection {
 	my ($self, $other) = @_;
 
+	return $self if $self eq $other;
+
 	$other = $self->parse($other) unless blessed $other;
 
 	if ($other->isa(__PACKAGE__)) {
