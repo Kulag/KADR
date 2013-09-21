@@ -46,8 +46,8 @@ sub crc_is_ok  { $_[0]->status & STATUS_CRCOK }
 
 for (
 	[ is_unlocated => 'eps_with_state_unknown' ],
-	[ is_internal  => 'eps_with_state_on_hdd' ],
-	[ is_external  => 'eps_with_state_on_cd' ],
+	[ is_on_hdd    => 'eps_with_state_on_hdd' ],
+	[ is_on_cd     => 'eps_with_state_on_cd' ],
 	[ is_deleted   => 'eps_with_state_deleted' ],
 	[ watched      => 'watched_eps' ],
 	)

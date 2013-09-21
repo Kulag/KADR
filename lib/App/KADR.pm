@@ -320,7 +320,7 @@ sub process_file {
 	# TODO: Move to the client somehow.
 	if ($mylist
 		&& $mylist->state == MylistEntry->STATE_HDD
-		&& !$file->episode_is_internal)
+		&& !$file->episode_is_on_hdd)
 	{
 		# Our mylistanime record is old.
 		# Can happen if the file was not added by kadr.
