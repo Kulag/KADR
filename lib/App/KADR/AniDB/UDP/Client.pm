@@ -310,7 +310,7 @@ sub _sendrecv {
 	my $attempts = 0;
 
 	# Auto-login
-	unless ($self->has_session || $command eq 'AUTH') {
+	if (!($self->has_session || $command eq 'AUTH') && $self->username) {
 		$self->login;
 	}
 
