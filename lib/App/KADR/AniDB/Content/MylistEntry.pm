@@ -18,6 +18,8 @@ field [
 	qw(lid fid eid aid gid date state viewdate storage source other filestate)
 ];
 
+max_age 2 * 365 * 24 * 60 * 60;
+
 # File here will cause a reference loop. Not really fixable without async or
 # some other way to weaken the ref after it's been returned to the caller.
 refer anime => 'aid';

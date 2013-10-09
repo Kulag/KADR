@@ -11,6 +11,8 @@ field [qw(
 	special_episode_count credits_episode_count other_episode_count trailer_episode_count parody_episode_count
 )];
 
+max_age 12 * 24 * 60 * 60;
+
 refer mylist => 'aid', client_method => 'mylist_anime';
 
 sub parse {

@@ -4,6 +4,7 @@ package App::KADR::AniDB::Role::Content;
 use App::KADR::Moose::Role;
 use List::MoreUtils qw(mesh);
 use List::UtilsBy qw(nsort_by);
+use Method::Signatures::Simple;
 
 use aliased 'App::KADR::AniDB::Meta::Attribute::Field';
 
@@ -12,13 +13,33 @@ has 'updated',
 	isa     => 'Int',
 	default => sub {time};
 
+my %does;
+
+# This assumes our meta is immutable, and never changed after creation.
+# It's also about 15 times as fast as Moose::Object::does.
+method does($role) {
+	exists((
+			$does{ ref $self } //= {
+				map { ($_->name, undef) }
+					$self->meta->calculate_all_roles_with_inheritance
+			}
+		)->{ ref $role ? $role->name : $role });
+}
+
+sub max_age_is_dynamic {0}
+
 sub parse {
 	my ($class, $str) = @_;
 	my @fields
 		= map    { $_->does(Field) ? $_->name : () }
 		nsort_by { $_->insertion_order } $class->meta->get_all_attributes;
 	my @values = (split /\|/, $str)[ 0 .. @fields - 1 ];
-	$class->new(mesh @fields, @values);
+	my %attrs = mesh @fields, @values;
+
+	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
+	$attrs{$_} =~ tr/`/'/ for @fields;
+
+	$class->new(\%attrs);
 }
 
 =head1 DESCRIPTION

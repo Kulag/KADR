@@ -6,8 +6,9 @@ use MooseX::LazyRequire;
 
 has 'client',
 	lazy_required => 1,
-	traits => ['App::KADR::Meta::Attribute::DoNotSerialize'],
-	weak_ref => 1;
+	predicate     => 1,
+	traits        => ['App::KADR::Meta::Attribute::DoNotSerialize'],
+	weak_ref      => 1;
 
 =head1 DESCRIPTION
 

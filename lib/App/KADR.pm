@@ -44,67 +44,6 @@ CREATE TABLE IF NOT EXISTS known_files (
 
 has [qw(anidb conf db files pathname_filter path_tx)], is => 'lazy';
 
-sub cache_expire_mylist_anime {
-	my $self = shift;
-	my $conf = $self->conf;
-	my $db   = shift;
-
-	# Clean stale unwatched records.
-	$db->{dbh}->do(
-		'DELETE FROM anidb_mylist_anime WHERE updated < ? AND watched_eps = ""',
-		{},
-		time - $conf->cache_timeout_mylist_unwatched,
-	);
-
-	# Can't do watched/watching in the database because watched_eps will not
-	# equal eps_with_state_on_hdd if all eps on hdd are watched but there are
-	# watched eps not on hdd.
-
-	my @stale;
-	my $watched_max_age  = time - $conf->cache_timeout_mylist_watched;
-	my $watching_max_age = time - $conf->cache_timeout_mylist_watching;
-
-	my $sth = $db->{dbh}->prepare(<<'SQL_END');
-SELECT aid, watched_eps, eps_with_state_on_hdd, updated
-FROM anidb_mylist_anime
-SQL_END
-	$sth->execute;
-
-	while (my ($aid, $watched, $on_hdd, $updated) = $sth->fetchrow_array) {
-
-		# Unwatched anime handled above.
-		next unless $watched;
-
-		# Quick watched check
-		if ($watched eq $on_hdd) {
-			push @stale, $aid if $updated < $watched_max_age;
-
-			next;
-		}
-
-		# Parse epnos.
-		$watched = EpisodeNumber->parse($watched);
-		$on_hdd  = EpisodeNumber->parse($on_hdd);
-
-		# Watched check
-		if ($on_hdd->in($watched)) {
-			push @stale, $aid if $updated < $watched_max_age;
-
-			next;
-		}
-
-		# Watching
-		push @stale, $aid if $updated < $watching_max_age;
-	}
-
-	if (@stale) {
-		$db->{dbh}->do(
-			'DELETE FROM anidb_mylist_anime
-			WHERE aid IN (' . join(',', @stale) . ')'
-		);
-	}
-}
-
 sub cleanup {
 	my $self = shift;
 	$_->logout for $self->anidb;
@@ -395,25 +334,13 @@ sub update_mylist_state_for_missing_files {
 		$sl->incr->update($name);
 
 		# File mylist information.
-		my $lid = $a->get_cached_lid(ed2k => $ed2k, size => $size);
-		my $mylist_file;
-		if ($lid) {
-			# Update mylist record so we don't overwrite a user-set state.
-			$db->remove('anidb_mylist_file', {lid => $lid});
-			$mylist_file = $a->mylist_file(lid => $lid);
-		}
-		else {
-			# Not in cache.
-			$mylist_file = $a->mylist_file(ed2k => $ed2k, size => $size);
-			$lid = $mylist_file->{lid} if $mylist_file;
-		}
-
-		# File not in mylist.
-		next unless $mylist_file;
+		my $ml
+			= $a->mylist_file(ed2k => $ed2k, size => $size, { max_age => 0 })
+			or next;
 
 		# Don't overwrite user-set status.
-		unless ($mylist_file->state == MylistEntry->STATE_HDD) {
-			if ($mylist_file->state != $set_state) {
+		unless ($ml->state == $ml->STATE_HDD) {
+			if ($ml->state != $set_state) {
 				$sl->child('Freeform')->finalize('Mylist status already set.');
 			}
 			next;
@@ -426,11 +353,15 @@ sub update_mylist_state_for_missing_files {
 		next if $conf->test;
 
 		# Try to edit
-		$a->mylist_edit(lid => $lid, state => $set_state)
+		$a->mylist_edit(lid => $ml->lid, state => $set_state)
 			or die 'Error setting mylist state';
 
 		$update_sl->finalize('Mylist state set to ' . $set_state_name);
-		$db->update('anidb_mylist_file', {state => $set_state}, {lid => $lid});
+		$db->update(
+			'anidb_mylist_file',
+			{ state => $set_state },
+			{ lid   => $ml->lid },
+		);
 	}
 }
 
@@ -439,6 +370,16 @@ sub _build_anidb {
 	my $conf = $self->conf;
 
 	App::KADR::AniDB::UDP::Client::Caching->new(
+		cache_ignore_max_age => !$conf->expire_cache,
+		cache_max_ages       => {
+			Anime     ,=> $conf->cache_timeout_anime,
+			File      ,=> $conf->cache_timeout_file,
+			MylistSet ,=> {
+				watching  => $conf->cache_timeout_mylist_watching,
+				watched   => $conf->cache_timeout_mylist_watched,
+				unwatched => $conf->cache_timeout_mylist_unwatched,
+			},
+		},
 		db                      => $self->db,
 		password                => $conf->anidb_password,
 		timeout                 => $conf->query_timeout,
@@ -464,13 +405,6 @@ sub _build_db {
 		known_files        => KnownFile,
 	});
 	$db->{dbh}->do(SCHEMA_KNOWN_FILES) or die 'Error initializing known_files';
-
-	if ($conf->expire_cache) {
-		$db->{dbh}->do('DELETE FROM anidb_anime WHERE updated < ' . (time - $conf->cache_timeout_anime));
-		$db->{dbh}->do('DELETE FROM adbcache_file WHERE updated < ' . (time - $conf->cache_timeout_file));
-
-		$self->cache_expire_mylist_anime($db);
-	}
 
 	if ($conf->load_local_cache_into_memory) {
 		$db->cache([

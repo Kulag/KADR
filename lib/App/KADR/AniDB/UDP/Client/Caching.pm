@@ -2,8 +2,11 @@ package App::KADR::AniDB::UDP::Client::Caching;
 # ABSTRACT: Caching layer atop the AniDB UDP Client
 
 use App::KADR::Moose;
-use List::AllUtils qw(first);
+use Const::Fast;
+use List::AllUtils qw(first min);
+use Method::Signatures;
 use aliased 'App::KADR::AniDB::EpisodeNumber';
+use aliased 'App::KADR::AniDB::Role::Content::Referencer';
 
 extends 'App::KADR::AniDB::UDP::Client';
 
@@ -104,61 +107,70 @@ CREATE TABLE IF NOT EXISTS anidb_mylist_anime (
 	`updated` INT)
 };
 
+const my %TYPE_TABLES => (
+	file => 'adbcache_file',
+	map { ($_ => "anidb_$_") } qw(anime mylist_anime mylist_file),
+);
+
+has 'cache_ignore_max_age', is => 'ro', isa => 'Bool';
+has 'cache_max_ages', is => 'ro', isa => 'HashRef', default => sub { {} };
 has 'db', is => 'ro', isa => 'App::KADR::DBI', required => 1;
 
-sub anime {
-	my ($self, %params) = @_;
-	my $db = $self->db;
+for my $type (qw(anime file mylist_anime)) {
+	__PACKAGE__->meta->add_method(
+		$type => method(@_) {
+			my $opts = ref $_[-1] eq 'HASH' ? pop : {};
 
-	# Cached
-	if (my $anime = $db->fetch('anidb_anime', ['*'], \%params, 1)) {
-		$anime->client($self);
-		return $anime;
-	}
+			# Cached
+			if (my $obj = $self->cached($type, @_, $opts)) {
+				return $obj;
+			}
+			return if $opts->{no_update};
 
-	# Update
-	return unless my $anime = $self->SUPER::anime(%params);
+			# Update
+			return unless my $obj = $self->${ \"SUPER::$type" }(@_);
 
-	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-	$anime->{$_} =~ tr/`/'/ for keys %$anime;
+			# Cache
+			$self->db->remove($TYPE_TABLES{$type}, {@_});
+			$self->db->insert($TYPE_TABLES{$type}, $obj);
 
-	# Cache
-	$db->set('anidb_anime', $anime, { aid => $anime->aid });
-
-	$anime;
+			$obj;
+		});
 }
 
-sub BUILD {
-	my $self = shift;
-	my $dbh  = $self->db->{dbh};
+method BUILD(@_) {
+	my $db  = $self->db;
+	my $dbh = $db->{dbh};
 
 	$dbh->do(SCHEMA_ANIME)        or die 'Error initializing anime table';
 	$dbh->do(SCHEMA_FILE)         or die 'Error initializing file';
 	$dbh->do(SCHEMA_MYLIST)       or die 'Error initializing mylist_file';
 	$dbh->do(SCHEMA_MYLIST_ANIME) or die 'Error initializing mylist_anime';
+
+	unless ($self->cache_ignore_max_age) {
+		for my $type (keys %TYPE_TABLES) {
+			my $class  = $db->{class_map}{ $TYPE_TABLES{$type} };
+			my $oldest = time - $self->max_age_for($class);
+
+			$dbh->do("DELETE FROM $TYPE_TABLES{$type} WHERE updated < $oldest");
+		}
+	}
 }
 
-sub file {
-	my ($self, %params) = @_;
-	my $db = $self->db;
+method cached(@_) {
+	my $opts = ref $_[-1] eq 'HASH' ? pop : {};
+	my ($type, %params) = @_;
 
 	# Cached
-	if (my $file = $db->fetch("adbcache_file", ["*"], \%params, 1)) {
-		$file->client($self);
-		return $file;
-	}
+	my $obj = $self->db->fetch($TYPE_TABLES{$type}, ['*'], \%params, 1)
+		or return;
 
-	# Update
-	return unless my $file = $self->SUPER::file(%params);
+	# Expiry
+	my $max_age = $self->max_age_for($obj, $opts->{max_age});
+	return if $obj->updated < time - $max_age && !$self->cache_ignore_max_age;
 
-	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-	my %obj = (episode_number => 1, client => 1);
-	$file->{$_} =~ tr/`/'/ for grep { !$obj{$_} } keys %$file;
-
-	# Cache
-	$db->set('adbcache_file', $file, { fid => $file->fid });
-
-	$file;
+	$obj->client($self) if $obj->does(Referencer) && !$obj->has_client;
+	$obj;
 }
 
 sub get_cached_lid {
@@ -169,6 +181,24 @@ sub get_cached_lid {
 		return $file->lid;
 	}
 	();
+}
+
+method max_age_for($obj, $override?) {
+	if ($obj->max_age_is_dynamic) {
+		if (my $defaults = $self->cache_max_ages->{ ref $obj }) {
+			if (defined $override) {
+				if (ref $override eq 'HASH') {
+					return $obj->max_age({ %$defaults, %$override });
+				}
+				return $obj->max_age($override);
+			}
+			return $obj->max_age($defaults);
+		}
+		return $obj->max_age($override);
+	}
+
+	$self->{max_age_for}{ ref $obj }{$override}
+		//= $obj->max_age(min $self->cache_max_ages->{ ref $obj }, $override);
 }
 
 sub mylist_add {
@@ -186,9 +216,9 @@ sub mylist_add {
 	wantarray ? ($type, $info) : $info;
 }
 
-sub mylist_file {
-	my ($self, %params) = @_;
-	my $db = $self->db;
+method mylist_file(@_) {
+	my $opts   = ref $_[-1] eq 'HASH' ? pop : {};
+	my %params = @_;
 
 	if (my $lid = $self->get_cached_lid(%params)) {
 		%params = (lid => $lid);
@@ -196,39 +226,21 @@ sub mylist_file {
 
 	# Cached
 	my $key = $params{lid} ? 'lid' : $params{fid} ? 'fid' : undef;
-	if ($key and my $mylist = $db->fetch('anidb_mylist_file', ['*'], { $key => $params{$key} }, 1)) {
-		$mylist->client($self);
-		return $mylist;
+	if ($key) {
+		if (my $mylist = $self->cached('mylist_file', $key => $params{$key}, $opts)) {
+			return $mylist;
+		}
 	}
+	return if $opts->{no_update};
 
 	# Update
-	return unless my $mylist = $self->SUPER::mylist_file(%params);
+	return unless my $ml = $self->SUPER::mylist_file(%params);
 
 	# Cache
-	$db->set('anidb_mylist_file', $mylist, { lid => $mylist->lid });
+	$self->db->remove('anidb_mylist_file', { lid => $ml->lid });
+	$self->db->insert('anidb_mylist_file', $ml);
 
-	$mylist;
-}
-
-sub mylist_anime {
-	my ($self, %params) = @_;
-	my $db = $self->db;
-
-	# Cached
-	if (my $mylist = $db->fetch('anidb_mylist_anime', ['*'], \%params, 1)) {
-		return $mylist;
-	}
-
-	# Update
-	return unless my $mylist = $self->SUPER::mylist_anime(%params);
-
-	# Temporary fix to make strings look nice because AniDB::UDP::Client doesn't understand types.
-	$mylist->{anime_title} =~ tr/`/'/;
-
-	# Cache
-	$db->set('anidb_mylist_anime', $mylist, { aid => $mylist->aid });
-
-	$mylist;
+	$ml;
 }
 
 =head1 SYNOPSIS

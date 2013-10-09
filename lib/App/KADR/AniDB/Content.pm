@@ -2,6 +2,7 @@ package App::KADR::AniDB::Content;
 # ABSTRACT: Moose with content extras
 
 use App::KADR::AniDB::Types qw(ID MaybeID);
+use List::Util qw(min);
 use Method::Signatures;
 
 use aliased 'App::KADR::AniDB::Meta::Attribute::Field';
@@ -17,6 +18,10 @@ func field($meta, $name, %opts) {
 	push @{ $opts{traits} ||= [] }, Field;
 
 	$meta->add_attribute($_, %opts) for ref $name ? @$name : $name;
+}
+
+func max_age($meta, $max_age) {
+	$meta->add_method('max_age', sub { $_[1] // $max_age });
 }
 
 func refer($meta, $name, $keys, %opts) {
@@ -37,7 +42,7 @@ use App::KADR::Moose::Exporter
 	also             => 'App::KADR::Moose',
 	as_is            => [qw(ID MaybeID)],
 	base_class_roles => ['App::KADR::AniDB::Role::Content'],
-	with_meta        => [qw(field refer)];
+	with_meta        => [qw(field max_age refer)];
 
 =head1 SYNOPSIS
 

@@ -30,6 +30,8 @@ field [qw(
 	group_name group_short_name
 )];
 
+max_age 12 * 24 * 60 * 60;
+
 refer anime        => 'aid';
 refer anime_mylist => 'aid', client_method => 'mylist_anime';
 refer group        => 'gid';
