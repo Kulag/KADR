@@ -188,7 +188,7 @@ sub mylist_add {
 		}
 		# Multiple entries
 		elsif ($res->{code} == 322) {
-			$type = 'multiple_entries';
+			$type = 'multiple_files';
 			$value = [ split /\|/, $res->{contents}[0] ];
 		}
 	}
@@ -392,4 +392,284 @@ sub DEMOLISH {
 	shift->logout;
 }
 
-0x6B63;
+=head1 SYNOPSIS
+
+	use App::KADR::AniDB::UDP::Client;
+	my $client = App::KADR::AniDB::UDP::Client->new;
+
+	# Enable opportunistic login
+	$client->username('user')->password('pass');
+
+	# Manual login
+	$client->login('user', 'pass');
+	$client->logout;
+
+	# Get the name of an anime (logs in automatically)
+	say $client->anime(aid => 1)->romaji_name;
+
+	# Get the size of a file
+	say $client->file(fid => 1)->size;
+
+	# Check if a file is in mylist
+	say $client->mylist(fid => 1) ? "In mylist" : "Not in mylist";
+
+=head1 DESCRIPTION
+
+L<App::KADR::AniDB::UDP::Client> is a client with partial support for AniDB's
+UDP API.
+Caching support has been split out into
+L<App::KADR::AniDB::UDP::Client::Caching>. The split was made under the
+assumption that a client without caching would be feasible and useful, and is
+likely to be merged back.
+
+Most queries require login. L<App::KADR::AniDB::UDP::Client> will perform a
+login when a query requiring login is made and the username attribute is set.
+
+Many queries have many different sets of parameters that can be used. Method
+examples with arguments like %anime_spec are explained in the C<SPECIFICATIONS>
+section below.
+
+=head1 ATTRIBUTES
+
+=head2 C<is_banned>
+
+	my $bool = $client->is_banned;
+
+Check if the client has recieved a temporary IP ban.
+
+=head2 C<max_attempts>
+
+	my $max = $client->max_attempts;
+	$client = $client->max_attempts(5);
+	my $set = $client->has_max_attempts;
+
+Number of times to retry timed out queries before dying. When unset, will keep
+trying queries indefinitely.
+
+=head2 C<port>
+
+	my $port = $client->port;
+	$client  = $client->port(9000);
+
+Local UDP port to use. Defaults to 9000.
+
+=head2 C<password>
+
+	my $password = $client->password;
+	$client      = $client->password('password');
+
+Password to use for opportunistic login.
+
+=head2 C<timeout>
+
+	my $timeout = $client->timeout;
+	$client     = $client->timeout(15.0);
+
+Minimum amount of time in seconds to wait for a reply to a query. Defaults to
+15.0.
+
+=head2 C<time_to_sleep_when_busy>
+
+	my $time = $client->time_to_sleep_when_busy;
+	$client  = $client->time_to_sleep_when_busy(900);
+
+Time in seconds to sleep when the server informs the client it's too busy to
+process queries at this time. Defaults to 15 minutes.
+
+=head2 C<tx_class>
+
+	my $class = $client->tx_class;
+	$client   = $client->tx_class('App::KADR::AniDB::UDP::Transaction');
+
+Transaction class to use. Defaults to L<App::KADR::AniDB::UDP::Transaction>
+
+=head2 C<username>
+
+Username to use for opportunistic login.
+
+=head1 EVENTS
+
+=head2 C<start>
+
+	$client->on(start => sub {
+		my ($client, $tx) = @_;
+		...
+	});
+
+Emitted when a new transaction is about to start.
+
+=head1 METHODS
+
+=head2 C<anime>
+
+	my $anime = $client->anime(%anime_spec);
+
+Get anime information.
+WARNING: Currently, using aname with the caching subclass will crash.
+
+=head2 C<build_tx>
+
+	my $tx = $client->build_tx('ANIME', { aid => 1, amask => ANIME_MASK });
+
+Generate a new transaction object.
+
+=head2 C<file>
+
+	my $file = $client->file(%file_spec);
+
+Get file information.
+WARNING: Currently, using aname or gname with the caching subclass will crash.
+
+=head2 C<has_session>
+
+	my $bool = $client->has_session;
+
+Check if the client has an active session with the server.
+
+=head2 C<login>
+
+	$client = $client->login; # username and password attributes must be set
+	$client = $client->login('username', 'password');
+
+Log in to the server unless there is an active session. Required by AniDB for
+most queries. Will be done automatically when needed if the username attribute
+has been set.
+
+=head2 C<logout>
+
+Log out from the server if there is an active session. Done automatically when
+the client object is destroyed.
+
+=head2 C<mylist>
+
+	my $mylist_entry = $client->mylist(%mylist_file_spec);
+	my $mylist_entry = $client->mylist(%mylist_set_spec); # Only one match
+	my $mylist_set   = $client->mylist(%mylist_set_spec);
+
+Get information about a mylist entry or a set of entries. This may be removed
+or have its functionality replaced with that of mylist_file soon due to the
+unpredictability of the return value.
+
+=head2 C<mylist_add>
+
+	# Mylist attributes are all optional.
+	# You should set state => MylistEntry->ON_HDD when adding a file from HDD.
+	my %mylist_attrs = (
+		edit => 0,
+		state => 1,
+		viewed => 0,
+		viewdate => 0, # unix epoch, ignored unless viewed is set
+		source => '', # custom user string
+		storage => '', # custom user string
+		other => '', # custom user string
+	);
+
+	my ($type, $value) = $client->mylist_add(%mylist_spec, %mylist_attrs);
+	my $value = $client->mylist_add(%mylist_spec, %mylist_attrs);
+
+	# While this is valid, if the anime has more than one episode, this will
+	# fail, and return multiple_files instead of adding.
+	my ($type, $value) = $client->mylist_add(%anime_spec, %mylist_attrs);
+	my $value = $client->mylist_add(%anime_spec, %mylist_attrs);
+
+	# epno can be set to a negative value, meaning all episodes up to the epno.
+	# generic => 1 may be set instead of a group spec.
+	my ($type, $value) = $client->mylist_add(%episodes_spec, %mylist_attrs);
+	my $value = $client->mylist_add(%episodes_spec, %mylist_attrs);
+
+Add one or more files to the mylist, or edit one mylist entry. The edit
+parameter is likely to become an error soon.
+
+The return values are likely to become objects at some point in the future,
+at which point the type will be dropped.
+
+=head3 C<return values by type>
+
+=head4 C<edited>
+
+Number of entries edited.
+
+=head4 C<added>
+
+lid of added entry.
+
+=head4 C<added_count>
+
+Number of entries added.
+
+=head4 C<existing_entry>
+
+The MylistEntry object for the existing entry.
+
+=head4 C<multiple_files>
+
+An arrayref of fids.
+
+=head2 C<mylist_anime>
+
+	my $mylist = $client->mylist_anime(%mylist_set_spec);
+
+Get information about a set of mylist entries. This may be renamed to
+C<mylist_set> soon.
+
+In order to get mylist entries for each item in the set you will need to use
+the (not yet supported) multiple file query since differentiating information
+like the file version is missing from the mylist set data.
+
+=head2 C<mylist_file>
+
+	my $mylist = $client->mylist_file(%mylist_spec);
+
+Get information about a mylist entry. This may be renamed to C<mylist> or
+C<mylist_entry> soon.
+
+=head2 C<start>
+
+	$tx = $client->start($tx);
+
+Perform a query.
+
+=head1 SPECIFICATIONS
+
+=head2 C<anime>
+
+	(aid => 1)
+	(aname => "seikai no monshou")
+
+=head2 C<episode>
+
+	(%anime_spec, epno => 1)
+	(%anime_spec, epno => EpisodeNumber->parse(1))
+
+=head2 C<episodes>
+	(%episode_spec)
+	(%anime_spec, epno => '1-2')
+	(%anime_spec, epno => EpisodeNumber->parse('1-2'))
+
+=head2 C<file>
+
+	(fid => 1)
+	(ed2k => 'a62c68d5961e4c601fcf73624b003e9e', size => 169_142_272)
+	(%anime_spec, %group_spec, epno => 1)
+
+=head2 C<group>
+
+	(gid => 1)
+	(gname => 'Animehaven')
+
+=head2 C<mylist_entry>
+
+	(lid => 1)
+	(%file_spec)
+
+=head2 C<mylist_set>
+
+	# Nothing but aid is currently supported.
+	(%anime_spec)
+	(%episodes_spec)
+	(%mylist_spec)
+
+=head1 SEE ALSO
+
+L<App::KADR::AniDB::UDP::Client::Caching>
+L<http://wiki.anidb.info/w/UDP_API_Definition>

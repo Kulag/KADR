@@ -230,3 +230,55 @@ sub mylist_anime {
 
 	$mylist;
 }
+
+=head1 SYNOPSIS
+
+	use aliased 'App::KADR::AniDB::UDP::Client::Caching', 'Client';
+
+	my $db = App::KADR::DBI->new("dbd:SQLite:dbname=foo");
+	my $client = Client->new(db => $db);
+
+	# Transparently cached
+	my $anime = $client->anime(aid => 1);
+
+	# Try to get a lid from fid/ed2k/size
+	my $lid = $client->get_cached_lid(fid => 1);
+
+=head1 DESCRIPTION
+
+L<App::KADR::AniDB::UDP::Client::Caching> is a transparent caching layer around
+L<App::KADR:AniDB::UDP::Client>.
+
+=head1 ATTRIBUTES
+
+L<App::KADR::AniDB::UDP::Client::Caching> inherits all attributes from
+L<App::KADR:AniDB::UDP::Client> and implements the following new ones.
+
+=head2 C<db>
+
+	my $db = $client->db;
+
+A L<App::KADR::DBI> instance. Required at creation.
+
+=head1 METHODS
+
+L<App::KADR::AniDB::UDP::Client::Caching> inherits all methods from
+L<App::KADR:AniDB::UDP::Client> and implements the following new ones.
+
+=head2 C<get_cached_lid>
+
+	my $lid = $client->get_cached_lid(%file_spec);
+	my $lid = $client->get_cached_lid(
+		ed2k => 'a62c68d5961e4c601fcf73624b003e9e',
+		size => 169_142_272,
+	);
+
+	# Always returns nothing.
+	my $lid = $client->get_cached_lid(aid => 1, epno => 1, gid => 1);
+
+Get a cached lid given a file specification. Undef does not mean no mylist
+entry exists for the file, just that none is cached.
+
+=head1 SEE ALSO
+
+L<App::KADR::AniDB::UDP::Client>
