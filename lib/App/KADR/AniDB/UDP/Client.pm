@@ -8,7 +8,6 @@ use Encode;
 use IO::Socket;
 use IO::Uncompress::Inflate qw(inflate $InflateError);
 use List::Util qw(min max);
-use Method::Signatures::Simple;
 use MooseX::Types::LoadableClass qw(LoadableClass);
 use MooseX::Types::Moose qw(Bool Int Num Str);
 use MooseX::NonMoose;
@@ -99,7 +98,7 @@ sub has_session {
 	&& (time - $_[0]->_last_query_time) < SESSION_TIMEOUT
 }
 
-method login($user, $pass) {
+method login($user = $self->username, $pass = $self->password) {
 	return $self if $self->has_session;
 
 	my $tx = $self->build_tx('AUTH', {
@@ -108,9 +107,9 @@ method login($user, $pass) {
 		comp => 1,
 		enc => 'UTF8',
 		nat => 1,
-		pass => $pass || $self->password,
+		pass => $pass,
 		protover => 3,
-		user => $user || $self->username,
+		user => $user,
 	});
 
 	my $res = $self->start($tx)->success;

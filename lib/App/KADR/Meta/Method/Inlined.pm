@@ -2,7 +2,6 @@ package App::KADR::Meta::Method::Inlined;
 # ABSTRACT: Abstract base class for inlined methods
 
 use App::KADR::Moose;
-use Method::Signatures::Simple;
 use MooseX::ABC;
 
 extends qw(Moose::Meta::Method Class::MOP::Method::Inlined);

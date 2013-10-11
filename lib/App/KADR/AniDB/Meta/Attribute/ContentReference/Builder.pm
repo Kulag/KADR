@@ -4,7 +4,6 @@ package App::KADR::AniDB::Meta::Attribute::ContentReference::Builder;
 use App::KADR::Moose;
 use Carp ();
 use Lingua::EN::Inflect qw(WORDLIST);
-use Method::Signatures;
 use strict 'refs';
 
 extends 'App::KADR::Meta::Method::AttrInlined';
