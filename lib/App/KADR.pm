@@ -307,7 +307,7 @@ sub process_file {
 	}
 	elsif (!$conf->test && $mylist->state != MylistEntry->STATE_HDD) {
 		my $proc_sl = $sl->child('Freeform')->update('Setting AniDB Mylist state to "On HDD"');
-		if($a->mylistedit({lid => $file->lid, state => MylistEntry->STATE_HDD})) {
+		if($a->mylist_edit(lid => $file->lid, state => MylistEntry->STATE_HDD)) {
 			$db->update('anidb_mylist_file', {state => MylistEntry->STATE_HDD}, {fid => $mylist->fid});
 			$proc_sl->finalize_and_log('Set AniDB Mylist state to "On HDD"');
 		}
@@ -428,7 +428,7 @@ sub update_mylist_state_for_missing_files {
 		next if $conf->test;
 
 		# Try to edit
-		$a->mylist_add(edit => 1, lid => $lid, state => $set_state)
+		$a->mylist_edit(lid => $lid, state => $set_state)
 			or die 'Error setting mylist state';
 
 		$update_sl->finalize('Mylist state set to ' . $set_state_name);

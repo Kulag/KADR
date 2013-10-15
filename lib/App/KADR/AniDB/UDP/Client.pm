@@ -130,12 +130,6 @@ sub logout {
 	$self;
 }
 
-sub mylistedit {
-	my ($self, $params) = @_;
-	$params->{edit} = 1;
-	return $self->mylist_add(%$params);
-}
-
 sub mylist {
 	my ($self, %params) = @_;
 
@@ -222,6 +216,10 @@ sub mylist_anime {
 		eps_with_state_deleted => ($state == $mylist->STATE_DELETED ? $epno : ''),
 		watched_eps => ($mylist->viewdate > 0 ? $epno : ''),
 	);
+}
+
+sub mylist_edit {
+	shift->mylist_add(edit => 1, @_);
 }
 
 sub mylist_file {
@@ -615,6 +613,13 @@ C<mylist_set> soon.
 In order to get mylist entries for each item in the set you will need to use
 the (not yet supported) multiple file query since differentiating information
 like the file version is missing from the mylist set data.
+
+=head2 C<mylist_edit>
+
+	my $count = $client->mylist_edit(...);
+	# Shortcut for $client->mylist_add(edit => 1, ...);
+
+Edit one or more mylist entries. See C<mylist_add> for parameters.
 
 =head2 C<mylist_file>
 
