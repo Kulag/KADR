@@ -13,6 +13,7 @@ sub new {
 	my $self = bless {}, shift;
 	my $dsn = shift;
 	$self->{class_map} = shift;
+	$self->{rclass_map} = { map { ($self->{class_map}{$_}, $_) } keys %{ $self->{class_map} } };
 
 	$self->{dbh} = DBI->connect($dsn) or die "Cannot connect: $DBI::errstr";
 
@@ -50,6 +51,10 @@ sub cache {
 sub fetch {
 	my($self, $table, $what, $whereinfo, $limit) = @_;
 
+	if (my $t = $self->{rclass_map}{$table}) {
+		$table = $t;
+	}
+
 	# From cache
 	my @cache_keys = sort keys %$whereinfo;
 	if (my $a = $self->{cache}->{ join '-', $table, @cache_keys }->{ join '-', @$whereinfo{@cache_keys} }) {
@@ -82,6 +87,11 @@ sub fetch {
 
 sub exists {
 	my($self, $table, $whereinfo) = @_;
+
+	if (my $t = $self->{rclass_map}{$table}) {
+		$table = $t;
+	}
+
 	my $sth = $self->{dbh}->prepare_cached("SELECT count(*) FROM $table" . $self->_whereinfo($whereinfo)) or die $DBI::errstr;
 	my @vals = values %$whereinfo;
 
@@ -93,6 +103,10 @@ sub exists {
 
 sub insert {
 	my($self, $table, $info) = @_;
+
+	if (my $t = $self->{rclass_map}{$table}) {
+		$table = $t;
+	}
 
 	if (blessed $info and my $class = $self->{class_map}{$table}) {
 		$info = { map { ($_, $info->$_) } $self->_keys_for($class) };
@@ -106,6 +120,10 @@ sub insert {
 
 sub update {
 	my($self, $table, $info, $whereinfo) = @_;
+
+	if (my $t = $self->{rclass_map}{$table}) {
+		$table = $t;
+	}
 
 	if (blessed $info and my $class = $self->{class_map}{$table}) {
 		$info = { map { ($_, $info->$_) } $self->_keys_for($class) };
@@ -125,6 +143,10 @@ sub set {
 
 sub remove {
 	my($self, $table, $whereinfo) = @_;
+
+	if (my $t = $self->{rclass_map}{$table}) {
+		$table = $t;
+	}
 
 	# From cache
 	my @cache_keys = sort keys %$whereinfo;
