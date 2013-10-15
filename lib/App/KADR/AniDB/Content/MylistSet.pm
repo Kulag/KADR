@@ -17,7 +17,7 @@ field [qw(
 	isa => EpisodeNumber;
 
 sub max_age {
-	return 91 * 24 * 60 * 60 unless ref $_[0];
+	return $_[0]->{''} // 91 * 24 * 60 * 60 unless ref $_[0];
 
 	$_[0]{max_age}{ ref $_[1] ? join '-', %{ $_[1] } : $_[1] } //= do {
 		my $tags = $_[0]->_max_age_tags;
