@@ -2,7 +2,6 @@ package App::KADR::AniDB::Content::MylistSet;
 # ABSTRACT: AniDB information about a set of mylist entries
 
 use App::KADR::AniDB::Content;
-use List::Util qw(min);
 use Method::Signatures::Simple;
 
 use aliased 'App::KADR::AniDB::EpisodeNumber';
@@ -16,40 +15,15 @@ field [qw(
 )],
 	isa => EpisodeNumber;
 
-sub max_age {
-	return $_[0]->{''} // 91 * 24 * 60 * 60 unless ref $_[0];
+dynamic_max_age 91 * 24 * 60 * 60, method {
+	return { unwatched => 12 * 60 * 60 }
+		unless my $watched = $self->watched_eps;
 
-	$_[0]{max_age}{ ref $_[1] ? join '-', %{ $_[1] } : $_[1] } //= do {
-		my $tags = $_[0]->_max_age_tags;
+	my $on_hdd = $self->eps_with_state_on_hdd;
+	return { watched => 91 * 24 * 60 * 60 } if $on_hdd->in($watched);
 
-		# Tagged overrides
-		if (ref $_[1] eq 'HASH') {
-			my $override = pop;
-			min(@$override{ keys %$tags }) // min values %$tags;
-		}
-
-		# None or a general override
-		else {
-			$_[1] // min values %$tags;
-		}
-	};
-}
-
-sub max_age_is_dynamic {1}
-
-# TODO: MooseX::SingletonMethod
-# TODO: Defaults that are less KADR-centric.
-method _max_age_tags {
-	$self->{_max_age_tags} //= do {
-		my $watched = $self->watched_eps
-			or return { unwatched => 12 * 60 * 60 };
-
-		my $on_hdd = $self->eps_with_state_on_hdd;
-		return { watched => 91 * 24 * 60 * 60 } if $on_hdd->in($watched);
-
-		{ watching => 2 * 60 * 60 };
-	};
-}
+	{ watching => 2 * 60 * 60 };
+};
 
 =head1 DESCRIPTION
 

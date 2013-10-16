@@ -7,7 +7,17 @@ use Method::Signatures;
 
 use aliased 'App::KADR::AniDB::Meta::Attribute::Field';
 use aliased 'App::KADR::AniDB::Meta::Attribute::ContentReference';
+use aliased 'App::KADR::AniDB::Role::Content::DynamicMaxAge';
 use aliased 'App::KADR::AniDB::Role::Content::Referencer';
+
+sub dynamic_max_age {
+	my $meta = shift;
+	my $role = DynamicMaxAge->meta->apply(
+		$meta,
+		class_default => shift,
+		calculate     => shift
+	);
+}
 
 func field($meta, $name, %opts) {
 	$opts{definition_context} = {
@@ -42,7 +52,7 @@ use App::KADR::Moose::Exporter
 	also             => 'App::KADR::Moose',
 	as_is            => [qw(ID MaybeID)],
 	base_class_roles => ['App::KADR::AniDB::Role::Content'],
-	with_meta        => [qw(field max_age refer)];
+	with_meta        => [qw(dynamic_max_age field max_age refer)];
 
 =head1 SYNOPSIS
 
