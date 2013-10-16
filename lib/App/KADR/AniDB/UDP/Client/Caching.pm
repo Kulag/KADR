@@ -2,9 +2,14 @@ package App::KADR::AniDB::UDP::Client::Caching;
 # ABSTRACT: Caching layer atop the AniDB UDP Client
 
 use App::KADR::Moose;
-use Const::Fast;
+use Carp qw(croak);
 use List::AllUtils qw(first min);
 use Method::Signatures;
+
+use aliased 'App::KADR::AniDB::Content::Anime';
+use aliased 'App::KADR::AniDB::Content::File';
+use aliased 'App::KADR::AniDB::Content::MylistSet';
+use aliased 'App::KADR::AniDB::Content::MylistEntry';
 use aliased 'App::KADR::AniDB::EpisodeNumber';
 use aliased 'App::KADR::AniDB::Role::Content::Referencer';
 
@@ -107,9 +112,11 @@ CREATE TABLE IF NOT EXISTS anidb_mylist_anime (
 	`updated` INT)
 };
 
-const my %TYPE_TABLES => (
-	file => 'adbcache_file',
-	map { ($_ => "anidb_$_") } qw(anime mylist_anime mylist_file),
+my %TYPE_CLASSES = (
+	anime        => Anime,
+	file         => File,
+	mylist_anime => MylistSet,
+	mylist_file  => MylistEntry,
 );
 
 has 'cache_ignore_max_age', is => 'ro', isa => 'Bool';
@@ -131,8 +138,8 @@ for my $type (qw(anime file mylist_anime)) {
 			return unless my $obj = $self->${ \"SUPER::$type" }(@_);
 
 			# Cache
-			$self->db->remove($TYPE_TABLES{$type}, {@_});
-			$self->db->insert($TYPE_TABLES{$type}, $obj);
+			$self->db->remove($TYPE_CLASSES{$type}, {@_});
+			$self->db->insert($TYPE_CLASSES{$type}, $obj);
 
 			$obj;
 		});
@@ -148,11 +155,11 @@ method BUILD(@_) {
 	$dbh->do(SCHEMA_MYLIST_ANIME) or die 'Error initializing mylist_anime';
 
 	unless ($self->cache_ignore_max_age) {
-		for my $type (keys %TYPE_TABLES) {
-			my $class  = $db->{class_map}{ $TYPE_TABLES{$type} };
+		for my $type (keys %TYPE_CLASSES) {
+			my $class  = $TYPE_CLASSES{$type};
 			my $oldest = time - $self->max_age_for($class);
 
-			$dbh->do("DELETE FROM $TYPE_TABLES{$type} WHERE updated < $oldest");
+			$dbh->do("DELETE FROM $db->{rclass_map}{$TYPE_CLASSES{$type}} WHERE updated < $oldest");
 		}
 	}
 }
@@ -162,8 +169,8 @@ method cached(@_) {
 	my ($type, %params) = @_;
 
 	# Cached
-	my $obj = $self->db->fetch($TYPE_TABLES{$type}, ['*'], \%params, 1)
-		or return;
+	my $type_class = $TYPE_CLASSES{$type} or croak "Invalid type: $type";
+	return unless my $obj = $self->db->fetch($type_class, ['*'], \%params, 1);
 
 	# Expiry
 	my $max_age = $self->max_age_for($obj, $opts->{max_age});
@@ -177,7 +184,7 @@ sub get_cached_lid {
 	my ($self, %params) = @_;
 	return unless exists $params{fid} || exists $params{ed2k};
 
-	if (my $file = $self->db->fetch('adbcache_file', ['*'], \%params, 1)) {
+	if (my $file = $self->db->fetch(File, ['*'], \%params, 1)) {
 		return $file->lid;
 	}
 	();
@@ -185,7 +192,7 @@ sub get_cached_lid {
 
 method max_age_for($obj, $override?) {
 	if ($obj->max_age_is_dynamic) {
-		if (my $defaults = $self->cache_max_ages->{ ref $obj }) {
+		if (my $defaults = $self->cache_max_ages->{ ref $obj || $obj }) {
 			if (defined $override) {
 				if (ref $override eq 'HASH') {
 					return $obj->max_age({ %$defaults, %$override });
@@ -197,8 +204,9 @@ method max_age_for($obj, $override?) {
 		return $obj->max_age($override);
 	}
 
-	$self->{max_age_for}{ ref $obj }{$override}
-		//= $obj->max_age(min $self->cache_max_ages->{ ref $obj }, $override);
+	$self->{max_age_for}{ ref $obj || $obj }{$override}
+		//= $obj->max_age($override
+			// $self->cache_max_ages->{ ref $obj || $obj });
 }
 
 sub mylist_add {
@@ -208,8 +216,8 @@ sub mylist_add {
 	if ($type eq 'added') {
 		my $db = $self->db;
 		my %fparams = map { $params{$_} ? ($_, $params{$_}) : () } qw(fid ed2k size);
-		if (my $file = $db->fetch('adbcache_file', ['*'], \%fparams, 1)) {
-			$db->update('adbcache_file', {lid => $info}, \%fparams);
+		if (my $file = $db->fetch(File, ['*'], \%fparams, 1)) {
+			$db->update(File, { lid => $info }, \%fparams);
 		}
 	}
 
@@ -237,8 +245,8 @@ method mylist_file(@_) {
 	return unless my $ml = $self->SUPER::mylist_file(%params);
 
 	# Cache
-	$self->db->remove('anidb_mylist_file', { lid => $ml->lid });
-	$self->db->insert('anidb_mylist_file', $ml);
+	$self->db->remove(MylistEntry, { lid => $ml->lid });
+	$self->db->insert(MylistEntry, $ml);
 
 	$ml;
 }
