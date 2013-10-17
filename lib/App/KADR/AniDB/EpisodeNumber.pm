@@ -24,7 +24,7 @@ sub range_class() {'App::KADR::AniDB::EpisodeNumber::Range'}
 my %cache;
 
 sub contains {
-	my $other = blessed $_[1] ? $_[1] : $_[0]->parse($_[1]);
+	my $other = $_[0]->parse($_[1]);
 
 	$_[0]{_contains}{$other} //= $other->{_in}{ $_[0] }
 		//= $_[0]->intersection($other) eq $other;
@@ -45,8 +45,10 @@ sub count {
 }
 
 sub in {
-	$_[0]{_in}{ $_[1] } //= $_[1]{_contains}{ $_[0] }
-		//= $_[0]->intersection($_[1]) eq $_[0];
+	my $other = $_[0]->parse($_[1]);
+
+	$_[0]{_in}{$other} //= $other->{_contains}{ $_[0] }
+		//= $_[0]->intersection($other) eq $_[0];
 }
 
 sub in_ignore_max {
