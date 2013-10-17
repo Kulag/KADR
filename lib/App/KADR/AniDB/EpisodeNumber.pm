@@ -110,6 +110,7 @@ sub padded {
 }
 
 sub parse {
+	return $_[1] if ref $_[1] eq __PACKAGE__;
 
 	# We cache here as well because the input may not be ordered.
 	$cache{ $_[1] } //= do {
