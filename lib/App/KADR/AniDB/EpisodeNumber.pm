@@ -17,6 +17,7 @@ use common::sense;
 
 class_type __PACKAGE__;
 coerce __PACKAGE__, from 'Str', via { __PACKAGE__->parse($_) };
+coerce __PACKAGE__, from 'Undef', via { __PACKAGE__->new };
 
 sub range_class() {'App::KADR::AniDB::EpisodeNumber::Range'}
 
