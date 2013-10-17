@@ -17,9 +17,11 @@ subtest get_sub_exporter_into_hash => sub {
 	subtest 'all but into' => sub {
 		my $args = [ (my $self = bless {}), -traits => [],
 			abc => { -as => 'bca' } ];
+		my $args2 = [@$args];
 
-		is_deeply((my $ret = $sub->($args)), {});
-		is $args->[3], $ret;
+		ok !keys (my $ret = $sub->($args2)), 'got an empty hash back';
+		is $args2->[5], $ret, 'returned into hash is in the args';
+		is $args2->[$_], $args->[$_], "nothing changed in $_" for 0 .. $#$args;
 	};
 
 	subtest 'already present' => sub {
@@ -29,9 +31,11 @@ subtest get_sub_exporter_into_hash => sub {
 			(my $h = {into => 'foo'}),
 			abc => {-as => 'bca'},
 		];
+		my $args2 = [@$args];
 
-		is((my $ret = $sub->($args)), $h);
-		is $args->[3], $ret;
+		is((my $ret = $sub->($args2)), $h), 'got the right arg back';
+		is $args->[3], $ret, 'returned into hash is in the args';
+		is $args2->[$_], $args->[$_], "nothing changed in $_" for 0 .. $#$args;
 	};
 };
 

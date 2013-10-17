@@ -9,8 +9,7 @@ sub get_sub_exporter_into_hash {
 	my $args = shift;
 
 	# Start after $class
-	my $i;
-	for ($i = 1; $i < @$args; $i += 2) {
+	for (my $i = 1; $i < @$args; $i += 2) {
 
 		# Pass the MX params.
 		next if $args->[$i] =~ /^-/;
@@ -22,7 +21,7 @@ sub get_sub_exporter_into_hash {
 	}
 
 	# Not present, so add a blank hash.
-	splice @$args, $i, 1, my $params = {};
+	push @$args, my $params = {};
 	return $params;
 }
 
