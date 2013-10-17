@@ -298,7 +298,6 @@ sub process_file {
 		my $proc_sl = $sl->child('Freeform')->update('Adding to AniDB Mylist');
 		if(my $lid = $a->mylist_add(fid => $file->fid, state => MylistEntry->STATE_HDD)) {
 			$db->remove('anidb_mylist_anime', { aid => $file->aid }); # Force an update of this record, it's out of date.
-			$db->update('adbcache_file', {lid => $lid}, { fid => $file->fid });
 			$proc_sl->finalize_and_log('Added to AniDB Mylist');
 		}
 		else {
