@@ -103,6 +103,8 @@ sub parse {
 	$file;
 }
 
+sub primary_key {'fid'}
+
 sub version {
 	my $status = $_[0]->status;
 	  $status & STATUS_ISV2 ? 2

@@ -27,6 +27,8 @@ refer anime_mylist => 'aid', client_method => 'mylist_anime';
 refer file  => 'fid';
 refer group => 'gid';
 
+sub primary_key {'lid'}
+
 sub state_name_for {
 	my ($self, $state_id) = @_;
 	$STATE_NAMES{$state_id} or croak 'No such mylist state: ' . $state_id;

@@ -9,7 +9,7 @@ use aliased 'App::KADR::DBI';
 my $db;
 my %types;
 
-sub test_obj {
+sub obj_ok {
 	my $obj = shift;
 	ok $obj, "obj returned";
 	is $obj->updated, 0, "obj updated value is 0";
@@ -60,7 +60,8 @@ BEGIN {
 
 $db = DBI->new('dbi:SQLite::memory:',
 	{ map { @$_{qw(table class)} } values %types });
-my %client_opts = (db => $db, username => 'foo', password => 'bar');
+my %client_opts
+	= (cache => { db => $db }, username => 'foo', password => 'bar');
 my $c = Client->new(%client_opts);
 
 subtest "init cache clear" => sub {
@@ -72,44 +73,18 @@ subtest "init cache clear" => sub {
 
 subtest "no init cache clear" => sub {
 	populate_db;
-	my $c = Client->new(cache_ignore_max_age => 1, %client_opts);
+	my $c = Client->new(%client_opts,
+		cache => { db => $db, ignore_max_age => 1 });
 
 	ok $db->fetch(File, ['*'], { fid => 1 }, 1);
-	test_obj($c->cached('file', fid => 1));
-};
-
-subtest "cached enforces max age" => sub {
-	ok !$c->cached('file', fid => 1);
-};
-
-subtest "override max ages" => sub {
-	my $future = time + 10;
-	my $c      = Client->new(
-			cache_max_ages => {
-			Anime       ,=> $future,
-			File        ,=> $future,
-			MylistEntry ,=> $future,
-			MylistSet   ,=> {'' => $future, unwatched => $future},
-		}, %client_opts,
-	);
-	populate_db;
-
-	for my $type (keys %types) {
-		is $c->max_age_for($types{$type}->{class}), $future,
-			"$type max_age == $future";
-		is $c->max_age_for($types{$type}->{class}, 0), 0,
-			"$type max_age == 0 when overridden";
-
-		test_obj($c->cached($type, $types{$type}->{key} => 1));
-		test_obj($c->$type($types{$type}->{key} => 1));
-	}
+	obj_ok $c->file(fid => 1, { no_update => 1 });
 };
 
 subtest "query method options" => sub {
 	for my $type (keys %types) {
 		my $key = $types{$type}->{key};
 
-		test_obj($c->$type($key => 1, { max_age => time + 10 }));
+		obj_ok $c->$type($key => 1, { max_age => time + 10 });
 
 		ok !$c->$type($key => 1, { no_update => 1 });
 	}

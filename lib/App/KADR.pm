@@ -370,17 +370,19 @@ sub _build_anidb {
 	my $conf = $self->conf;
 
 	App::KADR::AniDB::UDP::Client::Caching->new(
-		cache_ignore_max_age => !$conf->expire_cache,
-		cache_max_ages       => {
-			Anime     ,=> $conf->cache_timeout_anime,
-			File      ,=> $conf->cache_timeout_file,
-			MylistSet ,=> {
-				watching  => $conf->cache_timeout_mylist_watching,
-				watched   => $conf->cache_timeout_mylist_watched,
-				unwatched => $conf->cache_timeout_mylist_unwatched,
+		cache => {
+			db             => $self->db,
+			ignore_max_age => !$conf->expire_cache,
+			max_ages       => {
+				Anime     ,=> $conf->cache_timeout_anime,
+				File      ,=> $conf->cache_timeout_file,
+				MylistSet ,=> {
+					watching  => $conf->cache_timeout_mylist_watching,
+					watched   => $conf->cache_timeout_mylist_watched,
+					unwatched => $conf->cache_timeout_mylist_unwatched,
+				},
 			},
 		},
-		db                      => $self->db,
 		password                => $conf->anidb_password,
 		timeout                 => $conf->query_timeout,
 		time_to_sleep_when_busy => $conf->time_to_sleep_when_busy,

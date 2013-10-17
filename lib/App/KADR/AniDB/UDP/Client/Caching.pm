@@ -1,6 +1,7 @@
 package App::KADR::AniDB::UDP::Client::Caching;
 # ABSTRACT: Caching layer atop the AniDB UDP Client
 
+use App::KADR::AniDB::Cache;
 use App::KADR::Moose;
 use Carp qw(croak);
 use List::AllUtils qw(first min);
@@ -119,9 +120,8 @@ my %TYPE_CLASSES = (
 	mylist_file  => MylistEntry,
 );
 
-has 'cache_ignore_max_age', is => 'ro', isa => 'Bool';
-has 'cache_max_ages', is => 'ro', isa => 'HashRef', default => sub { {} };
-has 'db', is => 'ro', isa => 'App::KADR::DBI', required => 1;
+# TODO: Lazy build
+has 'cache', is => 'ro', isa => 'App::KADR::AniDB::Cache';
 
 for my $type (qw(anime file mylist_anime)) {
 	__PACKAGE__->meta->add_method(
@@ -129,24 +129,22 @@ for my $type (qw(anime file mylist_anime)) {
 			my $opts = ref $_[-1] eq 'HASH' ? pop : {};
 
 			# Cached
-			if (my $obj = $self->cached($type, @_, $opts)) {
+			if (my $obj = $self->cache->get($TYPE_CLASSES{$type}, {@_}, $opts)) {
+				$obj->client($self) if $obj->does(Referencer) && !$obj->has_client;
 				return $obj;
 			}
 			return if $opts->{no_update};
 
 			# Update
 			return unless my $obj = $self->${ \"SUPER::$type" }(@_);
-
-			# Cache
-			$self->db->remove($TYPE_CLASSES{$type}, {@_});
-			$self->db->insert($TYPE_CLASSES{$type}, $obj);
+			$self->cache->set($obj);
 
 			$obj;
 		});
 }
 
 method BUILD(@_) {
-	my $db  = $self->db;
+	my $db  = $self->cache->db;
 	my $dbh = $db->{dbh};
 
 	$dbh->do(SCHEMA_ANIME)        or die 'Error initializing anime table';
@@ -154,59 +152,24 @@ method BUILD(@_) {
 	$dbh->do(SCHEMA_MYLIST)       or die 'Error initializing mylist_file';
 	$dbh->do(SCHEMA_MYLIST_ANIME) or die 'Error initializing mylist_anime';
 
-	unless ($self->cache_ignore_max_age) {
+	unless ($self->cache->ignore_max_age) {
 		for my $type (keys %TYPE_CLASSES) {
 			my $class  = $TYPE_CLASSES{$type};
-			my $oldest = time - $self->max_age_for($class);
+			my $oldest = time - $self->cache->max_age_for($class);
 
 			$dbh->do("DELETE FROM $db->{rclass_map}{$TYPE_CLASSES{$type}} WHERE updated < $oldest");
 		}
 	}
 }
 
-method cached(@_) {
-	my $opts = ref $_[-1] eq 'HASH' ? pop : {};
-	my ($type, %params) = @_;
-
-	# Cached
-	my $type_class = $TYPE_CLASSES{$type} or croak "Invalid type: $type";
-	return unless my $obj = $self->db->fetch($type_class, ['*'], \%params, 1);
-
-	# Expiry
-	my $max_age = $self->max_age_for($obj, $opts->{max_age});
-	return if $obj->updated < time - $max_age && !$self->cache_ignore_max_age;
-
-	$obj->client($self) if $obj->does(Referencer) && !$obj->has_client;
-	$obj;
-}
-
 sub get_cached_lid {
 	my ($self, %params) = @_;
 	return unless exists $params{fid} || exists $params{ed2k};
 
-	if (my $file = $self->db->fetch(File, ['*'], \%params, 1)) {
+	if (my $file = $self->cache->get(File, \%params)) {
 		return $file->lid;
 	}
 	();
-}
-
-method max_age_for($obj, $override?) {
-	if ($obj->max_age_is_dynamic) {
-		if (my $defaults = $self->cache_max_ages->{ ref $obj || $obj }) {
-			if (defined $override) {
-				if (ref $override eq 'HASH') {
-					return $obj->max_age({ %$defaults, %$override });
-				}
-				return $obj->max_age($override);
-			}
-			return $obj->max_age($defaults);
-		}
-		return $obj->max_age($override);
-	}
-
-	$self->{max_age_for}{ ref $obj || $obj }{$override}
-		//= $obj->max_age($override
-			// $self->cache_max_ages->{ ref $obj || $obj });
 }
 
 sub mylist_add {
@@ -214,10 +177,10 @@ sub mylist_add {
 	my ($type, $info) = $self->SUPER::mylist_add(%params);
 
 	if ($type eq 'added') {
-		my $db = $self->db;
+		my $cache = $self->cache;
 		my %fparams = map { $params{$_} ? ($_, $params{$_}) : () } qw(fid ed2k size);
-		if (my $file = $db->fetch(File, ['*'], \%fparams, 1)) {
-			$db->update(File, { lid => $info }, \%fparams);
+		if (my $file = $cache->get(File, \%fparams)) {
+			$cache->db->update(File, { lid => $info }, \%fparams);
 		}
 	}
 
@@ -235,19 +198,16 @@ method mylist_file(@_) {
 	# Cached
 	my $key = $params{lid} ? 'lid' : $params{fid} ? 'fid' : undef;
 	if ($key) {
-		if (my $mylist = $self->cached('mylist_file', $key => $params{$key}, $opts)) {
-			return $mylist;
+		if (my $ml = $self->cache->get(MylistEntry, { $key => $params{$key} }, $opts)) {
+			$ml->client($self) if $ml->does(Referencer) && !$ml->has_client;
+			return $ml;
 		}
 	}
 	return if $opts->{no_update};
 
 	# Update
 	return unless my $ml = $self->SUPER::mylist_file(%params);
-
-	# Cache
-	$self->db->remove(MylistEntry, { lid => $ml->lid });
-	$self->db->insert(MylistEntry, $ml);
-
+	$self->cache->set($ml);
 	$ml;
 }
 
@@ -256,7 +216,7 @@ method mylist_file(@_) {
 	use aliased 'App::KADR::AniDB::UDP::Client::Caching', 'Client';
 
 	my $db = App::KADR::DBI->new("dbd:SQLite:dbname=foo");
-	my $client = Client->new(db => $db);
+	my $client = Client->new(cache => { db => $db });
 
 	# Transparently cached
 	my $anime = $client->anime(aid => 1);
@@ -264,21 +224,32 @@ method mylist_file(@_) {
 	# Try to get a lid from fid/ed2k/size
 	my $lid = $client->get_cached_lid(fid => 1);
 
+	# Get a cached anime record, not fetching it if it's missing.
+	my $anime = $client->anime(aid => 1, { no_update => 1 });
+
+	# Ignore cache
+	my $anime = $client->mylist(lid => 1, { max_age => 0 });
+
 =head1 DESCRIPTION
 
 L<App::KADR::AniDB::UDP::Client::Caching> is a transparent caching layer around
 L<App::KADR:AniDB::UDP::Client>.
+
+On build, the needed tables are created in the database if needed, and content
+older than the cache's C<max_age_for> them are deleted unless C<ignore_max_age>
+is set.
 
 =head1 ATTRIBUTES
 
 L<App::KADR::AniDB::UDP::Client::Caching> inherits all attributes from
 L<App::KADR:AniDB::UDP::Client> and implements the following new ones.
 
-=head2 C<db>
+=head2 C<cache>
 
-	my $db = $client->db;
+	my $client = Client->new(cache => { db => $db });
+	my $cache  = $client->cache;
 
-A L<App::KADR::DBI> instance. Required at creation.
+Cache, an C<App::KADR::AniDB::Cache> object.
 
 =head1 METHODS
 
@@ -287,7 +258,7 @@ L<App::KADR:AniDB::UDP::Client> and implements the following new ones.
 
 =head2 C<get_cached_lid>
 
-	my $lid = $client->get_cached_lid(%file_spec);
+	my $lid = $client->get_cached_lid(fid => 1);
 	my $lid = $client->get_cached_lid(
 		ed2k => 'a62c68d5961e4c601fcf73624b003e9e',
 		size => 169_142_272,

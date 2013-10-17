@@ -25,6 +25,8 @@ dynamic_max_age 91 * 24 * 60 * 60, method {
 	{ watching => 2 * 60 * 60 };
 };
 
+sub primary_key {'aid'}
+
 =head1 DESCRIPTION
 
 MylistSet lists the episodes and groups corresponding to a mylist query which

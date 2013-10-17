@@ -23,6 +23,8 @@ sub parse {
 	$anime;
 }
 
+sub primary_key {'aid'}
+
 =head1 REFERENCES
 
 =head2 C<mylist>
