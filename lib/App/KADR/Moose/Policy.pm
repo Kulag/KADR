@@ -3,7 +3,9 @@ package App::KADR::Moose::Policy;
 
 use v5.14;
 use Const::Fast;
+use Devel::Pragma 0.60 ();
 use Hook::AfterRuntime;
+use Method::Signatures;
 use Moose 1.9900 ();
 use MooseX::AlwaysCoerce       ();
 use MooseX::Attribute::Chained ();
@@ -52,6 +54,8 @@ sub after_import {
 
 	# Cleanliness
 	$for_class->true::import;
+
+	Method::Signatures->import({ into => $for_class });
 
 	unless ($params->{noclean}) {
 		namespace::autoclean->import(-cleanee => $for_class);

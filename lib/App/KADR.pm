@@ -16,7 +16,6 @@ use File::Copy;
 use File::Find;
 use Guard;
 use List::AllUtils qw(first none);
-use Method::Signatures::Simple;
 use POSIX ();
 use Text::Xslate;
 use Time::HiRes;

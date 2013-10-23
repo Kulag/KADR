@@ -3,7 +3,6 @@ package App::KADR::AniDB::Meta::Attribute::ContentReference;
 
 use App::KADR::Moose::Role -attr => {is => 'ro'};
 use Carp qw(croak);
-use Method::Signatures::Simple;
 use Moose::Util::TypeConstraints;
 use strict 'refs';
 

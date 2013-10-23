@@ -2,7 +2,6 @@ package App::KADR::AniDB::Content::File;
 # ABSTRACT: AniDB's file information
 
 use App::KADR::AniDB::Content;
-use Method::Signatures;
 
 use aliased 'App::KADR::AniDB::EpisodeNumber';
 

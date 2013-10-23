@@ -7,6 +7,8 @@ package TestRole {
 
 	has 'role_attr';
 
+	method test {}
+
 	# strict refs off
 	Test::More::is Test::Fatal::exception {
 		my $a;
