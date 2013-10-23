@@ -5,7 +5,6 @@ use App::KADR::AniDB::Cache;
 use App::KADR::Moose;
 use Carp qw(croak);
 use List::AllUtils qw(first min);
-use Method::Signatures;
 
 use aliased 'App::KADR::AniDB::Content::Anime';
 use aliased 'App::KADR::AniDB::Content::File';

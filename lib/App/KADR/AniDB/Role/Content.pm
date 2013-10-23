@@ -4,7 +4,6 @@ package App::KADR::AniDB::Role::Content;
 use App::KADR::Moose::Role;
 use List::MoreUtils qw(mesh);
 use List::UtilsBy qw(nsort_by);
-use Method::Signatures::Simple;
 
 use aliased 'App::KADR::AniDB::Meta::Attribute::Field';
 

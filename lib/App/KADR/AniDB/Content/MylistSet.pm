@@ -2,7 +2,6 @@ package App::KADR::AniDB::Content::MylistSet;
 # ABSTRACT: AniDB information about a set of mylist entries
 
 use App::KADR::AniDB::Content;
-use Method::Signatures::Simple;
 
 use aliased 'App::KADR::AniDB::EpisodeNumber';
 
