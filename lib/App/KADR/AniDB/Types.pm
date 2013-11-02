@@ -1,6 +1,7 @@
 package App::KADR::AniDB::Types;
 # ABSTRACT: Types common to AniDB
 
+use App::KADR::AniDB::Regexp qw($tag_rx);
 use MooseX::Types -declare => [
 	qw(ID LowerCaseWhitespacelessSimpleStr MaybeID Tag WhitespacelessSimpleStr
 		UserName)
@@ -14,17 +15,14 @@ subtype ID, as PositiveInt;
 subtype MaybeID, as Maybe[ID];
 coerce MaybeID, from Int, via { $_ > 0 ? $_ : () };
 
-my $tag_rx = qr/^ [^\d\x00\s\n] [^\s\n]* $/sx;
 subtype Tag,
 	as Str,
-	where { $_ =~ $tag_rx && length $_ < 255 },
+	where { $_ =~ /^ $tag_rx $/x },
 	message {
 		'Must be a non-empty single line without whitespace of no more than '
 			. '255 chars which does not begin with a number or null' },
 	inline_as {
-		$_[0]->parent->_inline_check($_[1])
-			. " && $_[1] " . '=~ /^ [^\d\x00\s\n] [^\s\n]* $/sx'
-			. " && length $_[1] < 255";
+		$_[0]->parent->_inline_check($_[1]) . " && $_[1] =~ /^ $tag_rx \$/x";
 	};
 
 subtype WhitespacelessSimpleStr, as SimpleStr,
@@ -85,4 +83,4 @@ A simple string with no whitespace.
 
 =head1 SEE ALSO
 
-L<MooseX::Types::Common::String>
+L<App::KADR::AniDB::Regexp>, L<MooseX::Types::Common::String>
