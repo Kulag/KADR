@@ -19,7 +19,7 @@ field [qw(
 MylistSet lists the episodes and groups corresponding to a mylist query which
 matches more than one entry.
 
-Unfortunatly, it is still missing qualifying data such as file versions,
+Unfortunately, it is still missing qualifying data such as file versions,
 and trying to narrow down results via mylist queries can be impossible in many
 cases. I recommend using File and FileSet to narrow down results instead.
 
