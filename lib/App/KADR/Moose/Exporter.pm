@@ -18,7 +18,7 @@ method build_import_methods($class: %args) {
 	my $pkg = $args{exporting_package} ||= caller;
 	$export_spec{$pkg} = \%args;
 
-	load_class $_ for ref $args{also} ? @{ $args{also} } : $args{also};
+	load_class $_ for ref $args{also} ? @{ $args{also} } : $args{also} || ();
 
 	# Check if import should be installed, and prevent MX from installing its.
 	my $install_import = grep { $_ eq 'import' } @{ $args{install} };
