@@ -38,4 +38,32 @@ sub _STRINGLIKE0 ($) {
 	|| (defined $_[0] && $_[0] eq '');
 }
 
-1;
+0x6B63;
+
+=head1 FUNCTIONS
+
+=head2 C<pathname_filter>
+=head2 C<pathname_filter_windows>
+
+	my $pathname = pathname_filter 'foo/bar';
+
+Replace invalid characters in path names with similar unicode characters. The
+former replaces / only. The windows version replaces \?"<>|:*
+
+=head2 C<shortest>
+
+	my $a = shortest qw(a ab abc);
+
+Return the shortest string of the list.
+
+=head2 C<_STRINGLIKE0>
+
+	my $str = _STRINGLIKE0 $_[1] or die 'Invalid parameter';
+
+Test if parameter is a string or an object with a stringify overload.
+
+=head1 IMPORT TAGS
+
+=head2 C<-pathname_filter>
+
+C<pathname_filter> C<pathname_filter_windows>
