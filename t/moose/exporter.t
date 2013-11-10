@@ -1,4 +1,6 @@
 package TestClass {
+use v5.14;
+
 	use t::lib::Moose::Exporter -foo => 'bar';
 }
 
@@ -6,7 +8,6 @@ package TestSubClass {
 	use t::lib::Moose::Exporter::Sub -foo => 'baz';
 }
 
-use v5.14;
 use aliased;
 use Test::More;
 
