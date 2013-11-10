@@ -3,7 +3,7 @@
    "author" : [
       "Kulag <g.kulag@gmail.com>"
    ],
-   "dynamic_config" : 0,
+   "dynamic_config" : 1,
    "generated_by" : "Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.132510",
    "license" : [
       "mit"
@@ -14,9 +14,14 @@
    },
    "name" : "App-KADR",
    "prereqs" : {
+      "build" : {
+         "requires" : {
+            "Module::Build" : "0.3601"
+         }
+      },
       "configure" : {
          "requires" : {
-            "Module::Build::Tiny" : "0.030"
+            "Module::Build" : "0.3601"
          }
       },
       "develop" : {
@@ -119,8 +124,7 @@
             "IPC::Open3" : "0",
             "Test::Fatal" : "0",
             "Test::More" : "0.88",
-            "Test::Trap" : "0",
-            "Win32" : "0"
+            "Test::Trap" : "0"
          }
       }
    },
@@ -232,9 +236,9 @@
             "version" : "0.006"
          },
          {
-            "class" : "Dist::Zilla::Plugin::ModuleBuildTiny",
-            "name" : "ModuleBuildTiny",
-            "version" : "0.005"
+            "class" : "Dist::Zilla::Plugin::ModuleBuild",
+            "name" : "ModuleBuild",
+            "version" : "5.006"
          },
          {
             "class" : "Dist::Zilla::Plugin::Git::NextVersion",
@@ -260,6 +264,16 @@
             "class" : "Dist::Zilla::Plugin::NextRelease",
             "name" : "NextRelease",
             "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::OSPrereqs",
+            "config" : {
+               "Dist::Zilla::Plugin::OSPrereqs" : {
+                  "os" : "MSWin32"
+               }
+            },
+            "name" : "MSWin32",
+            "version" : "0.003"
          },
          {
             "class" : "Dist::Zilla::Plugin::Test::ChangesHasContent",
