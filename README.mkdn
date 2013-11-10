@@ -1,0 +1,19 @@
+# NAME
+
+App::KADR - Manage your anime collection with anidb
+
+# VERSION
+
+version 0.001
+
+# AUTHOR
+
+Kulag <g.kulag@gmail.com>
+
+# COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2013 by Kulag.
+
+This is free software, licensed under:
+
+    The MIT (X11) License
