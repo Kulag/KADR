@@ -120,8 +120,7 @@
             "Test::Fatal" : "0",
             "Test::More" : "0.88",
             "Test::Trap" : "0",
-            "Win32" : "0",
-            "t::Role" : "0"
+            "Win32" : "0"
          }
       }
    },
