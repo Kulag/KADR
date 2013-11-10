@@ -1,14 +1,13 @@
 *~
 *.patch
 Build
-MANIFEST*.bak
+*.bak
 MYMETA.*
 _build/
 .build/
 blib/
 cover_db/
-nytprof/
-nytprof.out*
+nytprof*
 *.tdy
 *.tmp
 App-KADR-*
