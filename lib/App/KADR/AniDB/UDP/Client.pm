@@ -40,7 +40,7 @@ use constant FILE_AMASK => "0000fcc0";
 use constant ANIME_MASK => "f0e0d8fd0000f8";
 
 has 'is_banned',                 isa => Bool;
-has 'max_attempts',              isa => Int,       predicate => 1;
+has 'max_attempts',              isa => Int,       predicate => 1, clearer => 1;
 has 'port',     default => 9000, isa => Int;
 has 'password',                  isa => Str,       required => 1;
 has 'timeout',  default => 15.0, isa => Num;
@@ -439,9 +439,10 @@ Check if the client has recieved a temporary IP ban.
 	my $max = $client->max_attempts;
 	$client = $client->max_attempts(5);
 	my $set = $client->has_max_attempts;
+	$client->clear_max_attempts;
 
-Number of times to retry timed out queries before dying. When unset, will keep
-trying queries indefinitely.
+Number of times to retry timed out queries before dying. Will keep retrying
+queries indefinitely if undefined.
 
 =head2 C<port>
 
