@@ -1,12 +1,13 @@
-package TestClass {
+use v5.14;
+
+package t::Class {
 	use t::lib::Moose::Exporter -foo => 'bar';
 }
 
-package TestSubClass {
+package t::SubClass {
 	use t::lib::Moose::Exporter::Sub -foo => 'baz';
 }
 
-use v5.14;
 use aliased;
 use Test::More;
 
@@ -14,7 +15,7 @@ sub Exporter()    {'t::lib::Moose::Exporter'}
 sub SubExporter() {'t::lib::Moose::Exporter::Sub'}
 
 ok($_->isa('Moose::Object'), "also a Moose: $_")
-	for qw(TestClass TestSubClass);
+	for qw(t::Class t::SubClass);
 
 is_deeply(
 	\@t::lib::Moose::Exporter::order,
@@ -29,8 +30,8 @@ is_deeply(
 	'modifier ordering'
 );
 
-is(TestClass->$_, Exporter . ' bar', "TestClass::$_") for qw(beforei afteri);
-is(TestSubClass->beforei, Exporter . ' baz',    'TestSubClass::beforei');
-is(TestSubClass->afteri,  SubExporter . ' baz', 'TestSubClass::afteri');
+is(t::Class->$_, Exporter . ' bar', "t::Class::$_") for qw(beforei afteri);
+is(t::SubClass->beforei, Exporter . ' baz',    't::SubClass::beforei');
+is(t::SubClass->afteri,  SubExporter . ' baz', 't::SubClass::afteri');
 
 done_testing;
