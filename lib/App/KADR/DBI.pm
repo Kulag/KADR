@@ -180,34 +180,34 @@ sub _keys_for {
 =head1 SYNOPSIS
 
   use App::KADR::DBI;
-  
+
   my $db = App::KADR::DBI->new("dbi:SQLite:example.db");
-  
+
   # Cache the contents of the files table in memory for quick access
   # when fetching with filename and size as the where clause.
   $db->cache([{table => "files", indices => ["filename", "size"]}]);
-  
+
   # This probably doesn't even work...
   $result = $db->fetch("files", ['filename', 'size'], {filename => "foo"});
   $result->{foo}->{size};
-  
+
   # This does, though.
   $result = $db->fetch("files", ['filename', 'size'], {filename => "foo"}, 1);
   $result->{size};
-  
+
   # Will return true if a row in files with filename="foo" exists.
   $result = $db->exists("files", {filename => "foo"});
-  
+
   $db->insert("files", {filename => "foo", size => 3});
-  
+
   # Update files size=6 where filename="foo";
   $db->update("files", {size => 6}, {filename => "foo"});
-  
+
   # Decides whether to insert a new row or update an existing one based on the where clause.
   $db->set("files", {filename => "foo", size => 6}, {filename => "foo"});
-  
+
   $db->remove("files", {filename => "foo"});
-  
+
   # DBI can still be accessed for more complex queries.
   $result = $db->{dbh}->selectone_arrayref("SELECT size, filename FROM files");
 
@@ -216,7 +216,7 @@ sub _keys_for {
 App::KADR::DBI is a very simplistic interface for L<DBI> that aims to simplify
 and speed up writing common database calls.
 
-The main differences from the helper functions found within L<DBI> itself are: 
+The main differences from the helper functions found within L<DBI> itself are:
  - usage of prepare_cached rather than prepare
  - the ability to load a table into a transparent cache in RAM to speed access
  - functions are not called with SQL queries but the table name and a somewhat

@@ -55,7 +55,7 @@ sub update_term {
 
 	# Print any "log" lines since the last status line update.
 	$out .= join("\n", @log) . "\n" if @log;
-	
+
 	print $out . $line;
 	$self->_last_line($line);
 	$self->_last_update(Time::HiRes::time);

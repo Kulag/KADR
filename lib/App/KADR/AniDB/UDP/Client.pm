@@ -196,7 +196,7 @@ sub mylist_anime {
 
 	# Not found
 	return unless $mylist;
-	
+
 	return $mylist if $mylist->isa(MylistSet);
 
 	# Mylist data for this anime consists of one episode.
