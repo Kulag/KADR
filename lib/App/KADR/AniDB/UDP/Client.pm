@@ -432,7 +432,7 @@ section below.
 
 	my $bool = $client->is_banned;
 
-Check if the client has recieved a temporary IP ban.
+Check if the client has received a temporary IP ban.
 
 =head2 C<max_attempts>
 
@@ -503,7 +503,7 @@ Emitted when a new transaction is about to start.
 	my $anime = $client->anime(%anime_spec);
 
 Get anime information.
-WARNING: Currently, using aname with the caching subclass will crash.
+WARNING: Currently, using C<aname> with the caching subclass will crash.
 
 =head2 C<build_tx>
 
@@ -516,7 +516,7 @@ Generate a new transaction object.
 	my $file = $client->file(%file_spec);
 
 Get file information.
-WARNING: Currently, using aname or gname with the caching subclass will crash.
+WARNING: Currently, using C<aname> or C<gname> with the caching subclass will crash.
 
 =head2 C<has_session>
 
@@ -601,7 +601,7 @@ The MylistEntry object for the existing entry.
 
 =head4 C<multiple_files>
 
-An arrayref of fids.
+An arrayref of C<fids>.
 
 =head2 C<mylist_anime>
 
@@ -647,6 +647,7 @@ Perform a query.
 	(%anime_spec, epno => EpisodeNumber->parse(1))
 
 =head2 C<episodes>
+
 	(%episode_spec)
 	(%anime_spec, epno => '1-2')
 	(%anime_spec, epno => EpisodeNumber->parse('1-2'))

@@ -3,7 +3,7 @@ package App::KADR::Moose::Role;
 
 use App::KADR::Moose::Exporter also => [qw(Moose::Role App::KADR::Moose::Policy)];
 
-=head1 SYNPOSIS
+=head1 SYNOPSIS
 
 	use App::KADR::Moose::Role;
 

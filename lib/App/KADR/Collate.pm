@@ -53,7 +53,7 @@ resolve_auto will be used.
 	my $type = App::KADR::Collate->resolve_auto;
 
 Determine best available collator type.
-'unicodeicu' if L<Unicode::ICU::Collator> is available, otherwise 'unicode'.
+C<unicodeicu> if L<Unicode::ICU::Collator> is available, otherwise C<unicode>.
 
 =head1 SEE ALSO
 

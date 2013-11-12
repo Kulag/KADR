@@ -106,4 +106,4 @@ Delete the pid file.
 	$pidfile->write; # Current process ID.
 	$pidfile->write($pid);
 
-Write a process ID to the pidfile. Defaults to the current process' ID.
+Write a process ID to the pid file. Defaults to the current process' ID.

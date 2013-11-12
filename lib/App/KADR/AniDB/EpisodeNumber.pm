@@ -199,8 +199,9 @@ Check if another episode number contains this one. Equivalent to C<contains>, wi
 	EpisodeNumber->parse('S1')->in('1-10');
 
 Check if another episode number which is broken contains this one.
-Use this to work around MULTIPLE MYLIST ENTRIES incorrectly returning only the
-first applicable episode numbers from the files it represents.
+Use this to work around L<App::KADR::AniDB::Content::MylistSet> incorrectly
+returning only the first applicable episode numbers from the files it
+represents.
 This method is memoized.
 
 =head2 C<intersection>

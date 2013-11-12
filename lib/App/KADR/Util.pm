@@ -47,7 +47,7 @@ sub _STRINGLIKE0 ($) {
 
 	my $pathname = pathname_filter 'foo/bar';
 
-Replace invalid characters in path names with similar unicode characters. The
+Replace invalid characters in path names with similar Unicode characters. The
 former replaces / only. The windows version replaces \?"<>|:*
 
 =head2 C<shortest>

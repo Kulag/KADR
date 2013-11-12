@@ -98,7 +98,7 @@ Turn a path into a file. This static method is memoized.
 
 	my $dir_class = $file->dir_class;
 
-Dir class in use by this file.
+Directory class in use.
 
 =head2 C<is_absolute>
 
@@ -116,9 +116,10 @@ Check if file is hidden.
 
 	my $relative_file = $file->relative;
 	my $relative_file = $file->relative('..');
+	my $relative_file = $file->relative(dir(''));
 
-Turn file into a file relative to another dir.
-The other dir defaults to the current directory.
+Turn file into a L<App::KADR::Path::File> relative to another directory.
+The other directory defaults to the current directory.
 
 =head2 C<stringify>
 

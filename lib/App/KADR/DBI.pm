@@ -213,7 +213,7 @@ sub _keys_for {
 
 =head1 DESCRIPTION
 
-App::KADR::DBI is a very simplistic interface for L<DBI> that aims to simplfy
+App::KADR::DBI is a very simplistic interface for L<DBI> that aims to simplify
 and speed up writing common database calls.
 
 The main differences from the helper functions found within L<DBI> itself are: 

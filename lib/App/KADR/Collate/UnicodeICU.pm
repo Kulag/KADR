@@ -45,9 +45,9 @@ sub _build_icu {
 =head1 DESCRIPTION
 
 L<App::KADR::Collate::UnicodeICU> is a partial L<Unicode::Collate>-like
-wrapper for L<Unicode::ICU::Collator>. At present it is unconfigurable aside
-from locale, and attempts to mimic Unicode::Collate's sort output with
-(level => 1, normalize => undef).
+wrapper for L<Unicode::ICU::Collator>. At present it is not configurable aside
+from locale, and attempts to mimic L<Unicode::Collate>'s sort output with
+C<(level => 1, normalize => undef)>.
 
 =head1 USAGE
 
@@ -63,14 +63,14 @@ L<App::KADR::Collate::UnicodeICU> implements the following methods.
 	my $key = $collate->getSortKey($string);
 
 Get sort key for string. Removes ∶ from the string before getting the sort key
-since ICU doesn't shift ∶ to level 4 like Unicode::Collate.
+since ICU doesn't shift ∶ to level 4 like L<Unicode::Collate>.
 
 =head2 C<sort>
 
 	my @array = $collate->sort(@list);
 	my @array = $collate->sort(sub { $_ }, @list);
 
-Sort list with Unicode::ICU::Collator.
+Sort list with L<Unicode::ICU::Collator>.
 
 =head1 SEE ALSO
 

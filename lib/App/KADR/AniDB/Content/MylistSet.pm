@@ -16,12 +16,13 @@ field [qw(
 
 =head1 DESCRIPTION
 
-MylistSet lists the episodes and groups corresponding to a mylist query which
-matches more than one entry.
+L<App::KADR::AniDB::Content::MylistSet> lists the episodes and groups
+corresponding to a mylist query which matches more than one entry.
 
 Unfortunately, it is still missing qualifying data such as file versions,
 and trying to narrow down results via mylist queries can be impossible in many
-cases. I recommend using File and FileSet to narrow down results instead.
+cases. I recommend using L<App::KADR::AniDB::Content::File> and
+L<App::KADR::AniDB::Content::FileSet> to narrow down results instead.
 
 It's most useful property is probably its aggregate information about the
 overall state of all the files in a user's mylist that correspond to a

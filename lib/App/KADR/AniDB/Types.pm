@@ -56,17 +56,17 @@ subtype UserName, as LowerCaseWhitespacelessSimpleStr;
 
 =head2 C<ID>
 
-A AniDB ID is a positive integer. See also C<MooseX::Types::Comment::Numeric
+A AniDB ID is a positive integer. See also L<MooseX::Types::Comment::Numeric>
 
 =head2 C<MaybeID>
 
 Undef or an AniDB ID. 0 is used for undef IDs in the UDP API.
-XXX: This should be moved to typemapping when it's implemented.
+XXX: This should be moved to the typemap when it's implemented.
 
 =head2 C<LowerCaseWhitespacelessSimpleStr>
 
 A lowercase simple string with no whitespace. Coerces from
-WhitespacelessSimpleStr.
+L</WhitespacelessSimpleStr>.
 
 =head2 C<Tag>
 

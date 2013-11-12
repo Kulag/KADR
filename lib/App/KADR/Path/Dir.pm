@@ -152,14 +152,15 @@ L<App::KADR::Path::Entity> and implements the following new ones.
 	my $dir = App::KADR::Path::Dir->new('/home', ...);
 	my $dir = dir('/home', ...);
 
-Turn a path into a dir. This static method is memoized.
+Parse a path into a L<App::KADR::Path::Dir> object. This static method is
+memoized.
 
 =head2 C<children>
 
 	my @children = $dir->children;
 	my @children = $dir->children(all => 0, no_hidden => 0); # Defaults
 
-Gather a list of this dir's children, filtered by options.
+Gather a list of this directory's children, filtered by options.
 If C<all>, the current and parent directories will be included.
 If C<no_hidden>, entries that are hidden will not be included.
 
@@ -167,41 +168,44 @@ If C<no_hidden>, entries that are hidden will not be included.
 
 	my $file_class = $dir->file_class;
 
-File class in use by this dir.
+File class in use.
 
 =head2 C<is_absolute>
 
 	my $is_absolute = $dir->is_absolute;
 
-Check if dir is absolute. This method is memoized.
+Check if path is absolute. This method is memoized.
 
 =head2 C<is_hidden>
 
 	my $is_hidden = $dir->is_hidden;
 
-Check if dir is hidden.
+Check if path is hidden. This only checks the basename. i.e., a directory
+inside a hidden directory is not considered hidden.
 
 =head2 C<relative>
 
 	my $relative_dir = $dir->relative;
 	my $relative_dir = $dir->relative('..');
+	my $relative_dir = $dir->relative(dir(''));
 
-Turn dir into a dir relative to another dir.
-The other dir defaults to the current directory.
+Construct a L<App::KADR::Path::Dir> relative to another directory.
+The other directory defaults to the current directory.
 
 =head2 C<stringify>
 
 	my $string = $dir->stringify;
 	my $string = $dir . '';
 
-Turn dir into a string. This method is memoized.
+Turn directory into a string. This method is memoized.
 
 =head2 C<subsumes>
 
 	my $subsumes = $dir->subsumes(dir());
 	my $subsumes = $dir->subsumes(file('foo'));
 
-Check if another dir or file is logically contained within this dir.
+Check if another directory or file is logically contained within this
+directory.
 This method is memoized.
 
 =head1 SEE ALSO

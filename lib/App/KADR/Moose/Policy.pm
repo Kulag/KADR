@@ -87,7 +87,9 @@ sub init_meta {
 	);
 }
 
-=head1 SYNPOSIS
+=for :stopwords rw
+
+=head1 SYNOPSIS
 
 	use Moose;
 	use App::KADR::Moose::Policy;

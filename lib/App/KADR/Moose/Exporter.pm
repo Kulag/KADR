@@ -128,10 +128,11 @@ Modules in C<also> are loaded for you.
 Parameters specified in C<import_params> (without leading dashes) will be
 collected and accessible via C<get_import_params>.
 
+	method before_import($class: $for_class, @import_args) { ... }
+	method after_import($class: $meta, @import_args) { ... }
+
 If your module has subs C<before_import> and/or C<after_import>, they will be
 called around L<Moose::Exporter>'s import method like Moose's method modifiers.
-The before modifier is given the caller class before its other arguments.
-The after modifier is given the caller metaobject before its other arguments.
 
 =head2 C<get_import_params>
 

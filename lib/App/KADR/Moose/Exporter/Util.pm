@@ -53,7 +53,7 @@ sub strip_import_params {
 	my $hashref = get_sub_exporter_into_hash(\@_);
 
 Returns the hashref meant for Sub::Exporter from a Moose::Exporter import array,
-creating it if neccessary.
+creating it if necessary.
 
 =head2 C<strip_import_params>
 

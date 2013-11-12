@@ -5,4 +5,4 @@ use App::KADR::Moose::Role;
 
 =head1 DESCRIPTION
 
-Like the flag traits from MooseX::Storage and KiokuDB.
+Like the flag traits from L<MooseX::Storage> and L<KiokuDB>.
