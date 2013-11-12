@@ -4,7 +4,7 @@
       "Kulag <g.kulag@gmail.com>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.132510",
+   "generated_by" : "Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.132830",
    "license" : [
       "mit"
    ],
@@ -13,6 +13,12 @@
       "version" : "2"
    },
    "name" : "App-KADR",
+   "no_index" : {
+      "directory" : [
+         "corpus",
+         "t"
+      ]
+   },
    "prereqs" : {
       "build" : {
          "requires" : {
@@ -26,7 +32,9 @@
       },
       "develop" : {
          "requires" : {
+            "Pod::Coverage::TrustPod" : "0",
             "Test::Pod" : "1.41",
+            "Test::Pod::Coverage" : "1.08",
             "version" : "0.9901"
          }
       },
@@ -128,13 +136,197 @@
          }
       }
    },
+   "provides" : {
+      "App::KADR" : {
+         "file" : "lib/App/KADR.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Content" : {
+         "file" : "lib/App/KADR/AniDB/Content.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Content::Anime" : {
+         "file" : "lib/App/KADR/AniDB/Content/Anime.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Content::File" : {
+         "file" : "lib/App/KADR/AniDB/Content/File.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Content::MylistEntry" : {
+         "file" : "lib/App/KADR/AniDB/Content/MylistEntry.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Content::MylistSet" : {
+         "file" : "lib/App/KADR/AniDB/Content/MylistSet.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::EpisodeNumber" : {
+         "file" : "lib/App/KADR/AniDB/EpisodeNumber.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::EpisodeNumber::Range" : {
+         "file" : "lib/App/KADR/AniDB/EpisodeNumber/Range.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Meta::Attribute::ContentReference" : {
+         "file" : "lib/App/KADR/AniDB/Meta/Attribute/ContentReference.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Meta::Attribute::ContentReference::Builder" : {
+         "file" : "lib/App/KADR/AniDB/Meta/Attribute/ContentReference/Builder.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Meta::Attribute::Field" : {
+         "file" : "lib/App/KADR/AniDB/Meta/Attribute/Field.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Regexp" : {
+         "file" : "lib/App/KADR/AniDB/Regexp.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Role::Content" : {
+         "file" : "lib/App/KADR/AniDB/Role/Content.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Role::Content::Referencer" : {
+         "file" : "lib/App/KADR/AniDB/Role/Content/Referencer.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::Types" : {
+         "file" : "lib/App/KADR/AniDB/Types.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::UDP::Client" : {
+         "file" : "lib/App/KADR/AniDB/UDP/Client.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::UDP::Client::Caching" : {
+         "file" : "lib/App/KADR/AniDB/UDP/Client/Caching.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::AniDB::UDP::Transaction" : {
+         "file" : "lib/App/KADR/AniDB/UDP/Transaction.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Collate" : {
+         "file" : "lib/App/KADR/Collate.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Collate::ASCII" : {
+         "file" : "lib/App/KADR/Collate/ASCII.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Collate::None" : {
+         "file" : "lib/App/KADR/Collate/None.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Collate::Unicode" : {
+         "file" : "lib/App/KADR/Collate/Unicode.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Collate::UnicodeICU" : {
+         "file" : "lib/App/KADR/Collate/UnicodeICU.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Config" : {
+         "file" : "lib/App/KADR/Config.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::DBI" : {
+         "file" : "lib/App/KADR/DBI.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::KnownFile" : {
+         "file" : "lib/App/KADR/KnownFile.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Meta::Attribute::DoNotSerialize" : {
+         "file" : "lib/App/KADR/Meta/Attribute/DoNotSerialize.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Meta::Method::AttrInlined" : {
+         "file" : "lib/App/KADR/Meta/Method/AttrInlined.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Meta::Method::Inlined" : {
+         "file" : "lib/App/KADR/Meta/Method/Inlined.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Moose" : {
+         "file" : "lib/App/KADR/Moose.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Moose::AttrDefaults" : {
+         "file" : "lib/App/KADR/Moose/AttrDefaults.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Moose::Exporter" : {
+         "file" : "lib/App/KADR/Moose/Exporter.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Moose::Exporter::Util" : {
+         "file" : "lib/App/KADR/Moose/Exporter/Util.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Moose::Policy" : {
+         "file" : "lib/App/KADR/Moose/Policy.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Moose::Role" : {
+         "file" : "lib/App/KADR/Moose/Role.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Path" : {
+         "file" : "lib/App/KADR/Path.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Path::Dir" : {
+         "file" : "lib/App/KADR/Path/Dir.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Path::Entity" : {
+         "file" : "lib/App/KADR/Path/Entity.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Path::File" : {
+         "file" : "lib/App/KADR/Path/File.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Path::Util" : {
+         "file" : "lib/App/KADR/Path/Util.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Pid" : {
+         "file" : "lib/App/KADR/Pid.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Term::StatusLine" : {
+         "file" : "lib/App/KADR/Term/StatusLine.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Term::StatusLine::Fractional" : {
+         "file" : "lib/App/KADR/Term/StatusLine/Fractional.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Term::StatusLine::Freeform" : {
+         "file" : "lib/App/KADR/Term/StatusLine/Freeform.pm",
+         "version" : "0.001"
+      },
+      "App::KADR::Util" : {
+         "file" : "lib/App/KADR/Util.pm",
+         "version" : "0.001"
+      }
+   },
    "release_status" : "stable",
    "resources" : {
-      "homepage" : "https://github.com/kulag/KADR",
+      "bugtracker" : {
+         "web" : "https://github.com/Kulag/KADR/issues"
+      },
       "repository" : {
          "type" : "git",
-         "url" : "https://github.com/kulag/KADR.git",
-         "web" : "https://github.com/kulag/KADR"
+         "url" : "git://github.com/Kulag/KADR.git",
+         "web" : "https://github.com/Kulag/KADR"
       }
    },
    "version" : "0.001",
@@ -144,69 +336,312 @@
       },
       "plugins" : [
          {
+            "class" : "Dist::Zilla::Plugin::NextRelease",
+            "name" : "@BHERWEYER/NextRelease",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::ContributorsFromGit",
+            "name" : "@BHERWEYER/ContributorsFromGit",
+            "version" : "0.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::CheckFor::CorrectBranch",
+            "name" : "@BHERWEYER/@Git::CheckFor/Git::CheckFor::CorrectBranch",
+            "version" : "0.008"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::CheckFor::Fixups",
+            "name" : "@BHERWEYER/@Git::CheckFor/Git::CheckFor::Fixups",
+            "version" : "0.008"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::CheckFor::MergeConflicts",
+            "name" : "@BHERWEYER/@Git::CheckFor/Git::CheckFor::MergeConflicts",
+            "version" : "0.008"
+         },
+         {
             "class" : "Dist::Zilla::Plugin::Git::GatherDir",
-            "name" : "Git::GatherDir",
+            "name" : "@BHERWEYER/Git::GatherDir",
+            "version" : "2.017"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::PromptIfStale",
+            "name" : "@BHERWEYER/PromptIfStale",
+            "version" : "0.011"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::NextVersion",
+            "name" : "@BHERWEYER/Git::NextVersion",
             "version" : "2.017"
          },
          {
             "class" : "Dist::Zilla::Plugin::PruneCruft",
-            "name" : "@Filter/PruneCruft",
+            "name" : "@BHERWEYER/PruneCruft",
             "version" : "5.006"
          },
          {
-            "class" : "Dist::Zilla::Plugin::ManifestSkip",
-            "name" : "@Filter/ManifestSkip",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::MetaYAML",
-            "name" : "@Filter/MetaYAML",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::License",
-            "name" : "@Filter/License",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Readme",
-            "name" : "@Filter/Readme",
+            "class" : "Dist::Zilla::Plugin::PkgVersion",
+            "name" : "@BHERWEYER/PkgVersion",
             "version" : "5.006"
          },
          {
             "class" : "Dist::Zilla::Plugin::ExecDir",
-            "name" : "@Filter/ExecDir",
+            "name" : "@BHERWEYER/ExecDir",
             "version" : "5.006"
          },
          {
             "class" : "Dist::Zilla::Plugin::ShareDir",
-            "name" : "@Filter/ShareDir",
+            "name" : "@BHERWEYER/ShareDir",
             "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::ModuleBuild",
+            "name" : "@BHERWEYER/ModuleBuild",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::InstallGuide",
+            "name" : "@BHERWEYER/InstallGuide",
+            "version" : "1.200001"
          },
          {
             "class" : "Dist::Zilla::Plugin::Manifest",
-            "name" : "@Filter/Manifest",
+            "name" : "@BHERWEYER/Manifest",
             "version" : "5.006"
          },
          {
-            "class" : "Dist::Zilla::Plugin::TestRelease",
-            "name" : "@Filter/TestRelease",
-            "version" : "5.006"
+            "class" : "Dist::Zilla::Plugin::ReadmeFromPod",
+            "name" : "@BHERWEYER/ReadmeFromPod",
+            "version" : "0.21"
          },
          {
-            "class" : "Dist::Zilla::Plugin::ConfirmRelease",
-            "name" : "@Filter/ConfirmRelease",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::UploadToCPAN",
-            "name" : "@Filter/UploadToCPAN",
-            "version" : "5.006"
+            "class" : "Dist::Zilla::Plugin::ReportVersions::Tiny",
+            "name" : "@BHERWEYER/ReportVersions::Tiny",
+            "version" : "1.10"
          },
          {
             "class" : "Dist::Zilla::Plugin::AutoPrereqs",
-            "name" : "AutoPrereqs",
+            "name" : "@BHERWEYER/AutoPrereqs",
             "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::ConsistentVersionTest",
+            "name" : "@BHERWEYER/ConsistentVersionTest",
+            "version" : "0.02"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::PodCoverageTests",
+            "name" : "@BHERWEYER/PodCoverageTests",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::PodSyntaxTests",
+            "name" : "@BHERWEYER/PodSyntaxTests",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::EOLTests",
+            "name" : "@BHERWEYER/EOLTests",
+            "version" : "0.02"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::HasVersionTests",
+            "name" : "@BHERWEYER/HasVersionTests",
+            "version" : "1.101420"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Test::Compile",
+            "config" : {
+               "Dist::Zilla::Plugin::Test::Compile" : {
+                  "filename" : "t/00-compile.t",
+                  "module_finder" : [
+                     ":InstallModules"
+                  ],
+                  "script_finder" : [
+                     ":ExecFiles"
+                  ]
+               }
+            },
+            "name" : "@BHERWEYER/Test::Compile",
+            "version" : "2.037"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::ExtraTests",
+            "name" : "@BHERWEYER/ExtraTests",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Test::Pod::LinkCheck",
+            "name" : "@BHERWEYER/Test::Pod::LinkCheck",
+            "version" : "1.001"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Test::MinimumVersion",
+            "name" : "@BHERWEYER/Test::MinimumVersion",
+            "version" : "2.000005"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Test::PodSpelling",
+            "name" : "@BHERWEYER/Test::PodSpelling",
+            "version" : "2.006001"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Authority",
+            "name" : "@BHERWEYER/Authority",
+            "version" : "1.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::MetaNoIndex",
+            "name" : "@BHERWEYER/MetaNoIndex",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::GitHub::Meta",
+            "name" : "@BHERWEYER/GitHub::Meta",
+            "version" : "0.35"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::MetaConfig",
+            "name" : "@BHERWEYER/MetaConfig",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::MetaJSON",
+            "name" : "@BHERWEYER/MetaJSON",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::MetaYAML",
+            "name" : "@BHERWEYER/MetaYAML",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::FinderCode",
+            "name" : "@BHERWEYER/MetaProvides::Package/AUTOVIV/:InstallModulesPM",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::MetaProvides::Package",
+            "config" : {
+               "Dist::Zilla::Plugin::MetaProvides::Package" : {},
+               "Dist::Zilla::Role::MetaProvider::Provider" : {
+                  "inherit_missing" : "1",
+                  "inherit_version" : "1",
+                  "meta_noindex" : "1"
+               }
+            },
+            "name" : "@BHERWEYER/MetaProvides::Package",
+            "version" : "1.15000000"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::TestRelease",
+            "name" : "@BHERWEYER/TestRelease",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::CheckChangesHasContent",
+            "name" : "@BHERWEYER/CheckChangesHasContent",
+            "version" : "0.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::CheckPrereqsIndexed",
+            "name" : "@BHERWEYER/CheckPrereqsIndexed",
+            "version" : "0.009"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::Remote::Update",
+            "name" : "@BHERWEYER/Git::Remote::Update",
+            "version" : "0.1.2"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::TravisYML",
+            "name" : "@BHERWEYER/TravisYML",
+            "version" : "1.04"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::Remote::Check",
+            "name" : "@BHERWEYER/Git::Remote::Check",
+            "version" : "0.1.2"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::Check",
+            "name" : "@BHERWEYER/Git::Check",
+            "version" : "2.017"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::Commit",
+            "name" : "@BHERWEYER/Git::Commit",
+            "version" : "2.017"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Git::Tag",
+            "name" : "@BHERWEYER/Git::Tag",
+            "version" : "2.017"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::UploadToCPAN",
+            "name" : "@BHERWEYER/UploadToCPAN",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Signature",
+            "name" : "@BHERWEYER/Signature",
+            "version" : "1.100930"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::Twitter",
+            "name" : "@BHERWEYER/Twitter",
+            "version" : "0.023"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::InstallRelease",
+            "name" : "@BHERWEYER/InstallRelease",
+            "version" : "0.008"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::GitHub::Update",
+            "name" : "@BHERWEYER/GitHub::Update",
+            "version" : "0.35"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::ConfirmRelease",
+            "name" : "@BHERWEYER/ConfirmRelease",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::License",
+            "name" : "@BHERWEYER/License",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::CPANFile",
+            "name" : "@BHERWEYER/CPANFile",
+            "version" : "5.006"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::ReadmeAnyFromPod",
+            "name" : "@BHERWEYER/ReadmeMarkdownInRoot",
+            "version" : "0.131500"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::CopyFilesFromBuild",
+            "name" : "@BHERWEYER/CopyFilesFromBuild",
+            "version" : "0.103510"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::PodWeaver",
+            "config" : {
+               "Dist::Zilla::Plugin::PodWeaver" : {
+                  "config_plugin" : "@BHERWEYER",
+                  "finder" : [
+                     ":InstallModules",
+                     ":ExecFiles"
+                  ]
+               }
+            },
+            "name" : "@BHERWEYER/PodWeaver",
+            "version" : "4.001"
          },
          {
             "class" : "Dist::Zilla::Plugin::Prereqs",
@@ -231,41 +666,6 @@
             "version" : "5.006"
          },
          {
-            "class" : "Dist::Zilla::Plugin::ContributorsFromGit",
-            "name" : "ContributorsFromGit",
-            "version" : "0.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::ModuleBuild",
-            "name" : "ModuleBuild",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Git::NextVersion",
-            "name" : "Git::NextVersion",
-            "version" : "2.017"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::PkgVersion",
-            "name" : "PkgVersion",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::MetaConfig",
-            "name" : "MetaConfig",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::MetaJSON",
-            "name" : "MetaJSON",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::NextRelease",
-            "name" : "NextRelease",
-            "version" : "5.006"
-         },
-         {
             "class" : "Dist::Zilla::Plugin::OSPrereqs",
             "config" : {
                "Dist::Zilla::Plugin::OSPrereqs" : {
@@ -274,86 +674,6 @@
             },
             "name" : "MSWin32",
             "version" : "0.003"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Test::ChangesHasContent",
-            "name" : "Test::ChangesHasContent",
-            "version" : "0.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::PodSyntaxTests",
-            "name" : "PodSyntaxTests",
-            "version" : "5.006"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Test::Compile",
-            "config" : {
-               "Dist::Zilla::Plugin::Test::Compile" : {
-                  "filename" : "t/00-compile.t",
-                  "module_finder" : [
-                     ":InstallModules"
-                  ],
-                  "script_finder" : [
-                     ":ExecFiles"
-                  ]
-               }
-            },
-            "name" : "Test::Compile",
-            "version" : "2.037"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::ReportVersions::Tiny",
-            "name" : "ReportVersions::Tiny",
-            "version" : "1.10"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::PodWeaver",
-            "config" : {
-               "Dist::Zilla::Plugin::PodWeaver" : {
-                  "config_plugin" : "@RJBS",
-                  "finder" : [
-                     ":InstallModules",
-                     ":ExecFiles"
-                  ]
-               }
-            },
-            "name" : "PodWeaver",
-            "version" : "4.001"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::GithubMeta",
-            "name" : "GithubMeta",
-            "version" : "0.42"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::ReadmeAnyFromPod",
-            "name" : "ReadmeMarkdownInRoot",
-            "version" : "0.131500"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::CopyFilesFromBuild",
-            "name" : "CopyFilesFromBuild",
-            "version" : "0.103510"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Git::Check",
-            "name" : "@Git/Check",
-            "version" : "2.017"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Git::Commit",
-            "name" : "@Git/Commit",
-            "version" : "2.017"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Git::Tag",
-            "name" : "@Git/Tag",
-            "version" : "2.017"
-         },
-         {
-            "class" : "Dist::Zilla::Plugin::Git::Push",
-            "name" : "@Git/Push",
-            "version" : "2.017"
          },
          {
             "class" : "Dist::Zilla::Plugin::FinderCode",
@@ -394,6 +714,7 @@
          "version" : "5.006"
       }
    },
+   "x_authority" : "cpan:BHERWEYER",
    "x_contributors" : [
       "Kovensky <diogomfranco@gmail.com>",
       "Kovensky <kovensk@gmail.com>"

@@ -10,6 +10,11 @@ version 0.001
 
 Kulag <g.kulag@gmail.com>
 
+# CONTRIBUTORS
+
+- Kovensky <diogomfranco@gmail.com>
+- Kovensky <kovensk@gmail.com>
+
 # COPYRIGHT AND LICENSE
 
 This software is Copyright (c) 2013 by Kulag.
