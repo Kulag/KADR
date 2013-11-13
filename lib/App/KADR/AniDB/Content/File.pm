@@ -2,6 +2,7 @@ package App::KADR::AniDB::Content::File;
 # ABSTRACT: AniDB's file information
 
 use App::KADR::AniDB::Content;
+use MooseX::Types::Digest -all;
 
 use aliased 'App::KADR::AniDB::EpisodeNumber';
 
@@ -18,9 +19,13 @@ use constant {
 
 field [qw(fid aid eid gid)];
 field 'lid', isa => MaybeID, coerce => 1;
+field [qw(other_episodes is_deprecated status size ed2k)];
+
+field 'md5', isa => MD5;
+field 'sha1', isa => SHA1;
+
 field [qw(
-	other_episodes is_deprecated status
-	size ed2k md5 sha1 crc32
+	crc32
 	quality source audio_codec audio_bitrate video_codec video_bitrate video_resolution file_type
 	dub_language sub_language length description air_date
 )];

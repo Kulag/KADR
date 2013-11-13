@@ -77,6 +77,7 @@ my %module_build_args = (
     "MooseX::Types" => 0,
     "MooseX::Types::Common::Numeric" => 0,
     "MooseX::Types::Common::String" => 0,
+    "MooseX::Types::Digest" => 0,
     "MooseX::Types::LoadableClass" => 0,
     "MooseX::Types::Moose" => 0,
     "MooseX::Types::Stringlike" => 0,
