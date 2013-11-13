@@ -83,4 +83,5 @@ A simple string with no whitespace.
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::Regexp>, L<MooseX::Types::Common::String>
+App::KADR::AniDB::Regexp
+MooseX::Types::Common::String

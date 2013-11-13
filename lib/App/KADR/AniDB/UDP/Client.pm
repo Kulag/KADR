@@ -678,5 +678,5 @@ Perform a query.
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::UDP::Client::Caching>
-L<http://wiki.anidb.info/w/UDP_API_Definition>
+App::KADR::AniDB::UDP::Client::Caching
+http://wiki.anidb.info/w/UDP_API_Definition

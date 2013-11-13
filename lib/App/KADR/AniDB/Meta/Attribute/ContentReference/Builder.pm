@@ -55,10 +55,6 @@ method _inline_call_client($inv, $args) {
 
 __PACKAGE__->meta->make_immutable(replace_constructor => 1);
 
-=head1 EXTENDS
-
-L<App::KADR::Meta::Method::AttrInlined>
-
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::Meta::Attribute::ContentReference>
+App::KADR::AniDB::Meta::Attribute::ContentReference

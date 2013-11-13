@@ -46,4 +46,4 @@ Parse a new content object from a string.
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::Content>
+App::KADR::AniDB::Content

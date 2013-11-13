@@ -210,4 +210,6 @@ This method is memoized.
 
 =head1 SEE ALSO
 
-	L<App::KADR::Path::File>, L<App::KADR::Path::Entity>, and L<Path::Class::Dir>
+App::KADR::Path::Entity
+App::KADR::Path::File
+Path::Class::Dir

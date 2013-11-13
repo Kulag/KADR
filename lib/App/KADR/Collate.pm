@@ -57,5 +57,6 @@ C<unicodeicu> if L<Unicode::ICU::Collator> is available, otherwise C<unicode>.
 
 =head1 SEE ALSO
 
-L<App::KADR::Collate::None>, L<App::KADR::Collate::Ascii>,
-L<App::KADR::Collate::Unicode>
+App::KADR::Collate::None
+App::KADR::Collate::Ascii
+App::KADR::Collate::Unicode

@@ -35,4 +35,4 @@ Doesn't sort the list.
 
 =head1 SEE ALSO
 
-L<App::KADR::Collate>
+App::KADR::Collate

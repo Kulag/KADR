@@ -25,4 +25,5 @@ The client that retrieved this content object.
 
 =head1 SEE ALSO
 
-C<App::KADR::AniDB::Content>, C<App::KADR::AniDB::UDP::Client>
+App::KADR::AniDB::Content
+App::KADR::AniDB::UDP::Client

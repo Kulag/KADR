@@ -38,4 +38,4 @@ Sort list ASCII-betically
 
 =head1 SEE ALSO
 
-L<App::KADR::Collate>
+App::KADR::Collate

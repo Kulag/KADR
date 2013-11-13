@@ -74,4 +74,5 @@ Sort list with L<Unicode::ICU::Collator>.
 
 =head1 SEE ALSO
 
-L<App::KADR::Collate>, L<Unicode::ICU::Collator>
+App::KADR::Collate
+Unicode::ICU::Collator

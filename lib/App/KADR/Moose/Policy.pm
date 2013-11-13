@@ -152,5 +152,6 @@ When stacking this module, you ought to use L<App::KADR::Moose::Exporter>.
 
 =head1 SEE ALSO
 
-L<App::KADR::Moose>, and L<App::KADR::Moose::Role>,
-L<App::KADR::Moose::Exporter>
+App::KADR::Moose
+App::KADR::Moose::Exporter
+App::KADR::Moose::Role

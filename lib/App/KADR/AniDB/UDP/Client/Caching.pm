@@ -281,4 +281,4 @@ entry exists for the file, just that none is cached.
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::UDP::Client>
+App::KADR::AniDB::UDP::Client

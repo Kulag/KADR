@@ -130,4 +130,6 @@ Turn file into a string. This method is memoized.
 
 =head1 SEE ALSO
 
-	L<App::KADR::Path::Dir>, L<App::KADR::Path::Entity>, and L<Path::Class::File>
+App::KADR::Path::Entity
+App::KADR::Path::Dir
+Path::Class::File

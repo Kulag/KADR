@@ -19,4 +19,5 @@ L<App::KADR::Moose::Policy>.
 
 =head1 SEE ALSO
 
-L<App::KADR::Moose>, L<App::KADR::Moose::Policy>
+App::KADR::Moose
+App::KADR::Moose::Policy

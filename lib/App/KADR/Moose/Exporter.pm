@@ -150,4 +150,4 @@ Identical to L<Moose::Exporter>.
 
 =head1 SEE ALSO
 
-L<Moose::Exporter>
+Moose::Exporter

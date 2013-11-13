@@ -180,4 +180,4 @@ File version number.
 
 =head1 SEE ALSO
 
-L<http://wiki.anidb.info/w/UDP_API_Definition>
+http://wiki.anidb.info/w/UDP_API_Definition

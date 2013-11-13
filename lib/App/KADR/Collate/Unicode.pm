@@ -51,4 +51,5 @@ Sort list with Unicode::Collate.
 
 =head1 SEE ALSO
 
-L<App::KADR::Collate>, L<Unicode::Collate>
+App::KADR::Collate
+Unicode::Collate

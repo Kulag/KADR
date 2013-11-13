@@ -45,4 +45,4 @@ The body of your method, less the enclosing C<sub { }>
 
 =head1 SEE ALSO
 
-C<Class::MOP::Method::Inlined>
+Class::MOP::Method::Inlined

@@ -5,4 +5,4 @@ use App::KADR::Moose::Role;
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::Content>
+App::KADR::AniDB::Content

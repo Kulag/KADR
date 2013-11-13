@@ -70,4 +70,4 @@ Remove attribute builder from associated class.
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::Content>
+App::KADR::AniDB::Content

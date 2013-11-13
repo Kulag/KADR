@@ -88,4 +88,4 @@ also a code.
 
 =head1 SEE ALSO
 
-L<App::KADR::AniDB::UDP::Client>
+App::KADR::AniDB::UDP::Client
