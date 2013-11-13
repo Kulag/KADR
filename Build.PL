@@ -49,6 +49,7 @@ my %module_build_args = (
     "Hook::AfterRuntime" => 0,
     "IO::Socket" => 0,
     "IO::Uncompress::Inflate" => 0,
+    "Iterator::Simple" => 0,
     "Lingua::EN::Inflect" => 0,
     "List::AllUtils" => 0,
     "List::MoreUtils" => 0,

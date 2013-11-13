@@ -15,8 +15,9 @@ use Time::HiRes;
 
 use aliased 'App::KADR::AniDB::Content::Anime';
 use aliased 'App::KADR::AniDB::Content::File';
-use aliased 'App::KADR::AniDB::Content::MylistSet';
+use aliased 'App::KADR::AniDB::Content::FileSet';
 use aliased 'App::KADR::AniDB::Content::MylistEntry';
+use aliased 'App::KADR::AniDB::Content::MylistSet';
 use aliased 'App::KADR::AniDB::Role::Content::Referencer';
 
 extends 'Mojo::EventEmitter';
@@ -182,7 +183,7 @@ sub mylist_add {
 		# Multiple entries
 		elsif ($res->{code} == 322) {
 			$type = 'multiple_files';
-			$value = [ split /\|/, $res->{contents}[0] ];
+			$value = $self->_parse_content(FileSet, $res->{contents}[0]);
 		}
 	}
 
