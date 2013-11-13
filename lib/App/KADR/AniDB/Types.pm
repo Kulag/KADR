@@ -56,7 +56,7 @@ subtype UserName, as LowerCaseWhitespacelessSimpleStr;
 
 =head2 C<ID>
 
-A AniDB ID is a positive integer. See also L<MooseX::Types::Comment::Numeric>
+A AniDB ID is a positive integer. See also L<MooseX::Types::Common::Numeric>
 
 =head2 C<MaybeID>
 

@@ -121,8 +121,8 @@ L<namespace::autoclean> is imported into your module by default.
 
 Moose classes are made immutable by default.
 
-L<MooseX::AttributeShortcuts>, L<MooseX::HasDefaults::RW>,
-and L<MooseX::Attribute::Chained> are applied to your attributes.
+L<MooseX::AttributeShortcuts> and L<MooseX::Attribute::Chained> are applied to
+your attributes.
 
 L<MooseX::AlwaysCoerce> is enabled.
 

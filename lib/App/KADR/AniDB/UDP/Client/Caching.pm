@@ -247,12 +247,12 @@ sub mylist_anime {
 =head1 DESCRIPTION
 
 L<App::KADR::AniDB::UDP::Client::Caching> is a transparent caching layer around
-L<App::KADR:AniDB::UDP::Client>.
+L<App::KADR::AniDB::UDP::Client>.
 
 =head1 ATTRIBUTES
 
 L<App::KADR::AniDB::UDP::Client::Caching> inherits all attributes from
-L<App::KADR:AniDB::UDP::Client> and implements the following new ones.
+L<App::KADR::AniDB::UDP::Client> and implements the following new ones.
 
 =head2 C<db>
 
@@ -263,7 +263,7 @@ A L<App::KADR::DBI> instance. Required at creation.
 =head1 METHODS
 
 L<App::KADR::AniDB::UDP::Client::Caching> inherits all methods from
-L<App::KADR:AniDB::UDP::Client> and implements the following new ones.
+L<App::KADR::AniDB::UDP::Client> and implements the following new ones.
 
 =head2 C<get_cached_lid>
 

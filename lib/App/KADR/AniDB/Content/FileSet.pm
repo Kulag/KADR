@@ -62,7 +62,7 @@ IDs of the files.
 	$set = $set->files([File->new(...)]);
 
 Associated L<App::KADR::AniDB::Content::File> objects. Note that this response
-is sent as a list of fids so retrieving their full information could take a
+is sent as a list of C<fids> so retrieving their full information could take a
 long time. Consider using L</ifiles> instead.
 
 =method C<ifiles>
@@ -72,9 +72,9 @@ L<App::KADR::AniDB::Content::File> objects.
 
 =method C<reset_iterator>
 
-Reset the internal iterator used by the L</<>> and L<&{}> overloads.
+Reset the internal iterator used by the L</E<lt>E<gt>> and L</&{}> overloads.
 
-=overload C<<>>
+=overload C<E<lt>E<gt>>
 
 Next associated L<App::KADR::AniDB::Content::File> object from the internal
 iterator.
