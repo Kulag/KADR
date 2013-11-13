@@ -6,6 +6,20 @@ App::KADR - Manage your anime collection with anidb
 
 version 0.001
 
+# SOURCE
+
+The development version is on github at [http://github.com/Kulag/KADR](http://github.com/Kulag/KADR)
+and may be cloned from [git://github.com/Kulag/KADR.git](git://github.com/Kulag/KADR.git)
+
+# BUGS
+
+Please report any bugs or feature requests on the bugtracker website
+https://github.com/Kulag/KADR/issues
+
+When submitting a bug or request, please include a test-file or a
+patch to an existing test-file that illustrates the bug or desired
+feature.
+
 # AUTHOR
 
 Kulag <g.kulag@gmail.com>
